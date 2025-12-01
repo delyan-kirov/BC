@@ -1,0 +1,16 @@
+[
+  {
+    "arguments": [
+      "/run/current-system/sw/bin/g++",
+      "-c",
+      "-std=c++23",
+      "-Wall",
+      "-o",
+      "main",
+      "main.cpp"
+    ],
+    "directory": "/home/dk/Projects/BC",
+    "file": "/home/dk/Projects/BC/main.cpp",
+    "output": "/home/dk/Projects/BC/main"
+  }
+]
