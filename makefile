@@ -1,5 +1,5 @@
-CC = g++
-CFLAGS = -std=c++23 -Wall
+CC = clang++
+CFLAGS = -Wall -g -o0
 
 main.exe: main.cpp
 	$(CC) $(CFLAGS) -o main.exe main.cpp
@@ -7,7 +7,7 @@ main.exe: main.cpp
 .PHONY: clean bear
 
 clean:
-	rm main
+	rm main.exe
 
 bear:
 	bear -- make main.exe
