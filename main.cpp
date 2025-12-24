@@ -176,13 +176,14 @@ struct TokenGroup
 bool
 gen_token_groups (const std::vector<Token> &tokens,     // in
                   size_t begin,                         // in
+                  size_t end,                           // in
                   std::vector<TokenGroup> &token_groups // out
 )
 //! return: true if successful, false otherwise
 //! note: this will parse token groups at a single layer
 {
   size_t i = begin;
-  for (; i < tokens.size (); ++i)
+  for (; i < end; ++i)
   {
     Token t = tokens[i];
     switch (t.m_type)
@@ -201,52 +202,66 @@ gen_token_groups (const std::vector<Token> &tokens,     // in
     break;
     case Token_t::ParR:
     {
-      return true;
+      return false;
     }
     case Token_t::ParL:
     {
       size_t par_stack = 1;
+      size_t subgroup_idx = i + 1;
 
-      size_t subgroup_idx = i;
-      for (; subgroup_idx < tokens.size (); ++subgroup_idx)
+      for (; subgroup_idx < end; ++subgroup_idx)
       {
-        Token t = tokens[subgroup_idx];
-        if (t.m_type == Token_t::ParL)
+        if (tokens[subgroup_idx].m_type == Token_t::ParL)
         {
-          par_stack += 1;
+          ++par_stack;
         }
-        else if (t.m_type == Token_t::ParR)
+        else if (tokens[subgroup_idx].m_type == Token_t::ParR)
         {
-          par_stack -= 1;
-        }
-        else
-        {
-          ; // do nothing
+          --par_stack;
         }
 
-        if (0 == par_stack)
+        if (par_stack == 0)
         {
           break;
         }
       }
 
-      if (subgroup_idx > i + 1)
+      if (par_stack != 0)
       {
-        token_groups.push_back (TokenGroup (t.m_type, i, subgroup_idx));
-      }
-      else
-      {
-        return false;
+        return false; // unbalanced
       }
 
-      i = subgroup_idx;
-      continue;
+      token_groups.push_back (TokenGroup (Token_t::ParL, i, subgroup_idx));
+
+      i = subgroup_idx; // skip whole group
     }
     break; // ParL
     }
   }
 
   return true;
+}
+
+namespace std
+{
+
+std::string
+to_string (const std::vector<TokenGroup> &token_groups)
+{
+  string s{ "" };
+
+  for (auto token_group : token_groups)
+  {
+    s += std::to_string (token_group.m_type);
+    s += "(";
+    s += std::to_string (token_group.m_begin);
+    s += "...";
+    s += std::to_string (token_group.m_end);
+    s += ") ";
+  }
+
+  return s;
+}
 }
 
 enum class Expr_t
@@ -260,81 +275,92 @@ enum class Expr_t
 struct Expr
 {
   Expr_t type;
-  union
-  {
-    Expr *left;
-    Expr *right;
-    long long int integer;
-  } data;
+  Expr *left;
+  Expr *right;
+  int integer;
 };
 
 namespace std
 {
 string
-to_sting (Expr_t expr_type)
+to_string (Expr_t expr_type)
 {
-  string s{ "" };
-  // TODO: implement
-  return s;
+  switch (expr_type)
+  {
+  case Expr_t::Integer: return "Expr_t::Integer";
+  case Expr_t::Minus  : return "Expr_t::Minus";
+  case Expr_t::Plus   : return "Expr_t::Plus";
+  case Expr_t::Unknown:
+  default             : return "Expr_t::Unknown";
+  }
 }
+
+string to_string (Expr *expr);
 
 string
-to_sting (Expr expr)
+to_string (Expr *expr)
 {
   string s{ "" };
-  // TODO: implement
-  return s;
-}
-}
 
-bool
-is_operator (const std::vector<TokenGroup> &group, size_t idx, TokenGroup &out)
-{
-  if (group.size () > idx)
+  if (!expr)
   {
-    Token_t group_type = group[idx].m_type;
-    if (group_type == Token_t::Minus || group_type == Token_t::Plus)
-    {
-      out = group[idx];
-      return true;
-    }
+    std::cerr << "ERROR: expression given is null";
+    return "";
   }
-  return false;
-}
 
-Expr_t
-operation_t_from_token_t (Token_t token_type)
-{
-  Expr_t expr_type = Expr_t::Unknown;
-  switch (token_type)
+  switch (expr->type)
   {
-  case Token_t::Plus : expr_type = Expr_t::Plus; break;
-  case Token_t::Minus: expr_type = Expr_t::Minus; break;
+  case Expr_t::Integer:
+  {
+    s = std::to_string (expr->integer);
+  }
+  break;
+  case Expr_t::Plus:
+  {
+    s += "(";
+    s += to_string (expr->left);
+    s += " + ";
+    s += to_string (expr->right);
+    s += ")";
+  }
+  break;
+  case Expr_t::Minus:
+  {
+    s += "(";
+    s += to_string (expr->left);
+    s += " - ";
+    s += to_string (expr->right);
+    s += ")";
+  }
+  break;
+  case Expr_t::Unknown:
   default:
   {
-    std::cout << "ERROR: invalid token_type: " << std::to_string (token_type)
-              << std::endl;
-    throw std::exception{};
+    s += "Expr_t::Unknown";
   }
+  break;
   }
-  return expr_type;
+
+  return s;
+}
 }
 
 void
-parse (std::vector<Token> &tokens // in
-       ,
-       size_t begin // in
-       ,
-       size_t &end // in
-       ,
-       Expr *expr // out
+parse (std::vector<Token> &tokens, // in
+       size_t begin,               // in
+       size_t &end,                // out
+       size_t stop,                // in
+       Expr *expr                  // out
 )
 {
   std::vector<TokenGroup> token_groups{};
-  if (!gen_token_groups (tokens, begin, token_groups))
+  if (!gen_token_groups (tokens, begin, stop, token_groups))
   {
     throw std::exception{};
   }
+
+  std::cout << "(" << begin << "..." << stop << ") | "
+            << std::to_string (token_groups) << std::endl;
 
   for (size_t idx = 0; idx < token_groups.size (); ++idx)
   {
@@ -350,21 +376,15 @@ parse (std::vector<Token> &tokens // in
     }
     case Token_t::Int:
     {
-      expr->data.integer = tokens[group.m_begin].m_int;
-      end = idx;
-      return;
+      expr->type = Expr_t::Integer;
+      expr->integer = tokens[group.m_begin].m_int;
     }
     break; // Int
     case Token_t::ParL:
     {
-      size_t inner_end = 0;
-      for (size_t i = group.m_begin + 1; i < group.m_end; ++i)
-      {
-        parse (tokens, i + 1, inner_end, expr);
-      }
-      end = inner_end;
-      exit (0);
-      return;
+      end = group.m_begin + 1;
+      parse (tokens, end, end, group.m_end, expr);
+      end = group.m_end;
     }
     break; // Group
     case Token_t::Plus:
@@ -380,45 +400,59 @@ parse (std::vector<Token> &tokens // in
       else
       {
         Expr *left = new Expr;
-        left->type = expr->type;
-        left->data = expr->data;
+        *left = *expr;
 
         Expr *right = new Expr;
-        size_t end = 0;
-        parse (tokens, idx + 1, end, right);
+        size_t right_begin = group.m_begin + 1;
+        size_t right_end = right_begin;
+        parse (tokens, right_begin, right_end, token_groups[idx + 1].m_end + 1,
+               right);
 
         expr->type = Expr_t::Plus;
-        expr->data.left = left;
-        expr->data.right = right;
+        expr->left = left;
+        expr->right = right;
+
+        end = right_end;
+        ++idx;
+        std::cout << "INFO(plus): " << end << " " << std::to_string (left)
+                  << "+" << std::to_string (right) << "\n";
       }
-      return;
     }
     break; // Plus
     case Token_t::Minus:
     {
-      Expr *left = new Expr;
+      // We have the left, we need to check if it's valid
       if (!expr)
       {
-        left->type = Expr_t::Integer;
-        left->data.integer = 0;
+        std::cerr << "ERROR: expected the left expression to be valid, but "
+                     "nullptr found"
+                  << std::endl;
+        return;
       }
       else
       {
-        left->type = expr->type;
-        left->data = expr->data;
+        Expr *left = new Expr;
+        *left = *expr;
+
+        Expr *right = new Expr;
+        size_t right_begin = group.m_begin + 1;
+        size_t right_end = right_begin;
+        parse (tokens, right_begin, right_end, token_groups[idx + 1].m_end + 1,
+               right);
+
+        expr->type = Expr_t::Minus;
+        expr->left = left;
+        expr->right = right;
+
+        end = right_end;
+        ++idx;
+        std::cout << "INFO(plus): " << end << " " << std::to_string (left)
+                  << "+" << std::to_string (right) << "\n";
       }
-
-      Expr *right = new Expr;
-      size_t end = 0;
-      parse (tokens, idx + 1, end, right);
-
-      expr->type = Expr_t::Plus;
-      expr->data.left = left;
-      expr->data.right = right;
-      return;
     }
     break; // Minus
     }
+    std::cout << std::to_string (expr) << "\n";
   }
 
   return;
@@ -427,21 +461,22 @@ parse (std::vector<Token> &tokens // in
 int
 main ()
 {
-  string input = "(2 - 2 + 4 + 12) + (1 + 21) + 33";
+  string input = "1 - (2 - (3 + 43)) + 4 - 1";
+  // string input = "1 + 1";
   std::cout << input << std::endl;
   vector<Token> tokens = tokenize (input);
 
-  for (auto token : tokens)
-  {
-    std::cout << std::to_string (token) << '\n';
-  }
+  // for (auto token : tokens)
+  // {
+  //   std::cout << std::to_string (token) << '\n';
+  // }
 
   Expr *expr = new Expr;
-  size_t end = 0;
 
   try
   {
-    parse (tokens, 0, end, expr);
+    size_t end = 0;
+    parse (tokens, end, end, tokens.size (), expr);
   }
   catch (std::exception &e)
   {
@@ -451,4 +486,12 @@ main ()
   {
     std::cerr << "ERROR: unknown exception occured\n";
   }
+
+  std::cout << std::to_string (expr) << "\n";
 }
+
+/*
+ * TODO:
+     - Split code so that it's not as crazy as this
+     - Add testing
+ */

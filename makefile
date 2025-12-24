@@ -1,8 +1,8 @@
 CC = clang++
 CFLAGS = -Wall -g -o0
 
-main.exe: main.cpp
-	$(CC) $(CFLAGS) -o main.exe main.cpp
+main: main.cpp
+	$(CC) $(CFLAGS) -o main main.cpp
 
 .PHONY: clean bear
 
