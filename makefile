@@ -1,13 +1,31 @@
 CC = clang++
-CFLAGS = -Wall -g -o0
+CFLAGS = -Wall -g -O0
+SRC = src
+INC = inc
+BIN = bin
 
-main: main.cpp
-	$(CC) $(CFLAGS) -o main main.cpp
+OBJS = \
+	$(BIN)/main.o \
+	$(BIN)/parser.o \
+	$(BIN)/tokenizer.o
 
-.PHONY: clean bear
+$(BIN)/main: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $^
+
+$(BIN)/main.o: $(SRC)/main.cpp $(INC)/parser.hpp
+	$(CC) $(CFLAGS) -I$(INC) -c $< -o $@
+
+$(BIN)/parser.o: $(SRC)/parser.cpp $(INC)/parser.hpp $(INC)/tokenizer.hpp
+	$(CC) $(CFLAGS) -I$(INC) -c $< -o $@
+
+$(BIN)/tokenizer.o: $(SRC)/tokenizer.cpp $(INC)/tokenizer.hpp
+	$(CC) $(CFLAGS) -I$(INC) -c $< -o $@
 
 clean:
-	rm main.exe
+	rm -f $(BIN)/*
+
+.PHONY: clean
 
 bear:
-	bear -- make main.exe
+	make clean
+	bear -- make $(BIN)/main
