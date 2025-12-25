@@ -1,30 +1,31 @@
-CC = clang++
-CFLAGS = -Wall -g -O0
 SRC = src
 INC = inc
 BIN = bin
 
+CFLAGS = -Wall -Wextra -g -O0
+CC = clang++ $(CFLAGS) -I$(INC)
+
 OBJS = \
 	$(BIN)/main.o \
-	$(BIN)/parser.o \
-	$(BIN)/tokenizer.o
+	$(BIN)/LX.o \
+	$(BIN)/EX.o
 
 $(BIN)/main: $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) -o $@ $^
 
-$(BIN)/main.o: $(SRC)/main.cpp $(INC)/parser.hpp
-	$(CC) $(CFLAGS) -I$(INC) -c $< -o $@
+$(BIN)/main.o: $(SRC)/main.cpp $(BIN)/EX.o
+	$(CC) -c $< -o $@
 
-$(BIN)/parser.o: $(SRC)/parser.cpp $(INC)/parser.hpp $(INC)/tokenizer.hpp
-	$(CC) $(CFLAGS) -I$(INC) -c $< -o $@
+$(BIN)/EX.o: $(SRC)/EX.cpp $(INC)/EX.hpp $(BIN)/LX.o
+	$(CC) -c $< -o $@
 
-$(BIN)/tokenizer.o: $(SRC)/tokenizer.cpp $(INC)/tokenizer.hpp
-	$(CC) $(CFLAGS) -I$(INC) -c $< -o $@
+$(BIN)/LX.o: $(SRC)/LX.cpp $(INC)/LX.hpp
+	$(CC) -c $< -o $@
+
+.PHONY: clean bear
 
 clean:
 	rm -f $(BIN)/*
-
-.PHONY: clean
 
 bear:
 	make clean

@@ -1,15 +1,46 @@
-#include <cstddef>
 #include <exception>
 #include <iostream>
-#include <ostream>
-#include <string>
-#include <vector>
 
-#include "parser.hpp"
-#include "tokenizer.hpp"
+#include "EX.hpp"
+#include "LX.hpp"
 
 using std::string;
 using std::vector;
+
+int
+eval (EX::T *expr)
+{
+  int result = 0;
+
+  while (expr)
+  {
+    switch (expr->type)
+    {
+    case EX::Type::Plus:
+    {
+      return result = eval (expr->left) + eval (expr->right);
+    }
+    break;
+    case EX::Type::Minus:
+    {
+      return result = eval (expr->left) - eval (expr->right);
+    }
+    break;
+    case EX::Type::Integer:
+    {
+      return result = expr->integer;
+    }
+    break;
+    case EX::Type::Unknown:
+    {
+      throw std::exception{};
+    }
+    break;
+    }
+  }
+
+  return result;
+}
 
 int
 main ()
@@ -17,14 +48,14 @@ main ()
   string input = "1 - (2 - (3 + 43)) + 4 - 1";
   // string input = "1 + 1";
   std::cout << input << std::endl;
-  vector<Token> tokens = tokenize (input);
+  vector<LX::T> tokens = LX::run (input);
 
   // for (auto token : tokens)
   // {
   //   std::cout << std::to_string (token) << '\n';
   // }
 
-  Expr *expr = new Expr;
+  EX::T *expr = new EX::T;
 
   try
   {
@@ -41,12 +72,13 @@ main ()
   }
 
   std::cout << std::to_string (expr) << "\n";
+
+  int result = eval (expr);
+  std::cout << "INFO(result): " << result << std::endl;
 }
 
 /*
  * TODO:
-     - Split code so that it's not as crazy as this
      - Use arenas
      - Add testing
-     - Use cpp for building instead of makefile
  */
