@@ -51,7 +51,7 @@ to_string (LX::Type t)
          : (LX::Type::ParL == t)    ? "LX::Type::ParL"
          : (LX::Type::ParR == t)    ? "LX::Type::ParR"
          : (LX::Type::Unknown == t) ? "LX::Type::Unknown"
-                                           : "LX::Type::Insane";
+                                    : "LX::Type::Insane";
 }
 
 inline string

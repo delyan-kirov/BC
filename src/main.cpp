@@ -14,21 +14,21 @@ eval (EX::T *expr)
 
   while (expr)
   {
-    switch (expr->type)
+    switch (expr->m_type)
     {
     case EX::Type::Plus:
     {
-      return result = eval (expr->left) + eval (expr->right);
+      return result = eval (expr->m_left) + eval (expr->m_right);
     }
     break;
     case EX::Type::Minus:
     {
-      return result = eval (expr->left) - eval (expr->right);
+      return result = eval (expr->m_left) - eval (expr->m_right);
     }
     break;
-    case EX::Type::Integer:
+    case EX::Type::Int:
     {
-      return result = expr->integer;
+      return result = expr->m_int;
     }
     break;
     case EX::Type::Unknown:
@@ -45,7 +45,7 @@ eval (EX::T *expr)
 int
 main ()
 {
-  string input = "1 - (2 - (3 + 43)) + 4 - 1";
+  string input = "1 - (2 - (3 + 43)) + 4 - ( 1 + 3   )";
   // string input = "1 + 1";
   std::cout << input << std::endl;
   vector<LX::T> tokens = LX::run (input);
@@ -80,5 +80,11 @@ main ()
 /*
  * TODO:
      - Use arenas
+     - Add tracing
+     - Add error reporting and handling
+     - Add top level comments
+     - Add more operators
+     - Support functions
+     - Support streams
      - Add testing
  */

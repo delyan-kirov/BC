@@ -10,7 +10,7 @@ namespace EX
 
 enum class Type
 {
-  Integer,
+  Int,
   Plus,
   Minus,
   Unknown
@@ -18,17 +18,17 @@ enum class Type
 
 struct T
 {
-  Type type;
-  T *left;
-  T *right;
-  int integer;
+  Type m_type;
+  T *m_left;
+  T *m_right;
+  int m_int;
 };
 
 void parse (std::vector<LX::T> &tokens, // in
-            size_t begin,                      // in
-            size_t &end,                       // out
-            size_t stop,                       // in
-            T *expr                            // out
+            size_t begin,               // in
+            size_t &end,                // out
+            size_t stop,                // in
+            T *expr                     // out
 );
 }
 
@@ -39,11 +39,11 @@ to_string (EX::Type expr_type)
 {
   switch (expr_type)
   {
-  case EX::Type::Integer: return "Expr_t::Integer";
+  case EX::Type::Int    : return "Expr_t::Integer";
   case EX::Type::Minus  : return "Expr_t::Minus";
   case EX::Type::Plus   : return "Expr_t::Plus";
   case EX::Type::Unknown:
-  default                 : return "Expr_t::Unknown";
+  default               : return "Expr_t::Unknown";
   }
 }
 
@@ -60,28 +60,28 @@ to_string (EX::T *expr)
     return "";
   }
 
-  switch (expr->type)
+  switch (expr->m_type)
   {
-  case EX::Type::Integer:
+  case EX::Type::Int:
   {
-    s = std::to_string (expr->integer);
+    s = std::to_string (expr->m_int);
   }
   break;
   case EX::Type::Plus:
   {
     s += "(";
-    s += to_string (expr->left);
+    s += to_string (expr->m_left);
     s += " + ";
-    s += to_string (expr->right);
+    s += to_string (expr->m_right);
     s += ")";
   }
   break;
   case EX::Type::Minus:
   {
     s += "(";
-    s += to_string (expr->left);
+    s += to_string (expr->m_left);
     s += " - ";
-    s += to_string (expr->right);
+    s += to_string (expr->m_right);
     s += ")";
   }
   break;

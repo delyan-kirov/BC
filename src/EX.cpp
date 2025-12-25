@@ -10,10 +10,10 @@ namespace // EX UTILITIES
 
 void
 parse (std::vector<LX::T> &tokens, // in
-       size_t begin,                      // in
-       size_t &end,                       // out
-       size_t stop,                       // in
-       EX::T *expr                      // out
+       size_t begin,               // in
+       size_t &end,                // out
+       size_t stop,                // in
+       EX::T *expr                 // out
 )
 {
   std::vector<LX::Group> token_groups{};
@@ -39,8 +39,8 @@ parse (std::vector<LX::T> &tokens, // in
     }
     case LX::Type::Int:
     {
-      expr->type = EX::Type::Integer;
-      expr->integer = tokens[group.m_begin].m_int;
+      expr->m_type = EX::Type::Int;
+      expr->m_int = tokens[group.m_begin].m_int;
     }
     break; // Int
     case LX::Type::ParL:
@@ -71,9 +71,9 @@ parse (std::vector<LX::T> &tokens, // in
         parse (tokens, right_begin, right_end, token_groups[idx + 1].m_end + 1,
                right);
 
-        expr->type = Type::Plus;
-        expr->left = left;
-        expr->right = right;
+        expr->m_type = Type::Plus;
+        expr->m_left = left;
+        expr->m_right = right;
 
         end = right_end;
         ++idx;
@@ -103,9 +103,9 @@ parse (std::vector<LX::T> &tokens, // in
         parse (tokens, right_begin, right_end, token_groups[idx + 1].m_end + 1,
                right);
 
-        expr->type = EX::Type::Minus;
-        expr->left = left;
-        expr->right = right;
+        expr->m_type = EX::Type::Minus;
+        expr->m_left = left;
+        expr->m_right = right;
 
         end = right_end;
         ++idx;
