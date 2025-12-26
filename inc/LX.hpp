@@ -1,5 +1,5 @@
-#ifndef TOKENIZER_HEADER
-#define TOKENIZER_HEADER
+#ifndef LX_HEADER
+#define LX_HEADER
 
 #include <iostream>
 #include <string>
@@ -38,6 +38,8 @@ struct Group
   Group (Type type, size_t begin, size_t end);
 };
 
+typedef std::vector<LX::Group> Groups;
+
 } // LX
 
 namespace std
@@ -60,26 +62,23 @@ to_string (LX::T t)
   string s = "line: " + to_string (t.m_line) + " offset: "
              + to_string (t.m_offset) + " type: " + to_string (t.m_type);
 
-  if (LX::Type::Int == t.m_type)
-  {
-    s += "(" + to_string (t.m_int) + ")";
-  }
+  if (LX::Type::Int == t.m_type) { s += "(" + to_string (t.m_int) + ")"; }
 
   return s;
 }
 
 inline std::string
-to_string (const std::vector<LX::Group> &token_groups)
+to_string (const LX::Groups &groups)
 {
   string s{ "" };
 
-  for (auto token_group : token_groups)
+  for (auto group : groups)
   {
-    s += std::to_string (token_group.m_type);
+    s += std::to_string (group.m_type);
     s += "(";
-    s += std::to_string (token_group.m_begin);
+    s += std::to_string (group.m_begin);
     s += "...";
-    s += std::to_string (token_group.m_end);
+    s += std::to_string (group.m_end);
     s += ") ";
   }
 
@@ -90,33 +89,16 @@ to_string (const std::vector<LX::Group> &token_groups)
 
 namespace LX
 {
-inline T::T ()
-    : m_type{ Type::Unknown }, m_int{ 0 }, m_line{ 0 }, m_offset{ 0 } {};
+typedef std::vector<T> Tokens;
 
-inline T::T (Type type, int integer, size_t line, size_t offset)
-    : m_type{ type }, m_int{ integer }, m_line{ line }, m_offset (offset) {};
-
-inline Group::Group () : m_type (Type::Unknown), m_begin (0), m_end (0) {};
-
-inline Group::Group (Type type, size_t begin, size_t end)
-    : m_type{ type }, m_begin{ begin }, m_end{ end }
-{
-  if (Type::Unknown == type || Type::ParR == type)
-  {
-    std::cerr << "ERROR: sanity check failed. Expected the group to be "
-                 "ParL, Plus, Minus or Int, but found: "
-              << std::to_string (type) << std::endl;
-    throw std::exception{};
-  }
-}
-
-bool group (const std::vector<T> &tokens,    // in
-            size_t begin,                    // in
-            size_t end,                      // in
-            std::vector<Group> &token_groups // out
+bool group (const Tokens &tokens, // in
+            size_t begin,         // in
+            size_t end,           // in
+            Groups &groups        // out
 );
 
-std::vector<LX::T> run (std::string str);
+Tokens run (std::string str);
+
 } // namespace LX
 
-#endif // TOKENIZER_HEADER
+#endif // LX_HEADER

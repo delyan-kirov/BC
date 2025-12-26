@@ -1,12 +1,16 @@
-#ifndef PARSER_HEADER
-#define PARSER_HEADER
+#ifndef EX_HEADER
+#define EX_HEADER
 
+#include "AR.hpp"
 #include "LX.hpp"
 #include <iostream>
+#include <limits>
 #include <string>
 
 namespace EX
 {
+
+constexpr size_t PARSER_FAILED = std::numeric_limits<size_t>::max ();
 
 enum class Type
 {
@@ -24,11 +28,13 @@ struct T
   int m_int;
 };
 
-void parse (std::vector<LX::T> &tokens, // in
-            size_t begin,               // in
-            size_t &end,                // out
-            size_t stop,                // in
-            T *expr                     // out
+typedef std::vector<LX::T> Tokens;
+
+size_t parse (const Tokens &tokens, // in
+              AR::T &arena,         // in
+              size_t begin,         // in
+              size_t end,           // in
+              EX::T *expr           // out
 );
 }
 
@@ -97,4 +103,4 @@ to_string (EX::T *expr)
 }
 }
 
-#endif // PARSER_HEADER
+#endif // EX_HEADER

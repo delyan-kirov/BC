@@ -3,25 +3,35 @@
 #include <string>
 #include <vector>
 
-using std::string;
-using std::vector;
-
 namespace LX
 {
+
+T::T () : m_type{ Type::Unknown }, m_int{ 0 }, m_line{ 0 }, m_offset{ 0 } {};
+
+T::T (Type type, int integer, size_t line, size_t offset)
+    : m_type{ type }, m_int{ integer }, m_line{ line }, m_offset (offset) {};
+
+Group::Group () : m_type (Type::Unknown), m_begin (0), m_end (0) {};
+
+Group::Group (Type type, size_t begin, size_t end)
+    : m_type{ type }, m_begin{ begin }, m_end{ end }
+{
+  if (Type::Unknown == type || Type::ParR == type)
+  {
+    std::cerr << "ERROR: sanity check failed. Expected the group to be "
+                 "ParL, Plus, Minus or Int, but found: "
+              << std::to_string (type) << std::endl;
+    throw std::exception{};
+  }
+}
+
 namespace
 {
+
 void
-token_error_report (string &error_msg)
+to_integer (std::string &str, Tokens &tokens, T token)
 {
-  std::cerr << "ERROR: " << __func__ << ": " << error_msg << std::endl;
-}
-void
-to_integer (string &str, vector<T> &tokens, T token)
-{
-  if ("" == str)
-  {
-    return;
-  }
+  if ("" == str) { return; }
   try
   {
     int integer = std::stoi (str);
@@ -32,8 +42,8 @@ to_integer (string &str, vector<T> &tokens, T token)
   }
   catch (std::exception &e)
   {
-    string error_msg = "could not parse number `" + str + "`\n";
-    token_error_report (error_msg);
+    std::string error_msg = "could not parse number `" + str + "`\n";
+    std::cerr << "ERROR: " << __func__ << ": " << error_msg << std::endl;
     throw e;
   }
 }
@@ -77,19 +87,10 @@ group (const std::vector<T> &tokens,    // in
 
       for (; subgroup_idx < end; ++subgroup_idx)
       {
-        if (tokens[subgroup_idx].m_type == Type::ParL)
-        {
-          ++par_stack;
-        }
-        else if (tokens[subgroup_idx].m_type == Type::ParR)
-        {
-          --par_stack;
-        }
+        if (tokens[subgroup_idx].m_type == Type::ParL) { ++par_stack; }
+        else if (tokens[subgroup_idx].m_type == Type::ParR) { --par_stack; }
 
-        if (par_stack == 0)
-        {
-          break;
-        }
+        if (par_stack == 0) { break; }
       }
 
       if (par_stack != 0)
@@ -108,11 +109,11 @@ group (const std::vector<T> &tokens,    // in
   return true;
 }
 
-vector<T>
-run (string str)
+Tokens
+run (std::string str)
 {
-  vector<T> tokens;
-  string buffer{ "" };
+  Tokens tokens;
+  std::string buffer{ "" };
   size_t lines{ 0 };
   size_t offset{ 0 };
 
@@ -171,4 +172,4 @@ run (string str)
   return tokens;
 }
 
-} // namespace Tokenizer
+} // namespace LX

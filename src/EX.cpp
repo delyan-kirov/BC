@@ -1,33 +1,68 @@
 #include "EX.hpp"
+#include "AR.hpp"
 #include "LX.hpp"
+#include <vector>
 
 namespace EX
 {
+size_t parse (const Tokens &tokens, // in
+              AR::T &arena,         // in
+              size_t begin,         // in
+              size_t end,           // in
+              EX::T *expr           // out
+);
 
 namespace // EX UTILITIES
 {
-}
 
-void
-parse (std::vector<LX::T> &tokens, // in
-       size_t begin,               // in
-       size_t &end,                // out
-       size_t stop,                // in
-       EX::T *expr                 // out
+size_t
+parse_op (const Tokens &tokens,     // in
+          const LX::Groups &groups, // in
+          AR::T &arena,             // in
+          size_t idx,               // in
+          EX::Type op_type,         // in
+          EX::T *expr               // out
 )
 {
-  std::vector<LX::Group> token_groups{};
-  if (!LX::group (tokens, begin, stop, token_groups))
-  {
-    throw std::exception{};
-  }
+  size_t result = 0;
 
-  // std::cout << "(" << begin << "..." << stop << ") | "
-  //           << std::to_string (token_groups) << std::endl;
+  auto left = (EX::T *)arena.alloc<EX::T> ();
+  *left = *expr;
+  LX::Group group = groups[idx];
 
-  for (size_t idx = 0; idx < token_groups.size (); ++idx)
+  auto right = (EX::T *)arena.alloc<EX::T> ();
+  size_t right_begin = group.m_begin + 1;
+  size_t right_end = right_begin;
+
+  result
+      = parse (tokens, arena, right_begin, groups[idx + 1].m_end + 1, right);
+
+  expr->m_type = op_type;
+  expr->m_left = left;
+  expr->m_right = right;
+
+  result = right_end;
+
+  return result;
+}
+} // EX UTILITIES
+
+size_t
+parse (const std::vector<LX::T> &tokens, // in
+       AR::T &arena,                     // in
+       size_t begin,                     // in
+       size_t end,                       // in
+       EX::T *expr                       // out
+)
+{
+  size_t result = begin;
+
+  LX::Groups groups{};
+  if (!LX::group (tokens, begin, end, groups)) { throw std::exception{}; }
+
+  for (size_t idx = 0; idx < groups.size (); ++idx)
   {
-    LX::Group group = token_groups[idx];
+    LX::Group group = groups[idx];
     switch (group.m_type)
     {
     case LX::Type::ParR:
@@ -35,19 +70,20 @@ parse (std::vector<LX::T> &tokens, // in
     {
       std::cerr << "ERROR: invalid token: " << std::to_string (group.m_type)
                 << std::endl;
-      return;
+      return PARSER_FAILED;
     }
     case LX::Type::Int:
     {
       expr->m_type = EX::Type::Int;
       expr->m_int = tokens[group.m_begin].m_int;
+      result += 1;
     }
     break; // Int
     case LX::Type::ParL:
     {
-      end = group.m_begin + 1;
-      parse (tokens, end, end, group.m_end, expr);
-      end = group.m_end;
+      result = group.m_begin + 1;
+      result = parse (tokens, arena, result, group.m_end, expr);
+      result = group.m_end;
     }
     break; // Group
     case LX::Type::Plus:
@@ -58,27 +94,12 @@ parse (std::vector<LX::T> &tokens, // in
         std::cerr << "ERROR: expected the left expression to be valid, but "
                      "nullptr found"
                   << std::endl;
-        return;
+        return PARSER_FAILED;
       }
       else
       {
-        EX::T *left = new EX::T;
-        *left = *expr;
-
-        EX::T *right = new EX::T;
-        size_t right_begin = group.m_begin + 1;
-        size_t right_end = right_begin;
-        parse (tokens, right_begin, right_end, token_groups[idx + 1].m_end + 1,
-               right);
-
-        expr->m_type = Type::Plus;
-        expr->m_left = left;
-        expr->m_right = right;
-
-        end = right_end;
+        result = parse_op (tokens, groups, arena, idx, EX::Type::Plus, expr);
         ++idx;
-        // std::cout << "INFO(plus): " << end << " " << std::to_string (left)
-        //           << "+" << std::to_string (right) << "\n";
       }
     }
     break; // Plus
@@ -90,34 +111,18 @@ parse (std::vector<LX::T> &tokens, // in
         std::cerr << "ERROR: expected the left expression to be valid, but "
                      "nullptr found"
                   << std::endl;
-        return;
+        return PARSER_FAILED;
       }
       else
       {
-        EX::T *left = new EX::T;
-        *left = *expr;
-
-        EX::T *right = new EX::T;
-        size_t right_begin = group.m_begin + 1;
-        size_t right_end = right_begin;
-        parse (tokens, right_begin, right_end, token_groups[idx + 1].m_end + 1,
-               right);
-
-        expr->m_type = EX::Type::Minus;
-        expr->m_left = left;
-        expr->m_right = right;
-
-        end = right_end;
+        result = parse_op (tokens, groups, arena, idx, EX::Type::Minus, expr);
         ++idx;
-        // std::cout << "INFO(plus): " << end << " " << std::to_string (left)
-        //           << "+" << std::to_string (right) << "\n";
       }
     }
     break; // Minus
     }
-    // std::cout << std::to_string (expr) << "\n";
   }
 
-  return;
+  return result;
 }
 } // namespace EX

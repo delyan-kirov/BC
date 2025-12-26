@@ -13,6 +13,7 @@ namespace TDATA
 constexpr std::pair<const char *, int> INPUTS[] = {
   { "1 - (2 - (3 + 43)) + 4 - ( 1 + 3   )", 45 },
   { "1+2", 3 },
+  { "-2", -2 },
   { "10 - 5 - 2", 3 },
   { "10 - (5 - 2)", 7 },
   { "(1 + 2) + (3 + 4)", 10 },
@@ -79,17 +80,23 @@ bool
 run ()
 {
   bool result = true;
+  AR::T arena{};
   for (auto tdata : TDATA::INPUTS)
   {
     const char *input = tdata.first;
     int expect = tdata.second;
 
     vector<LX::T> tokens = LX::run (input);
-    EX::T *expr = new EX::T;
+    EX::T *expr = (EX::T *)arena.alloc<EX::T> ();
     try
     {
-      size_t end = 0;
-      parse (tokens, end, end, tokens.size (), expr);
+      size_t result = parse (tokens, arena, 0, tokens.size (), expr);
+      if (0 == result || EX::PARSER_FAILED == result)
+      {
+        std::cerr << "ERROR: Parser failed: " << result << std::endl;
+        std::cerr << "       " << std::to_string (expr) << "\n";
+        return -1;
+      }
     }
     catch (std::exception &e)
     {
@@ -114,8 +121,8 @@ run ()
     }
     else
     {
-      std::cout << "\033[32m" << "OK: " << "\033[0m" << input << " -> "
-                << got << " | (" << std::to_string (expr) << ")" << std::endl;
+      std::cout << "\033[32m" << "OK: " << "\033[0m" << input << " -> " << got
+                << " | (" << std::to_string (expr) << ")" << std::endl;
     }
 
     result |= new_result;
