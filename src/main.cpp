@@ -1,80 +1,28 @@
-#include <exception>
-#include <iostream>
+#include <cstdio>
+#include <cstring>
 
+#include "AR.hpp"
 #include "EX.hpp"
-#include "LX.hpp"
-
-using std::string;
-using std::vector;
-
-int
-eval (EX::T *expr)
-{
-  int result = 0;
-
-  while (expr)
-  {
-    switch (expr->m_type)
-    {
-    case EX::Type::Plus:
-    {
-      return result = eval (expr->m_left) + eval (expr->m_right);
-    }
-    break;
-    case EX::Type::Minus:
-    {
-      return result = eval (expr->m_left) - eval (expr->m_right);
-    }
-    break;
-    case EX::Type::Int:
-    {
-      return result = expr->m_int;
-    }
-    break;
-    case EX::Type::Unknown:
-    {
-      throw std::exception{};
-    }
-    break;
-    }
-  }
-
-  return result;
-}
 
 int
 main ()
 {
-  string input = "1 - (2 - (3 + 43)) + 4 - ( 1 + 3   )";
-  // string input = "1 + 1";
-  std::cout << input << std::endl;
-  vector<LX::T> tokens = LX::run (input);
+  const char msg[] = "Hello world\n";
+  char *new_msg = nullptr;
+  size_t *word = 0;
+  AR::T arena{};
+  new_msg = (char *)arena.alloc (5000);
+  std::strcpy (new_msg, msg);
+  word = (size_t *)arena.alloc (sizeof (size_t));
+  *word = 69;
 
-  // for (auto token : tokens)
-  // {
-  //   std::cout << std::to_string (token) << '\n';
-  // }
+  EX::T *expr = (EX::T *)arena.alloc (sizeof (EX::T));
+  std::printf("%p\n", expr);
 
-  EX::T *expr = new EX::T;
+  expr->m_int = 3;
+  expr->m_type = EX::Type::Int;
 
-  try
-  {
-    size_t end = 0;
-    parse (tokens, end, end, tokens.size (), expr);
-  }
-  catch (std::exception &e)
-  {
-    std::cerr << "ERROR: parser failed!\n";
-  }
-  catch (...)
-  {
-    std::cerr << "ERROR: unknown exception occured\n";
-  }
-
-  std::cout << std::to_string (expr) << "\n";
-
-  int result = eval (expr);
-  std::cout << "INFO(result): " << result << std::endl;
+  std::printf ("%d, %s", expr->m_int, new_msg);
 }
 
 /*

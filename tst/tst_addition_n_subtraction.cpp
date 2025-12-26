@@ -1,5 +1,6 @@
 #include <exception>
 #include <iostream>
+#include <string>
 
 #include "EX.hpp"
 #include "LX.hpp"
@@ -16,6 +17,7 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "10 - (5 - 2)", 7 },
   { "(1 + 2) + (3 + 4)", 10 },
   { "(((((5)))))", 5 },
+  { "-5 + ((((-(-5)))))", 0 },
   { "0 - 1", -1 },
   { "0 - (1 + 2 + 3)", -6 },
   { "(8 - 3) - (2 - 1)", 4 },
@@ -110,7 +112,11 @@ run ()
       std::cerr << "       input: " << input << " | "
                 << "parsed: " << std::to_string (expr) << std::endl;
     }
-    else { std::cout << "INFO: " << input << " -> " << got << std::endl; }
+    else
+    {
+      std::cout << "\033[32m" << "OK: " << "\033[0m" << input << " -> "
+                << got << " | (" << std::to_string (expr) << ")" << std::endl;
+    }
 
     result |= new_result;
   }

@@ -11,7 +11,8 @@ CC = clang++ $(CFLAGS) -I$(INC)
 OBJS = \
 	$(BIN)/main.o \
 	$(BIN)/LX.o \
-	$(BIN)/EX.o
+	$(BIN)/EX.o \
+	$(BIN)/AR.o
 
 $(BIN)/main: $(OBJS)
 	$(CC) -o $@ $^
@@ -25,18 +26,30 @@ $(BIN)/EX.o: $(SRC)/EX.cpp $(INC)/EX.hpp $(BIN)/LX.o
 $(BIN)/LX.o: $(SRC)/LX.cpp $(INC)/LX.hpp
 	$(CC) -c $< -o $@
 
+#-----------------------------SLIBS-----------------------------
+# 
+$(BIN)/AR.o: $(SRC)/AR.cpp $(INC)/AR.hpp
+	$(CC) -c $< -o $@
+
 #-----------------------------TESTS-----------------------------
-tests = tst_addition_n_subtraction
+tests = \
+	tst_addition_n_subtraction \
+	tst_arena
 
 TOBJS = \
 	$(BIN)/LX.o \
-	$(BIN)/EX.o
+	$(BIN)/EX.o \
+	$(BIN)/AR.o \
 
 $(BIN)/tst_addition_n_subtraction: $(TST)/tst_addition_n_subtraction.cpp $(TOBJS)
 	$(CC) -o $@ $^
 
-test: $(BIN)/tst_addition_n_subtraction
+$(BIN)/tst_arena: $(TST)/tst_arena.cpp $(TOBJS)
+	$(CC) -o $@ $^
+
+test: $(BIN)/tst_addition_n_subtraction $(BIN)/tst_arena
 	@$(BIN)/tst_addition_n_subtraction
+	@$(BIN)/tst_arena
 
 .PHONY: clean bear test
 
