@@ -1,7 +1,6 @@
 #ifndef LX_HEADER
 #define LX_HEADER
 
-#include <iostream>
 #include <string>
 #include <vector>
 

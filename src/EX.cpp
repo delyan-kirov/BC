@@ -1,7 +1,6 @@
 #include "EX.hpp"
 #include "AR.hpp"
 #include "LX.hpp"
-#include <vector>
 
 namespace EX
 {
@@ -48,7 +47,7 @@ parse_op (const Tokens &tokens,     // in
 } // EX UTILITIES
 
 size_t
-parse (const std::vector<LX::T> &tokens, // in
+parse (const Tokens &tokens, // in
        AR::T &arena,                     // in
        size_t begin,                     // in
        size_t end,                       // in

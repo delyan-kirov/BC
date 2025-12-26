@@ -1,6 +1,5 @@
 #include "AR.hpp"
 #include <algorithm>
-#include <cstdint>
 #include <cstdlib>
 
 namespace AR

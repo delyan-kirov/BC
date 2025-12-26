@@ -1,5 +1,5 @@
-#ifndef ARENA_HEADER
-#define ARENA_HEADER
+#ifndef AR_HEADER
+#define AR_HEADER
 
 #include <cstddef>
 #include <cstdint>
@@ -55,6 +55,7 @@ private:
   size_t max_len;
   Block **mem;
 };
-}
 
-#endif
+} // namespace AR
+
+#endif // AR_HEADER

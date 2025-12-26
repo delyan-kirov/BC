@@ -1,7 +1,6 @@
 #include "LX.hpp"
 #include <iostream>
 #include <string>
-#include <vector>
 
 namespace LX
 {
@@ -50,10 +49,10 @@ to_integer (std::string &str, Tokens &tokens, T token)
 } // namespace anonymous
 
 bool
-group (const std::vector<T> &tokens,    // in
+group (const Tokens &tokens,    // in
        size_t begin,                    // in
        size_t end,                      // in
-       std::vector<Group> &token_groups // out
+       Groups &token_groups // out
 )
 //! return: true if successful, false otherwise
 //! note: this will parse token groups at a single layer
