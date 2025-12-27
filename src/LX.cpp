@@ -49,10 +49,10 @@ to_integer (std::string &str, Tokens &tokens, T token)
 } // namespace anonymous
 
 bool
-group (const Tokens &tokens,    // in
-       size_t begin,                    // in
-       size_t end,                      // in
-       Groups &token_groups // out
+group (const Tokens &tokens, // in
+       size_t begin,         // in
+       size_t end,           // in
+       Groups &groups        // out
 )
 //! return: true if successful, false otherwise
 //! note: this will parse token groups at a single layer
@@ -66,17 +66,22 @@ group (const Tokens &tokens,    // in
     case Type::Int:
     case Type::Minus:
     case Type::Plus:
+    case Type::Mult:
     {
-      token_groups.push_back (Group (t.m_type, i, i));
+      groups.push_back (Group (t.m_type, i, i));
     }
     break;
     case Type::Unknown:
     {
+      std::cerr << "ERROR: `case Type::Unknown` was reached (" << i << ")"
+                << std::endl;
+      std::cerr << std::to_string (tokens) << std::endl;
       return false;
     }
     break;
     case Type::ParR:
     {
+      std::cerr << "ERROR: `case Type::ParR` was reached" << std::endl;
       return false;
     }
     case Type::ParL:
@@ -94,10 +99,11 @@ group (const Tokens &tokens,    // in
 
       if (par_stack != 0)
       {
+        std::cerr << "ERROR: groups are unballanced" << std::endl;
         return false; // unbalanced
       }
 
-      token_groups.push_back (Group (Type::ParL, i, subgroup_idx));
+      groups.push_back (Group (Type::ParL, i, subgroup_idx));
 
       i = subgroup_idx; // skip whole group
     }
@@ -133,6 +139,13 @@ run (std::string str)
     {
       to_integer (buffer, tokens, token);
       token.m_type = Type::Plus;
+      tokens.push_back (token);
+    }
+    break;
+    case '*':
+    {
+      to_integer (buffer, tokens, token);
+      token.m_type = Type::Mult;
       tokens.push_back (token);
     }
     break;

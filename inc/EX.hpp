@@ -14,10 +14,12 @@ constexpr size_t PARSER_FAILED = std::numeric_limits<size_t>::max ();
 
 enum class Type
 {
+  Unknown = 0,
   Int,
-  Plus,
   Minus,
-  Unknown
+  Add,
+  Sub,
+  Mult,
 };
 
 struct T
@@ -45,11 +47,12 @@ to_string (EX::Type expr_type)
 {
   switch (expr_type)
   {
-  case EX::Type::Int    : return "Expr_t::Integer";
-  case EX::Type::Minus  : return "Expr_t::Minus";
-  case EX::Type::Plus   : return "Expr_t::Plus";
-  case EX::Type::Unknown:
-  default               : return "Expr_t::Unknown";
+  case EX::Type::Int    : return "EX::Type::Int";
+  case EX::Type::Minus  : return "EX::Type::Minus";
+  case EX::Type::Sub    : return "EX::Type::Sub";
+  case EX::Type::Add    : return "EX::Type::Add";
+  case EX::Type::Mult   : return "EX::Type::Mult";
+  case EX::Type::Unknown: return "EX::Type::Unknown";
   }
 }
 
@@ -73,7 +76,7 @@ to_string (EX::T *expr)
     s = std::to_string (expr->m_int);
   }
   break;
-  case EX::Type::Plus:
+  case EX::Type::Add:
   {
     s += "(";
     s += to_string (expr->m_left);
@@ -84,6 +87,13 @@ to_string (EX::T *expr)
   break;
   case EX::Type::Minus:
   {
+    s += "-(";
+    s += to_string (expr->m_left);
+    s += ")";
+  }
+  break;
+  case EX::Type::Sub:
+  {
     s += "(";
     s += to_string (expr->m_left);
     s += " - ";
@@ -91,10 +101,18 @@ to_string (EX::T *expr)
     s += ")";
   }
   break;
-  case EX::Type::Unknown:
-  default:
+  case EX::Type::Mult:
   {
-    s += "Expr_t::Unknown";
+    s += "(";
+    s += to_string (expr->m_left);
+    s += " * ";
+    s += to_string (expr->m_right);
+    s += ")";
+  }
+  break;
+  case EX::Type::Unknown:
+  {
+    s += "EX::T::Unknown";
   }
   break;
   }

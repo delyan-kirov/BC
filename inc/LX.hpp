@@ -11,6 +11,7 @@ enum class Type
   Int,
   Plus,
   Minus,
+  Mult,
   ParL,
   ParR,
   Unknown,
@@ -26,6 +27,8 @@ struct T
   T ();
   T (Type type, int integer, size_t line, size_t offset);
 };
+
+typedef std::vector<T> Tokens;
 
 struct Group
 {
@@ -46,13 +49,16 @@ namespace std
 inline string
 to_string (LX::Type t)
 {
-  return (LX::Type::Int == t)       ? "Tokeninzer::Type::Int"
-         : (LX::Type::Minus == t)   ? "LX::Type::Minus"
-         : (LX::Type::Plus == t)    ? "LX::Type::Plus"
-         : (LX::Type::ParL == t)    ? "LX::Type::ParL"
-         : (LX::Type::ParR == t)    ? "LX::Type::ParR"
-         : (LX::Type::Unknown == t) ? "LX::Type::Unknown"
-                                    : "LX::Type::Insane";
+  switch (t)
+  {
+  case LX::Type::Int    : return "Tokeninzer::Type::Int";
+  case LX::Type::Minus  : return "LX::Type::Minus";
+  case LX::Type::Mult   : return "LX::Type::Mult";
+  case LX::Type::Plus   : return "LX::Type::Plus";
+  case LX::Type::ParL   : return "LX::Type::ParL";
+  case LX::Type::ParR   : return "LX::Type::ParR";
+  case LX::Type::Unknown: return "LX::Type::Unknown";
+  }
 }
 
 inline string
@@ -62,6 +68,21 @@ to_string (LX::T t)
              + to_string (t.m_offset) + " type: " + to_string (t.m_type);
 
   if (LX::Type::Int == t.m_type) { s += "(" + to_string (t.m_int) + ")"; }
+
+  return s;
+}
+
+inline string
+to_string (const LX::Tokens &tokens)
+{
+  string s {"[ \n"};
+
+  for (size_t i = 0; i < tokens.size(); ++i)
+  {
+    LX::T t = tokens[i];
+    s += to_string(t);
+    s += i == tokens.size() - 1 ? "\n]\n" : ",\n";
+  }
 
   return s;
 }
@@ -88,7 +109,6 @@ to_string (const LX::Groups &groups)
 
 namespace LX
 {
-typedef std::vector<T> Tokens;
 
 bool group (const Tokens &tokens, // in
             size_t begin,         // in

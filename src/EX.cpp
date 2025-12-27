@@ -1,6 +1,7 @@
 #include "EX.hpp"
 #include "AR.hpp"
 #include "LX.hpp"
+#include <exception>
 
 namespace EX
 {
@@ -31,33 +32,60 @@ parse_op (const Tokens &tokens,     // in
 
   auto right = (EX::T *)arena.alloc<EX::T> ();
   size_t right_begin = group.m_begin + 1;
-  size_t right_end = right_begin;
+  size_t right_end = 0;
 
-  result
-      = parse (tokens, arena, right_begin, groups[idx + 1].m_end + 1, right);
+  {
+    size_t next_idx = idx + 1;
+    for (; next_idx < groups.size (); ++next_idx)
+    {
+      auto next_group = groups[next_idx];
+      if (LX::Type::Minus != next_group.m_type) { break; }
+    }
+    right_end = groups[next_idx].m_end + 1;
+  }
+
+  result = parse (tokens, arena, right_begin, right_end, right);
 
   expr->m_type = op_type;
   expr->m_left = left;
   expr->m_right = right;
 
-  result = right_end;
+  if (EX::Type::Minus == op_type) { expr->m_left = right; }
+  else { result = right_end; }
 
   return result;
 }
+
+size_t
+next_group_idx (size_t idx, size_t result, LX::Groups &groups)
+{
+  size_t new_idx = idx + 1;
+  for (; new_idx < groups.size (); ++new_idx)
+  {
+    auto next_group = groups[new_idx];
+    if (next_group.m_end == result - 1) { break; }
+  }
+  return new_idx;
+}
+
 } // EX UTILITIES
 
 size_t
 parse (const Tokens &tokens, // in
-       AR::T &arena,                     // in
-       size_t begin,                     // in
-       size_t end,                       // in
-       EX::T *expr                       // out
+       AR::T &arena,         // in
+       size_t begin,         // in
+       size_t end,           // in
+       EX::T *expr           // out
 )
 {
   size_t result = begin;
 
   LX::Groups groups{};
-  if (!LX::group (tokens, begin, end, groups)) { throw std::exception{}; }
+  if (!LX::group (tokens, begin, end, groups))
+  {
+    std::cerr << "ERROR: creation of groups failed." << std::endl;
+    throw std::exception{};
+  }
 
   for (size_t idx = 0; idx < groups.size (); ++idx)
   {
@@ -85,6 +113,23 @@ parse (const Tokens &tokens, // in
       result = group.m_end;
     }
     break; // Group
+    case LX::Type::Mult:
+    {
+      // We have the left, we need to check if it's valid
+      if (!expr)
+      {
+        std::cerr << "ERROR: expected the left expression to be valid, but "
+                     "nullptr found"
+                  << std::endl;
+        return PARSER_FAILED;
+      }
+      else
+      {
+        result = parse_op (tokens, groups, arena, idx, EX::Type::Mult, expr);
+        idx = next_group_idx (idx, result, groups);
+      }
+    }
+    break; // Mult
     case LX::Type::Plus:
     {
       // We have the left, we need to check if it's valid
@@ -97,8 +142,8 @@ parse (const Tokens &tokens, // in
       }
       else
       {
-        result = parse_op (tokens, groups, arena, idx, EX::Type::Plus, expr);
-        ++idx;
+        result = parse_op (tokens, groups, arena, idx, EX::Type::Add, expr);
+        idx = next_group_idx (idx, result, groups);
       }
     }
     break; // Plus
@@ -114,8 +159,23 @@ parse (const Tokens &tokens, // in
       }
       else
       {
-        result = parse_op (tokens, groups, arena, idx, EX::Type::Minus, expr);
-        ++idx;
+        if (0 == idx
+            || (                                  //
+                EX::Type::Add != expr->m_type     //
+                && EX::Type::Sub != expr->m_type  //
+                && EX::Type::Int != expr->m_type  //
+                && EX::Type::Mult != expr->m_type //
+                )
+            || EX::Type::Unknown == expr->m_type)
+        {
+          result
+              = parse_op (tokens, groups, arena, idx, EX::Type::Minus, expr);
+        }
+        else
+        {
+          result = parse_op (tokens, groups, arena, idx, EX::Type::Sub, expr);
+        }
+        idx = next_group_idx (idx, result, groups);
       }
     }
     break; // Minus

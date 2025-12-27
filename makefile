@@ -3,7 +3,7 @@ INC = inc
 BIN = bin
 TST = tst
 
-CFLAGS = -Wall -Wextra -g -O0
+CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -g -O0
 CC = clang++ $(CFLAGS) -I$(INC)
 
 #-----------------------------OBJCS-----------------------------
@@ -44,18 +44,28 @@ TOBJS = \
 $(BIN)/tst_addition_n_subtraction: $(TST)/tst_addition_n_subtraction.cpp $(TOBJS)
 	$(CC) -o $@ $^
 
+$(BIN)/tst_mult: $(TST)/tst_mult.cpp $(TOBJS)
+	$(CC) -o $@ $^
+
 $(BIN)/tst_arena: $(TST)/tst_arena.cpp $(TOBJS)
 	$(CC) -o $@ $^
 
-test: $(BIN)/tst_addition_n_subtraction $(BIN)/tst_arena
-	@$(BIN)/tst_addition_n_subtraction
-	@$(BIN)/tst_arena
+test: $(BIN)/tst_addition_n_subtraction $(BIN)/tst_arena $(BIN)/tst_mult
+	# @$(BIN)/tst_addition_n_subtraction
+	# @$(BIN)/tst_arena
+	@$(BIN)/tst_mult
 
-.PHONY: clean bear test
+.PHONY: clean bear test init
+
+init:
+	mkdir -p $(BIN)
+	make clean
+	make test
 
 clean:
 	rm -f $(BIN)/*
 
 bear:
+	mkdir -p $(BIN)
 	make clean
 	bear -- make $(BIN)/main test
