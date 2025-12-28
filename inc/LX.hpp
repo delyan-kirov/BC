@@ -75,14 +75,29 @@ to_string (LX::T t)
 inline string
 to_string (const LX::Tokens &tokens)
 {
-  string s {"[ \n"};
+  string s{ "[ \n" };
 
-  for (size_t i = 0; i < tokens.size(); ++i)
+  for (size_t i = 0; i < tokens.size (); ++i)
   {
     LX::T t = tokens[i];
-    s += to_string(t);
-    s += i == tokens.size() - 1 ? "\n]\n" : ",\n";
+    s += to_string (t);
+    s += i == tokens.size () - 1 ? "\n]\n" : ",\n";
   }
+
+  return s;
+}
+
+inline std::string
+to_string (LX::Group group)
+{
+  string s{ "" };
+
+  s += std::to_string (group.m_type);
+  s += "(";
+  s += std::to_string (group.m_begin);
+  s += "...";
+  s += std::to_string (group.m_end);
+  s += ") ";
 
   return s;
 }
@@ -94,12 +109,7 @@ to_string (const LX::Groups &groups)
 
   for (auto group : groups)
   {
-    s += std::to_string (group.m_type);
-    s += "(";
-    s += std::to_string (group.m_begin);
-    s += "...";
-    s += std::to_string (group.m_end);
-    s += ") ";
+    s += std::to_string (group);
   }
 
   return s;

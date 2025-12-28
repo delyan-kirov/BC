@@ -142,7 +142,44 @@ parse (const Tokens &tokens, // in
       }
       else
       {
+        // TODO: Factor most of this out!!!
+        size_t mult_group_idx = idx + 2;
+        if (mult_group_idx < groups.size ())
+        {
+          // Need to check if the next group is (*)
+          LX::Group mult_group = groups[mult_group_idx];
+          if (LX::Type::Mult == mult_group.m_type)
+          {
+            // We should parse the multiplication first
+            LX::Group left_mult_group = groups[idx + 1];
+            LX::Group right_mult_group = groups[mult_group_idx + 1];
+
+            auto right = (EX::T *)arena.alloc<EX::T> ();
+
+            size_t next_expr_begin = left_mult_group.m_begin;
+            size_t next_expr_end = right_mult_group.m_end + 1;
+
+            result
+                = parse (tokens, arena, next_expr_begin, next_expr_end, right);
+
+            // Now we construct the final expression
+            auto left = (EX::T *)arena.alloc<EX::T> ();
+            // TODO: make a new helper function for this
+            left->m_left = expr->m_left;
+            left->m_right = expr->m_right;
+            left->m_type = expr->m_type;
+            left->m_int = expr->m_int;
+
+            expr->m_left = left;
+            expr->m_right = right;
+            expr->m_type = EX::Type::Add;
+
+            goto expression_addition_finished;
+          }
+        }
         result = parse_op (tokens, groups, arena, idx, EX::Type::Add, expr);
+
+      expression_addition_finished:
         idx = next_group_idx (idx, result, groups);
       }
     }
@@ -159,6 +196,7 @@ parse (const Tokens &tokens, // in
       }
       else
       {
+        // TODO: perhaps a small helper could be good here
         if (0 == idx
             || (                                  //
                 EX::Type::Add != expr->m_type     //
@@ -180,6 +218,7 @@ parse (const Tokens &tokens, // in
     }
     break; // Minus
     }
+    // std::cout << std::to_string (expr) << std::endl;
   }
 
   return result;

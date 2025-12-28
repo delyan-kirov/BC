@@ -9,8 +9,14 @@ using std::vector;
 
 namespace TDATA
 {
+// TODO: currently, we handle addition and multiplication
+// But with subtraction or unary minus, we don't handle multiplication well
 constexpr std::pair<const char *, int> INPUTS[] = {
-  { "1 + 2 * 2", 5 },
+  { "2 + - 2 * 2", -2 },
+  // { "2 * 2", 4 },
+  // { "1 + 2 * 2", 5 },
+  // { "(1 + 2) * 2", 6 },
+  // { "(1 + 2) + -1 * (1 * (2 * -1) * 1 + ((1 * 1)))", 2 },
   // { "1", 1 },
   // { "(1)", 1 },
   // { "1 + (1 + 1) + 1", 4 },
