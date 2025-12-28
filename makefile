@@ -12,12 +12,16 @@ OBJS = \
 	$(BIN)/main.o \
 	$(BIN)/LX.o \
 	$(BIN)/EX.o \
-	$(BIN)/AR.o
+	$(BIN)/AR.o \
+	$(BIN)/TL.o 
 
 $(BIN)/main: $(OBJS)
 	$(CC) -o $@ $^
 
 $(BIN)/main.o: $(SRC)/main.cpp $(BIN)/EX.o
+	$(CC) -c $< -o $@
+
+$(BIN)/TL.o: $(SRC)/TL.cpp $(BIN)/EX.o
 	$(CC) -c $< -o $@
 
 $(BIN)/EX.o: $(SRC)/EX.cpp $(INC)/EX.hpp $(BIN)/LX.o
@@ -40,6 +44,7 @@ TOBJS = \
 	$(BIN)/LX.o \
 	$(BIN)/EX.o \
 	$(BIN)/AR.o \
+	$(BIN)/TL.o
 
 $(BIN)/tst_addition_n_subtraction: $(TST)/tst_addition_n_subtraction.cpp $(TOBJS)
 	$(CC) -o $@ $^
