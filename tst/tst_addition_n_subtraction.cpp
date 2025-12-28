@@ -4,6 +4,7 @@
 
 #include "EX.hpp"
 #include "LX.hpp"
+#include "TL.hpp"
 
 using std::string;
 using std::vector;
@@ -41,50 +42,6 @@ constexpr std::pair<const char *, int> INPUTS[] = {
 
 namespace
 {
-int
-eval (EX::T *expr)
-{
-  int result = 0;
-
-  while (expr)
-  {
-    switch (expr->m_type)
-    {
-    case EX::Type::Add:
-    {
-      return result = eval (expr->m_left) + eval (expr->m_right);
-    }
-    case EX::Type::Minus:
-    {
-      std::cerr << "TODO: Impl: EX::Type::Minus\n";
-      throw std::exception {};
-    }
-    break;
-    case EX::Type::Sub:
-    {
-      return result = eval (expr->m_left) - eval (expr->m_right);
-    }
-    break;
-    case EX::Type::Mult:
-    {
-      return result = eval (expr->m_left) * eval (expr->m_right);
-    }
-    break;
-    case EX::Type::Int:
-    {
-      return result = expr->m_int;
-    }
-    break;
-    case EX::Type::Unknown:
-    {
-      throw std::exception{};
-    }
-    break;
-    }
-  }
-
-  return result;
-}
 
 bool
 run ()
@@ -119,7 +76,7 @@ run ()
       return false;
     }
 
-    int got = eval (expr);
+    int got = TL::eval (expr);
     bool new_result = (got == expect);
 
     if (!new_result)

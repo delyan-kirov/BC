@@ -67,6 +67,8 @@ group (const Tokens &tokens, // in
     case Type::Minus:
     case Type::Plus:
     case Type::Mult:
+    case Type::Div:
+    case Type::Modulus:
     {
       groups.push_back (Group (t.m_type, i, i));
     }
@@ -146,6 +148,20 @@ run (std::string str)
     {
       to_integer (buffer, tokens, token);
       token.m_type = Type::Mult;
+      tokens.push_back (token);
+    }
+    break;
+    case '/':
+    {
+      to_integer (buffer, tokens, token);
+      token.m_type = Type::Div;
+      tokens.push_back (token);
+    }
+    break;
+    case '%':
+    {
+      to_integer (buffer, tokens, token);
+      token.m_type = Type::Modulus;
       tokens.push_back (token);
     }
     break;

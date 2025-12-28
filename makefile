@@ -3,7 +3,7 @@ INC = inc
 BIN = bin
 TST = tst
 
-CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -g -O0
+CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g -O0
 CC = clang++ $(CFLAGS) -I$(INC)
 
 #-----------------------------OBJCS-----------------------------

@@ -20,6 +20,8 @@ enum class Type
   Add,
   Sub,
   Mult,
+  Div,
+  Modulus,
 };
 
 struct T
@@ -52,6 +54,8 @@ to_string (EX::Type expr_type)
   case EX::Type::Sub    : return "EX::Type::Sub";
   case EX::Type::Add    : return "EX::Type::Add";
   case EX::Type::Mult   : return "EX::Type::Mult";
+  case EX::Type::Div    : return "EX::Type::Div";
+  case EX::Type::Modulus: return "EX::Type::Modulus";
   case EX::Type::Unknown: return "EX::Type::Unknown";
   }
 }
@@ -106,6 +110,24 @@ to_string (EX::T *expr)
     s += "(";
     s += to_string (expr->m_left);
     s += " * ";
+    s += to_string (expr->m_right);
+    s += ")";
+  }
+  break;
+  case EX::Type::Div:
+  {
+    s += "(";
+    s += to_string (expr->m_left);
+    s += " / ";
+    s += to_string (expr->m_right);
+    s += ")";
+  }
+  break;
+  case EX::Type::Modulus:
+  {
+    s += "(";
+    s += to_string (expr->m_left);
+    s += " % ";
     s += to_string (expr->m_right);
     s += ")";
   }

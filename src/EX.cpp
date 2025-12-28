@@ -1,7 +1,6 @@
 #include "EX.hpp"
 #include "AR.hpp"
 #include "LX.hpp"
-#include <exception>
 
 namespace EX
 {
@@ -43,16 +42,23 @@ parse_op (const Tokens &tokens,     // in
       if (LX::Type::ParL == next_group.m_type) { break; }
       if (LX::Type::Int == next_group.m_type)
       {
-        // Check if after that we have multiplication, if we do, we need to
-        // parse more
-        size_t mult_group_idx = next_idx + 1;
-        if (mult_group_idx < groups.size ())
+        if (EX::Type::Add == op_type      //
+            || EX::Type::Minus == op_type //
+            || EX::Type::Sub == op_type   //
+        )
+        // Check if after that we have '*' '/' '%', cut more
         {
-          if (LX::Type::Mult == groups[mult_group_idx].m_type)
+          size_t mult_group_idx = next_idx + 1;
+          if (mult_group_idx < groups.size ())
           {
-            size_t int_or_par_group_idx = mult_group_idx + 1; // TODO: assert
-            next_idx = int_or_par_group_idx;
-            break;
+            if (LX::Type::Mult == groups[mult_group_idx].m_type
+                || LX::Type::Div == groups[mult_group_idx].m_type
+                || LX::Type::Modulus == groups[mult_group_idx].m_type)
+            {
+              size_t int_or_par_group_idx = mult_group_idx + 1; // TODO: assert
+              next_idx = int_or_par_group_idx;
+              break;
+            }
           }
         }
       }
@@ -101,7 +107,7 @@ parse (const Tokens &tokens, // in
   if (!LX::group (tokens, begin, end, groups))
   {
     std::cerr << "ERROR: creation of groups failed." << std::endl;
-    throw std::exception{};
+    return PARSER_FAILED;
   }
 
   for (size_t idx = 0; idx < groups.size (); ++idx)
@@ -146,6 +152,39 @@ parse (const Tokens &tokens, // in
       }
     }
     break; // Mult
+    case LX::Type::Div:
+    {
+      // We have the left, we need to check if it's valid
+      if (!expr || EX::Type::Unknown == expr->m_type)
+      {
+        std::cerr << "ERROR: expected the left expression to be valid, found: "
+                  << std::to_string (expr) << std::endl;
+        return PARSER_FAILED;
+      }
+      else
+      {
+        result = parse_op (tokens, groups, arena, idx, EX::Type::Div, expr);
+        idx = next_group_idx (idx, result, groups);
+      }
+    }
+    break; // Div
+    case LX::Type::Modulus:
+    {
+      // We have the left, we need to check if it's valid
+      if (!expr || EX::Type::Unknown == expr->m_type)
+      {
+        std::cerr << "ERROR: expected the left expression to be valid, found: "
+                  << std::to_string (expr) << std::endl;
+        return PARSER_FAILED;
+      }
+      else
+      {
+        result
+            = parse_op (tokens, groups, arena, idx, EX::Type::Modulus, expr);
+        idx = next_group_idx (idx, result, groups);
+      }
+    }
+    break; // Modulus
     case LX::Type::Plus:
     {
       // We have the left, we need to check if it's valid
@@ -164,7 +203,10 @@ parse (const Tokens &tokens, // in
         {
           // Need to check if the next group is (*)
           LX::Group mult_group = groups[mult_group_idx];
-          if (LX::Type::Mult == mult_group.m_type)
+          if (LX::Type::Mult == mult_group.m_type       //
+              || LX::Type::Div == mult_group.m_type     //
+              || LX::Type::Modulus == mult_group.m_type //
+          )
           {
             // We should parse the multiplication first
             LX::Group left_mult_group = groups[idx + 1];
@@ -214,11 +256,13 @@ parse (const Tokens &tokens, // in
       {
         // TODO: perhaps a small helper could be good here
         if (0 == idx
-            || (                                  //
-                EX::Type::Add != expr->m_type     //
-                && EX::Type::Sub != expr->m_type  //
-                && EX::Type::Int != expr->m_type  //
-                && EX::Type::Mult != expr->m_type //
+            || (                                     //
+                EX::Type::Add != expr->m_type        //
+                && EX::Type::Sub != expr->m_type     //
+                && EX::Type::Int != expr->m_type     //
+                && EX::Type::Mult != expr->m_type    //
+                && EX::Type::Div != expr->m_type     //
+                && EX::Type::Modulus != expr->m_type //
                 )
             || EX::Type::Unknown == expr->m_type)
         {

@@ -30,6 +30,16 @@ eval (EX::T *expr)
       return result = eval (expr->m_left) * eval (expr->m_right);
     }
     break;
+    case EX::Type::Div:
+    {
+      return result = eval (expr->m_left) / eval (expr->m_right);
+    }
+    break;
+    case EX::Type::Modulus:
+    {
+      return result = eval (expr->m_left) % eval (expr->m_right);
+    }
+    break;
     case EX::Type::Int:
     {
       return result = expr->m_int;

@@ -8,13 +8,15 @@ namespace LX
 {
 enum class Type
 {
+  Unknown,
   Int,
   Plus,
   Minus,
   Mult,
+  Div,
+  Modulus,
   ParL,
   ParR,
-  Unknown,
 };
 
 struct T
@@ -54,6 +56,8 @@ to_string (LX::Type t)
   case LX::Type::Int    : return "Tokeninzer::Type::Int";
   case LX::Type::Minus  : return "LX::Type::Minus";
   case LX::Type::Mult   : return "LX::Type::Mult";
+  case LX::Type::Div    : return "LX::Type::Div";
+  case LX::Type::Modulus: return "LX::Type::Modulus";
   case LX::Type::Plus   : return "LX::Type::Plus";
   case LX::Type::ParL   : return "LX::Type::ParL";
   case LX::Type::ParR   : return "LX::Type::ParR";
