@@ -38,7 +38,24 @@ parse_op (const Tokens &tokens,     // in
     size_t next_idx = idx + 1;
     for (; next_idx < groups.size (); ++next_idx)
     {
+      // TODO: we need to be much more suffisticated here
       auto next_group = groups[next_idx];
+      if (LX::Type::ParL == next_group.m_type) { break; }
+      if (LX::Type::Int == next_group.m_type)
+      {
+        // Check if after that we have multiplication, if we do, we need to
+        // parse more
+        size_t mult_group_idx = next_idx + 1;
+        if (mult_group_idx < groups.size ())
+        {
+          if (LX::Type::Mult == groups[mult_group_idx].m_type)
+          {
+            size_t int_or_par_group_idx = mult_group_idx + 1; // TODO: assert
+            next_idx = int_or_par_group_idx;
+            break;
+          }
+        }
+      }
       if (LX::Type::Minus != next_group.m_type) { break; }
     }
     right_end = groups[next_idx].m_end + 1;
@@ -116,11 +133,10 @@ parse (const Tokens &tokens, // in
     case LX::Type::Mult:
     {
       // We have the left, we need to check if it's valid
-      if (!expr)
+      if (!expr || EX::Type::Unknown == expr->m_type)
       {
-        std::cerr << "ERROR: expected the left expression to be valid, but "
-                     "nullptr found"
-                  << std::endl;
+        std::cerr << "ERROR: expected the left expression to be valid, found: "
+                  << std::to_string (expr) << std::endl;
         return PARSER_FAILED;
       }
       else
@@ -133,11 +149,11 @@ parse (const Tokens &tokens, // in
     case LX::Type::Plus:
     {
       // We have the left, we need to check if it's valid
-      if (!expr)
+      // We have the left, we need to check if it's valid
+      if (!expr || EX::Type::Unknown == expr->m_type)
       {
-        std::cerr << "ERROR: expected the left expression to be valid, but "
-                     "nullptr found"
-                  << std::endl;
+        std::cerr << "ERROR: expected the left expression to be valid, found: "
+                  << std::to_string (expr) << std::endl;
         return PARSER_FAILED;
       }
       else
