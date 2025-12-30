@@ -1,203 +1,157 @@
 #include "LX.hpp"
+#include <cassert>
 #include <iostream>
+#include <limits>
 #include <string>
 
 namespace LX
 {
-
-T::T () : m_type{ Type::Unknown }, m_int{ 0 }, m_line{ 0 }, m_offset{ 0 } {};
-
-T::T (Type type, int integer, size_t line, size_t offset)
-    : m_type{ type }, m_int{ integer }, m_line{ line }, m_offset (offset) {};
-
-Group::Group () : m_type (Type::Unknown), m_begin (0), m_end (0) {};
-
-Group::Group (Type type, size_t begin, size_t end)
-    : m_type{ type }, m_begin{ begin }, m_end{ end }
-{
-  if (Type::Unknown == type || Type::ParR == type)
-  {
-    std::cerr << "ERROR: sanity check failed. Expected the group to be "
-                 "ParL, Plus, Minus or Int, but found: "
-              << std::to_string (type) << std::endl;
-    throw std::exception{};
-  }
-}
-
+constexpr size_t TOKENIZER_FAILED = std::numeric_limits<size_t>::max ();
 namespace
 {
 
-void
-to_integer (std::string &str, Tokens &tokens, T token)
+size_t
+look_for_matching_parenthesis (const char *input, size_t offset)
 {
-  if ("" == str) { return; }
+  for (size_t idx = offset; input[idx]; ++idx)
+  {
+    char c = input[idx];
+    if (')' == c) { return idx; }
+  }
+
+  return TOKENIZER_FAILED;
+}
+
+} // namespace anonymous
+
+char
+L::next_char ()
+{
+  if (this->m_input[this->m_cursor])
+  {
+    char c = this->m_input[this->m_cursor];
+    if ('\n' == c) { this->m_lines += 1; }
+    this->m_cursor += 1;
+    return c;
+  }
+  return '\0';
+}
+
+void
+L::push_int ()
+{
+  int result = 0;
+  LX::L l = *this; // save lexer
+  std::string s{
+    this->m_input[this->m_cursor
+                  - 1 /* since we entered this function, the point where we
+                         need to start parsing is offset by 1 */
+  ]
+  };
+  for (char c = this->next_char (); c; c = this->next_char ())
+  {
+    if (!c) { break; }
+    if (std::isdigit (c)) { s += c; }
+    else { break; }
+  }
+
   try
   {
-    int integer = std::stoi (str);
-    token.m_type = Type::Int;
-    token.m_int = integer;
-    tokens.push_back (token);
-    str.clear ();
+    result = std::stoi (s.c_str (), nullptr, 10);
+
+    LX::T t{ LX::Type::Int };
+    t.as.m_int = result;
+    this->m_tokens.push (t);
   }
   catch (std::exception &e)
   {
-    std::string error_msg = "could not parse number `" + str + "`\n";
-    std::cerr << "ERROR: " << __func__ << ": " << error_msg << std::endl;
-    throw e;
-  }
-}
-} // namespace anonymous
-
-bool
-group (const Tokens &tokens, // in
-       size_t begin,         // in
-       size_t end,           // in
-       Groups &groups        // out
-)
-//! return: true if successful, false otherwise
-//! note: this will parse token groups at a single layer
-{
-  size_t i = begin;
-  for (; i < end; ++i)
-  {
-    T t = tokens[i];
-    switch (t.m_type)
-    {
-    case Type::Int:
-    case Type::Minus:
-    case Type::Plus:
-    case Type::Mult:
-    case Type::Div:
-    case Type::Modulus:
-    {
-      groups.push_back (Group (t.m_type, i, i));
-    }
-    break;
-    case Type::Unknown:
-    {
-      std::cerr << "ERROR: `case Type::Unknown` was reached (" << i << ")"
-                << std::endl;
-      std::cerr << std::to_string (tokens) << std::endl;
-      return false;
-    }
-    break;
-    case Type::ParR:
-    {
-      std::cerr << "ERROR: `case Type::ParR` was reached" << std::endl;
-      return false;
-    }
-    case Type::ParL:
-    {
-      size_t par_stack = 1;
-      size_t subgroup_idx = i + 1;
-
-      for (; subgroup_idx < end; ++subgroup_idx)
-      {
-        if (tokens[subgroup_idx].m_type == Type::ParL) { ++par_stack; }
-        else if (tokens[subgroup_idx].m_type == Type::ParR) { --par_stack; }
-
-        if (par_stack == 0) { break; }
-      }
-
-      if (par_stack != 0)
-      {
-        std::cerr << "ERROR: groups are unballanced" << std::endl;
-        return false; // unbalanced
-      }
-
-      groups.push_back (Group (Type::ParL, i, subgroup_idx));
-
-      i = subgroup_idx; // skip whole group
-    }
-    break; // ParL
-    }
+    std::cerr << "ERROR: " << e.what () << std::endl;
   }
 
-  return true;
+  if (this->m_input[this->m_cursor])
+  {
+    // We parsed one char more, we need to go back one step
+    this->m_cursor -= 1;
+    (void)l;
+  }
 }
 
-Tokens
-run (std::string str)
+void
+L::push_operator (char c)
 {
-  Tokens tokens;
-  std::string buffer{ "" };
-  size_t lines{ 0 };
-  size_t offset{ 0 };
-
-  for (char c : str)
+  LX::Type t_type = LX::Type::Unknown;
+  switch (c)
   {
-    offset += 1;
-    T token{ Type::Unknown, 0, lines, offset };
+  case '-': t_type = LX::Type::Minus; break;
+  case '+': t_type = LX::Type::Plus; break;
+  case '*': t_type = LX::Type::Mult; break;
+  case '/': t_type = LX::Type::Div; break;
+  case '%': t_type = LX::Type::Modulus; break;
+  default : /* UNREACHABLE */; break;
+  }
+
+  this->m_tokens.push (LX::T{ t_type });
+}
+
+void
+L::run ()
+{
+  for (char c = this->next_char ();       //
+       c && this->m_cursor < this->m_end; //
+       c = this->next_char ()             //
+  )
+  {
     switch (c)
     {
     case '-':
-    {
-      to_integer (buffer, tokens, token);
-      token.m_type = Type::Minus;
-      tokens.push_back (token);
-    }
-    break;
     case '+':
-    {
-      to_integer (buffer, tokens, token);
-      token.m_type = Type::Plus;
-      tokens.push_back (token);
-    }
-    break;
     case '*':
-    {
-      to_integer (buffer, tokens, token);
-      token.m_type = Type::Mult;
-      tokens.push_back (token);
-    }
-    break;
     case '/':
-    {
-      to_integer (buffer, tokens, token);
-      token.m_type = Type::Div;
-      tokens.push_back (token);
-    }
-    break;
     case '%':
     {
-      to_integer (buffer, tokens, token);
-      token.m_type = Type::Modulus;
-      tokens.push_back (token);
+      this->push_operator (c);
     }
     break;
     case '(':
     {
-      to_integer (buffer, tokens, token);
-      token.m_type = Type::ParL;
-      tokens.push_back (token);
+      LX::L new_l = *this;
+      size_t group_begin = this->m_cursor;
+      size_t group_end
+          = look_for_matching_parenthesis (this->m_input, this->m_cursor) + 1;
+
+      new_l.m_begin = group_begin;
+      new_l.m_end = group_end;
+      new_l.run ();
+
+      LX::T token{ new_l.m_tokens };
+      LX::T token_2{ new_l.m_tokens };
+
+      this->m_tokens.push (token);
+      this->m_cursor = new_l.m_cursor + 1;
     }
     break;
     case ')':
     {
-      to_integer (buffer, tokens, token);
-      token.m_type = Type::ParR;
-      tokens.push_back (token);
+      assert (false && "case ')'");
     }
     break;
     case ' ':
     {
-      to_integer (buffer, tokens, token);
+      ; // Do nothing
     }
     break;
     case '\n':
     {
-      to_integer (buffer, tokens, token);
-      lines += 1;
+      ; // Do nothing
     }
     break;
-    default: buffer += c; break;
+    default:
+    {
+      this->push_int ();
+    }
+    break;
     }
   }
-
-  T token{ Type::Unknown, 0, lines, offset };
-  to_integer (buffer, tokens, token);
-
-  return tokens;
 }
 
 } // namespace LX

@@ -61,8 +61,8 @@ now_allocate:
       block->len = 0;
       block->max_len = block_new_size - sizeof (Block);
 
+      this->mem[this->len] = block;
       this->len += 1;
-      this->mem[this->len - 1] = block;
 
       goto now_allocate;
     }

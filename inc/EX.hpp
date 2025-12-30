@@ -6,6 +6,7 @@
 #include <iostream>
 #include <limits>
 #include <string>
+#include <vector>
 
 namespace EX
 {
@@ -32,7 +33,7 @@ struct T
   int m_int;
 };
 
-typedef std::vector<LX::T> Tokens;
+using Tokens = std::vector<LX::T>;
 
 size_t parse (const Tokens &tokens, // in
               AR::T &arena,         // in

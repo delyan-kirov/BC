@@ -1,50 +1,94 @@
 #ifndef LX_HEADER
 #define LX_HEADER
 
+#include "ER.hpp"
+#include "UT.hpp"
 #include <string>
-#include <vector>
 
 namespace LX
 {
 enum class Type
 {
-  Unknown,
+  Unknown = 0,
   Int,
   Plus,
   Minus,
-  Mult,
   Div,
   Modulus,
-  ParL,
-  ParR,
+  Mult,
+  Group,
 };
+
+struct T;
+using Tokens = UT::V<T>;
 
 struct T
 {
   Type m_type;
-  int m_int;
   size_t m_line;
-  size_t m_offset;
+  size_t m_cursor;
+  union
+  {
+    int m_int = 0;
+    Tokens m_tokens;
+  } as;
 
-  T ();
-  T (Type type, int integer, size_t line, size_t offset);
+  T () = default;
+  ~T () = default;
+  T (Type t) : m_type{ t }, m_line{ 0 }, m_cursor{ 0 }, as{} {};
+  T (Tokens tokens) : m_type{ Type::Group }, m_line{ 0 }, m_cursor{ 0 }
+  {
+    this->as.m_tokens = tokens;
+  };
 };
 
-typedef std::vector<T> Tokens;
-
-struct Group
+namespace
 {
-  Type m_type;
+
+} // namespace anonymous
+
+struct L
+{
+  AR::T &m_arena;
+  ER::T m_events;
+  const char *m_input;
+  Tokens m_tokens;
+  size_t m_lines;
+  size_t m_cursor;
   size_t m_begin;
   size_t m_end;
 
-  Group ();
-  Group (Type type, size_t begin, size_t end);
+  L (const char *const input, AR::T &arena, size_t begin, size_t end)
+      : m_arena{ arena },           //
+        m_events{ arena },          //
+        m_input{ input },           //
+        m_tokens{ Tokens (arena) }, //
+        m_lines{ 0 },               //
+        m_cursor{ 0 },              //
+        m_begin{ begin },           //
+        m_end{ end }                //
+  {
+  }
+
+  L (L const &t) : m_arena{ t.m_arena }, m_events (t.m_arena)
+  {
+    this->m_begin = t.m_begin;
+    this->m_end = t.m_end;
+    this->m_cursor = t.m_cursor;
+    this->m_input = t.m_input;
+    this->m_tokens = Tokens{ t.m_arena };
+  }
+
+  char next_char ();
+
+  void push_int ();
+
+  void push_operator (char c);
+
+  void run ();
 };
 
-typedef std::vector<LX::Group> Groups;
-
-} // LX
+} // namespace LX
 
 namespace std
 {
@@ -53,85 +97,76 @@ to_string (LX::Type t)
 {
   switch (t)
   {
-  case LX::Type::Int    : return "Tokeninzer::Type::Int";
-  case LX::Type::Minus  : return "LX::Type::Minus";
-  case LX::Type::Mult   : return "LX::Type::Mult";
-  case LX::Type::Div    : return "LX::Type::Div";
-  case LX::Type::Modulus: return "LX::Type::Modulus";
-  case LX::Type::Plus   : return "LX::Type::Plus";
-  case LX::Type::ParL   : return "LX::Type::ParL";
-  case LX::Type::ParR   : return "LX::Type::ParR";
-  case LX::Type::Unknown: return "LX::Type::Unknown";
+  case LX::Type::Unknown: return "Unknown";
+  case LX::Type::Int    : return "Int";
+  case LX::Type::Plus   : return "Plus";
+  case LX::Type::Minus  : return "Minus";
+  case LX::Type::Mult   : return "Mult";
+  case LX::Type::Div    : return "Div";
+  case LX::Type::Modulus: return "Modulus";
+  case LX::Type::Group  : return "Group";
   }
 }
 
+inline string to_string (LX::Tokens ts);
 inline string
 to_string (LX::T t)
 {
-  string s = "line: " + to_string (t.m_line) + " offset: "
-             + to_string (t.m_offset) + " type: " + to_string (t.m_type);
-
-  if (LX::Type::Int == t.m_type) { s += "(" + to_string (t.m_int) + ")"; }
-
+  switch (t.m_type)
+  {
+  case LX::Type::Unknown: return "Unknown";
+  case LX::Type::Int:
+    return string ("Int") + "(" + to_string (t.as.m_int) + ")";
+  case LX::Type::Plus:
+    return "Op("
+           "+"
+           ")";
+  case LX::Type::Minus:
+    return "Op("
+           "-"
+           ")";
+  case LX::Type::Mult:
+    return "Op("
+           "*"
+           ")";
+  case LX::Type::Div:
+    return "Op("
+           "/"
+           ")";
+  case LX::Type::Modulus:
+    return "Op("
+           "%"
+           ")";
+  case LX::Type::Group:
+  {
+    return to_string (t.as.m_tokens);
+  }
+  }
+  string s = "Unreachable";
   return s;
 }
 
 inline string
-to_string (const LX::Tokens &tokens)
+to_string (LX::Tokens ts)
 {
-  string s{ "[ \n" };
-
-  for (size_t i = 0; i < tokens.size (); ++i)
+  string s{ "LX::Tokens [ " };
+  for (size_t i = 0; i < ts.m_len; ++i)
   {
-    LX::T t = tokens[i];
-    s += to_string (t);
-    s += i == tokens.size () - 1 ? "\n]\n" : ",\n";
+    LX::T t = ts[i];
+    if (LX::Type::Group == t.m_type)
+    {
+      s += to_string ((LX::Tokens)t.as.m_tokens); //
+    }
+    else
+    {
+      s += to_string (t); //
+    }
+    s += (i != ts.m_len - 1) ? " , " : "";
   }
-
+  s += " ]";
   return s;
 }
 
-inline std::string
-to_string (LX::Group group)
-{
-  string s{ "" };
-
-  s += std::to_string (group.m_type);
-  s += "(";
-  s += std::to_string (group.m_begin);
-  s += "...";
-  s += std::to_string (group.m_end);
-  s += ") ";
-
-  return s;
 }
-
-inline std::string
-to_string (const LX::Groups &groups)
-{
-  string s{ "" };
-
-  for (auto group : groups)
-  {
-    s += std::to_string (group);
-  }
-
-  return s;
-}
-
-} // namespace std
-
-namespace LX
-{
-
-bool group (const Tokens &tokens, // in
-            size_t begin,         // in
-            size_t end,           // in
-            Groups &groups        // out
-);
-
-Tokens run (std::string str);
-
-} // namespace LX
 
 #endif // LX_HEADER
