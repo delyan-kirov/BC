@@ -13,10 +13,13 @@ namespace
 size_t
 look_for_matching_parenthesis (const char *input, size_t offset)
 {
+  size_t stack = 1;
   for (size_t idx = offset; input[idx]; ++idx)
   {
     char c = input[idx];
-    if (')' == c) { return idx; }
+    if (')' == c) { stack -= 1; }
+    else if ('(' == c) { stack += 1; }
+    if (0 == stack) { return idx; }
   }
 
   return TOKENIZER_FAILED;
@@ -115,7 +118,7 @@ L::run ()
     case '(':
     {
       LX::L new_l = *this;
-      size_t group_begin = this->m_cursor;
+      size_t group_begin = this->m_cursor + 1;
       size_t group_end
           = look_for_matching_parenthesis (this->m_input, this->m_cursor) + 1;
 
@@ -127,12 +130,12 @@ L::run ()
       LX::T token_2{ new_l.m_tokens };
 
       this->m_tokens.push (token);
-      this->m_cursor = new_l.m_cursor + 1;
+      this->m_cursor = group_end;
     }
     break;
     case ')':
     {
-      assert (false && "case ')'");
+      assert (0 && "case ')'");
     }
     break;
     case ' ':

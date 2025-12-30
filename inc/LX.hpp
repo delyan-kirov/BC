@@ -38,7 +38,7 @@ struct T
   T (Type t) : m_type{ t }, m_line{ 0 }, m_cursor{ 0 }, as{} {};
   T (Tokens tokens) : m_type{ Type::Group }, m_line{ 0 }, m_cursor{ 0 }
   {
-    this->as.m_tokens = tokens;
+    new (&as.m_tokens) Tokens (tokens); // NOTE: placement new
   };
 };
 
@@ -76,7 +76,7 @@ struct L
     this->m_end = t.m_end;
     this->m_cursor = t.m_cursor;
     this->m_input = t.m_input;
-    this->m_tokens = Tokens{ t.m_arena };
+    new (&this->m_tokens) Tokens{ t.m_arena };
   }
 
   char next_char ();

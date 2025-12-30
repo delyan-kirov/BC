@@ -7,23 +7,17 @@
 int
 main ()
 {
-  const char *input = "(1 2 3) 3 4 \n";
-  std::cout << input;
+  const char *input = "(1 2 3 4) ( -(5  4) ) \n";
 
   AR::T arena{};
+  ER::Trace trace{ arena };
 
-  char *ptr = nullptr;
-  {
-    ER::Trace trace{
-      arena,
-    };
-    ptr = trace.m_mem;
-
-    trace << __func__ ;
-  }
-  std::cout << std::string (ptr) << std::endl;
+  trace << __func__ << " " << input;
 
   LX::L l{ input, arena, 0, std::strlen (input) + 1 };
   l.run ();
-  std::cout << std::to_string (l.m_tokens) << std::endl;
+
+  trace << std::to_string (l.m_tokens).c_str () << "\n";
+  trace.~Trace();
+  std::cout << trace.m_mem;
 }

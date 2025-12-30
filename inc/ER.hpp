@@ -59,8 +59,8 @@ struct Trace : UT::B
 
   ~Trace ()
   {
-    const char *s = this->m_fn_name;
-    this->push ('\n');
+    std::string suffix = std::string ("<:") + std::string (this->m_fn_name);
+    const char *s = suffix.c_str ();
     while (*s)
     {
       char c = *s;
@@ -75,9 +75,7 @@ struct Trace : UT::B
 
     if (!m_fn_name)
     {
-      std::string prefix_string
-          = std::string ("ER::Trace(") + std::string (s);
-      prefix_string += ")>: ";
+      std::string prefix_string = std::string (s) + std::string (":>");
 
       const char *prefix = prefix_string.c_str ();
       size_t prefix_len = std::strlen (prefix);
@@ -90,12 +88,14 @@ struct Trace : UT::B
           = (const char *)this->m_arena->alloc (sizeof (char) * prefix_len);
       std::strcpy ((char *)this->m_fn_name, s);
     }
-
-    while (*s)
+    else
     {
-      char c = *s;
-      this->push (c);
-      ++s;
+      while (*s)
+      {
+        char c = *s;
+        this->push (c);
+        ++s;
+      }
     }
 
     return *this;
