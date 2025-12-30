@@ -4,7 +4,7 @@ BIN = bin
 TST = tst
 
 CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g -O0
-CC = clang++ $(CFLAGS) -I$(INC)
+CC = g++ $(CFLAGS) -I$(INC)
 
 #-----------------------------OBJCS-----------------------------
 

@@ -7,7 +7,8 @@
 #include <cstring>
 
 #if defined(__GNUC__) || defined(__clang__)
-#define UT_PRINTF_LIKE(fmt_idx, arg_idx) __attribute__((format(printf, fmt_idx, arg_idx)))
+#define UT_PRINTF_LIKE(fmt_idx, arg_idx)                                      \
+  __attribute__ ((format (printf, fmt_idx, arg_idx)))
 #else
 #define UT_PRINTF_LIKE(fmt_idx, arg_idx)
 #endif
@@ -30,9 +31,7 @@ template <typename O> struct V
   V (AR::T &arena, size_t len = 0)
       : m_len{ 0 }, m_max_len{ V_DEFAULT_MAX_LEN }, m_arena{ &arena }
   {
-    size_t alloc_len = (0 == len)
-                           ? V_DEFAULT_MAX_LEN
-                           : len;
+    size_t alloc_len = (0 == len) ? V_DEFAULT_MAX_LEN : len;
     this->m_mem = (O *)arena.alloc<O> (alloc_len);
   };
 
@@ -65,6 +64,38 @@ template <typename O> struct V
     this->m_len += 1;
   }
 };
+
+struct B : std::streambuf, V<char>
+{
+  B () = default;
+  B (AR::T &arena)
+  {
+    this->m_arena = &arena;
+    this->m_len = 0;
+    this->m_max_len = V_DEFAULT_MAX_LEN;
+    this->m_mem = (char *)arena.alloc (this->m_max_len * sizeof (char));
+  }
+
+  B &
+  operator<< (char c)
+  {
+    this->push (c);
+    return *this;
+  }
+
+  B &
+  operator<< (const char *s)
+  {
+    while (*s)
+    {
+      char c = *s;
+      this->push (c);
+      ++s;
+    }
+    return *this;
+  }
+};
+
 }
 
 #endif // UT_HEADER
