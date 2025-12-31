@@ -2,106 +2,127 @@
 #define ER_HEADER
 
 #include "UT.hpp"
-#include <cstring>
+#include <iostream>
 #include <string>
 
 namespace ER
 {
+enum class Type
+{
+  MIN = 0,
+  ERROR,
+  WARNING,
+  UNFO,
+  MAX,
+};
+
 struct E
 {
+  Type m_type = Type::MIN;
   void *m_data = nullptr;
-  void (*make) (void) = nullptr;
-  char *(*fmt) (void *options) = nullptr;
+  void (*make) (void *m_data) = nullptr;
+  char *(*fmt) (void *m_data) = nullptr;
 };
 
-struct T
+namespace
 {
-  AR::T &m_arena;
-  UT::V<E> m_es;
+char *
+info_trace_fmt (void *m_data)
+{
+  char *info_event = (char *)m_data;
+  return info_event;
+}
+}
 
-  void
-  push (E e)
-  {
-    m_es.push (e);
-  }
-
-  void trace (E e, const char *fmt, ...) UT_PRINTF_LIKE (3, 4);
-
-  E &
-  operator[] (size_t i)
-  { // for writing
-    return this->m_es[i];
-  }
-
-  const E &
-  operator[] (size_t i) const
-  { // for reading from const objects
-    return this->m_es[i];
-  }
-
+class T : public UT::V<E>
+{
+public:
+  T (AR::T &arena) : UT::V<E>{ arena } {}
+  T () = delete;
   ~T () = default;
-  T (AR::T &arena) : m_arena (arena) { m_es = UT::V<E>{ arena }; }
+
+  using UT::V<E>::push;
+  using UT::V<E>::operator[];
+  void
+  dump_to_stdin ()
+  {
+    for (size_t i = 0; i < this->m_len; ++i)
+    {
+      E e = this->m_mem[i];
+      char *s = e.fmt (e.m_data);
+      std::cout << s << std::endl;
+    }
+  }
+
+  // void trace (E e, const char *fmt, ...) UT_PRINTF_LIKE (3, 4);
 };
 
-struct Trace : UT::B
+class Trace : public UT::B
 {
-  const char *m_fn_name = 0;
+public:
+  // TODO: support format
+  const char *m_fn_name;
+  T &m_event_log;
 
-  Trace () = default;
-  Trace (AR::T &arena)
+  Trace (AR::T &arena, const char *fn_name, T &event_log)
+      : UT::B{ arena, std::strlen (fn_name) + 2 * UT::V_DEFAULT_MAX_LEN }, //
+        m_fn_name{ fn_name },                                              //
+        m_event_log{ event_log }                                           //
   {
-    this->m_arena = &arena;
-    this->m_len = 0;
-    this->m_max_len = UT::V_DEFAULT_MAX_LEN;
-    this->m_mem = (char *)arena.alloc (UT::V_DEFAULT_MAX_LEN * sizeof (char));
-    std::memset (this->m_mem, 0, this->m_max_len);
+    this->push (fn_name);
+    this->push (" :> ");
+    {
+      this->push ("begin\n");
+    }
+    this->push (fn_name);
+    this->push (" :> ");
   };
 
   ~Trace ()
   {
-    std::string suffix = std::string ("<:") + std::string (this->m_fn_name);
-    const char *s = suffix.c_str ();
-    while (*s)
-    {
-      char c = *s;
-      this->push (c);
-      ++s;
-    }
+    this->push ("end\n");
+    ER::E e{};
+    e.m_type = Type::UNFO;
+    e.m_data = this->m_mem;
+    e.fmt = info_trace_fmt;
+    this->m_event_log.push (e);
   }
 
   B &
   operator<< (const char *s)
   {
-
-    if (!m_fn_name)
-    {
-      std::string prefix_string = std::string (s) + std::string (":>");
-
-      const char *prefix = prefix_string.c_str ();
-      size_t prefix_len = std::strlen (prefix);
-
-      for (size_t i = 0; i < prefix_len; ++i)
-      {
-        this->push (prefix[i]);
-      }
-      this->m_fn_name
-          = (const char *)this->m_arena->alloc (sizeof (char) * prefix_len);
-      std::strcpy ((char *)this->m_fn_name, s);
-    }
-    else
-    {
-      while (*s)
-      {
-        char c = *s;
-        this->push (c);
-        ++s;
-      }
-    }
-
+    this->push (s);
     return *this;
+  }
+
+  const char *
+  end ()
+  {
+    this->push ('\n');
+    this->push (m_fn_name);
+    this->push (" :> ");
+    return "";
   }
 };
 
+} // namespace ER
+
+namespace std
+{
+inline string
+to_string (ER::Type type)
+{
+  switch (type)
+  {
+  case ER::Type::MIN    : return "MIN";
+  case ER::Type::ERROR  : return "ERROR";
+  case ER::Type::WARNING: return "WARNING";
+  case ER::Type::UNFO   : return "UNFO";
+  case ER::Type::MAX    : return "MAX";
+  }
+
+  return "UNREACHABLE";
+}
 }
 
 #endif

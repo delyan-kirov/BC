@@ -65,15 +65,41 @@ template <typename O> struct V
   }
 };
 
-struct B : std::streambuf, V<char>
+class B : public V<char>
 {
-  B () = default;
-  B (AR::T &arena)
+public:
+  B () = delete;
+
+  B (AR::T &arena, size_t size)
   {
     this->m_arena = &arena;
     this->m_len = 0;
-    this->m_max_len = V_DEFAULT_MAX_LEN;
+    this->m_max_len = size;
     this->m_mem = (char *)arena.alloc (this->m_max_len * sizeof (char));
+    std::memset (this->m_mem, 0, this->m_max_len);
+  }
+
+  B (AR::T &arena) : B{ arena, V_DEFAULT_MAX_LEN } {}
+
+  using V<char>::push;
+  void
+  push (const char *s)
+  {
+    if (!s || !(*s)) { return; }
+    size_t s_len = std::strlen (s);
+    size_t available_mem = this->m_max_len - this->m_len;
+    if (s_len >= available_mem)
+    {
+      size_t new_max_len = 2 * (this->m_max_len + s_len);
+      char *new_mem
+          = (char *)this->m_arena->alloc (new_max_len * sizeof (char));
+      std::memset (new_mem, 0, new_max_len);
+      std::memcpy (new_mem, this->m_mem, this->m_len);
+      this->m_max_len = new_max_len;
+      this->m_mem = new_mem;
+    }
+    std::memcpy (this->m_mem + this->m_len, s, s_len);
+    this->m_len += s_len;
   }
 
   B &
