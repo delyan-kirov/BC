@@ -140,10 +140,19 @@ L::run ()
       new_l.run ();
 
       LX::T token{ new_l.m_tokens };
-      LX::T token_2{ new_l.m_tokens };
 
       this->m_tokens.push (token);
       this->m_cursor = group_end;
+
+      for (size_t i = 0; i < new_l.m_events.m_len; ++i)
+      {
+        ER::E e = new_l.m_events[i];
+        char *e_new_m_data = (char *)e.clone (e.m_data);
+
+        ER::E new_e = e;
+        new_e.m_data = (void *)e_new_m_data;
+        this->m_events.push (new_e);
+      }
     }
     break;
     case ')':
