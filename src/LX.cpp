@@ -1,6 +1,5 @@
 #include "LX.hpp"
 #include <cassert>
-#include <iostream>
 #include <limits>
 #include <string>
 
@@ -11,15 +10,22 @@ namespace
 {
 
 size_t
-look_for_matching_parenthesis (const char *input, size_t offset)
+look_for_matching_parenthesis (LX::L &l, const char *input, size_t offset)
 {
+  auto trace = ER::Trace (l.m_arena, __FUNCTION__, l.m_events);
   size_t stack = 1;
+
   for (size_t idx = offset; input[idx]; ++idx)
   {
     char c = input[idx];
     if (')' == c) { stack -= 1; }
     else if ('(' == c) { stack += 1; }
-    if (0 == stack) { return idx; }
+    if (0 == stack)
+    {
+      trace << "Found matching paren at: " << std::to_string (idx).c_str ()
+            << trace.end ();
+      return idx;
+    }
   }
 
   return TOKENIZER_FAILED;
@@ -43,7 +49,9 @@ L::next_char ()
 void
 L::push_int ()
 {
+  auto trace = ER::Trace (this->m_arena, __FUNCTION__, this->m_events);
   int result = 0;
+
   LX::L l = *this; // save lexer
   std::string s{
     this->m_input[this->m_cursor
@@ -82,6 +90,8 @@ L::push_int ()
 void
 L::push_operator (char c)
 {
+  auto trace = ER::Trace (this->m_arena, __FUNCTION__, this->m_events);
+
   LX::Type t_type = LX::Type::Unknown;
   switch (c)
   {
@@ -99,6 +109,8 @@ L::push_operator (char c)
 void
 L::run ()
 {
+  auto trace = ER::Trace (this->m_arena, __FUNCTION__, this->m_events);
+
   for (char c = this->next_char ();       //
        c && this->m_cursor < this->m_end; //
        c = this->next_char ()             //
@@ -119,8 +131,9 @@ L::run ()
     {
       LX::L new_l = *this;
       size_t group_begin = this->m_cursor + 1;
-      size_t group_end
-          = look_for_matching_parenthesis (this->m_input, this->m_cursor) + 1;
+      size_t group_end = look_for_matching_parenthesis (
+                             *this, this->m_input, this->m_cursor)
+                         + 1;
 
       new_l.m_begin = group_begin;
       new_l.m_end = group_end;

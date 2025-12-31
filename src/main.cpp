@@ -4,7 +4,7 @@
 int
 main ()
 {
-  const char *input = "(1 2 3 4) ( -(5  4) )";
+  const char *input = "(()) ()";
 
   AR::T arena{};
   LX::L l{ input, arena, 0, std::strlen (input) + 1 };

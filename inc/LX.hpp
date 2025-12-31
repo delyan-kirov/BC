@@ -70,13 +70,32 @@ struct L
   {
   }
 
-  L (L const &t) : m_arena{ t.m_arena }, m_events (t.m_arena)
+  L (L const &l) : m_arena{ l.m_arena }, m_events (l.m_arena)
   {
-    this->m_begin = t.m_begin;
-    this->m_end = t.m_end;
-    this->m_cursor = t.m_cursor;
-    this->m_input = t.m_input;
-    new (&this->m_tokens) Tokens{ t.m_arena };
+    this->m_begin = l.m_begin;
+    this->m_end = l.m_end;
+    this->m_cursor = l.m_cursor;
+    this->m_input = l.m_input;
+    new (&this->m_tokens) Tokens{ l.m_arena };
+
+    for (size_t i = 0; i < l.m_events.m_len; ++i)
+    {
+      ER::E e = l.m_events[i];
+      char *e_new_m_data = (char *)e.clone (e.m_data);
+
+      ER::E new_e = e;
+      new_e.m_data = (void *)e_new_m_data;
+      this->m_events.push (new_e);
+    }
+  }
+
+  ~L ()
+  {
+    for (size_t i = 0; i < this->m_events.m_len; ++i)
+    {
+      ER::E e = this->m_events[i];
+      e.free (e.m_data);
+    }
   }
 
   char next_char ();
