@@ -8,6 +8,13 @@
 
 namespace ER
 {
+constexpr bool TRACE_ENABLE =
+#if TRACE_ENABLED
+    true;
+#else
+    false;
+#endif
+
 enum class Type
 {
   MIN = 0,
@@ -24,7 +31,7 @@ struct E
   void (*make) (void *m_data) = nullptr;
   char *(*fmt) (void *m_data) = nullptr;
   void (*free) (void *m_data) = nullptr;
-  void* (*clone) (void *m_data) = nullptr;
+  void *(*clone) (void *m_data) = nullptr;
 };
 
 namespace
@@ -36,16 +43,18 @@ info_trace_fmt (void *m_data)
   return info_event;
 }
 
-void info_trace_free (void *m_data)
+void
+info_trace_free (void *m_data)
 {
-  delete (char*)m_data;
+  delete (char *)m_data;
 }
 
-void *info_trace_clone (void *m_data)
+void *
+info_trace_clone (void *m_data)
 {
-  char *new_data = new char[std::strlen((char*)m_data)];
-  std::strcpy(new_data, (char*)m_data);
-  return (char*)new_data;
+  char *new_data = new char[std::strlen ((char *)m_data)];
+  std::strcpy (new_data, (char *)m_data);
+  return (char *)new_data;
 }
 }
 
@@ -84,76 +93,87 @@ public:
         m_fn_name{ fn_name },                                              //
         m_event_log{ event_log }                                           //
   {
-    size_t fn_name_len = std::strlen (fn_name);
-    char *fn_name_cpy = new char[fn_name_len + 1];
-    std::strcpy (fn_name_cpy, fn_name);
-    this->m_fn_name = fn_name_cpy;
+    if (TRACE_ENABLE)
+    {
+      size_t fn_name_len = std::strlen (fn_name);
+      char *fn_name_cpy = new char[fn_name_len + 1];
+      std::strcpy (fn_name_cpy, fn_name);
+      this->m_fn_name = fn_name_cpy;
 
-    std::string prolog_s = { "" };
-    prolog_s += fn_name;
-    prolog_s += ":> begin";
-    const char *prolog = prolog_s.c_str ();
-    size_t prolog_len = prolog_s.size ();
-    char *msg = new char[prolog_len];
-    std::memcpy (msg, prolog, prolog_len);
+      std::string prolog_s = { "" };
+      prolog_s += fn_name;
+      prolog_s += ":> begin";
+      const char *prolog = prolog_s.c_str ();
+      size_t prolog_len = prolog_s.size ();
+      char *msg = new char[prolog_len];
+      std::memcpy (msg, prolog, prolog_len);
 
-    ER::E e{};
-    e.m_type = Type::UNFO;
-    e.m_data = msg;
-    e.fmt = info_trace_fmt;
-    e.free = info_trace_free;
-    e.clone = info_trace_clone;
-    this->m_event_log.push (e);
+      ER::E e{};
+      e.m_type = Type::UNFO;
+      e.m_data = msg;
+      e.fmt = info_trace_fmt;
+      e.free = info_trace_free;
+      e.clone = info_trace_clone;
+      this->m_event_log.push (e);
 
-    this->push (m_fn_name);
-    this->push (":> ");
+      this->push (m_fn_name);
+      this->push (":> ");
+    }
   };
 
   ~Trace ()
   {
-    std::string epilog_s = { this->m_fn_name };
-    epilog_s += ":> end";
-    const char *prolog = epilog_s.c_str ();
-    size_t prolog_len = epilog_s.size ();
-    char *msg = new char[prolog_len];
-    std::memcpy (msg, prolog, prolog_len);
+    if (TRACE_ENABLE)
+    {
+      std::string epilog_s = { this->m_fn_name };
+      epilog_s += ":> end";
+      const char *prolog = epilog_s.c_str ();
+      size_t prolog_len = epilog_s.size ();
+      char *msg = new char[prolog_len];
+      std::memcpy (msg, prolog, prolog_len);
 
-    ER::E e{};
-    e.m_type = Type::UNFO;
-    e.m_data = msg;
-    e.fmt = info_trace_fmt;
-    e.free = info_trace_free;
-    e.clone = info_trace_clone;
-    this->m_event_log.push (e);
+      ER::E e{};
+      e.m_type = Type::UNFO;
+      e.m_data = msg;
+      e.fmt = info_trace_fmt;
+      e.free = info_trace_free;
+      e.clone = info_trace_clone;
+      this->m_event_log.push (e);
+    }
   }
 
   B &
   operator<< (const char *s)
   {
-    this->push (s);
+    if (TRACE_ENABLE)
+    {
+      this->push (s); //
+    }
     return *this;
   }
 
   const char *
   end ()
   {
-    char *msg = new char[this->m_len + 1];
-    std::strcpy (msg, this->m_mem);
+    if (TRACE_ENABLE)
+    {
+      char *msg = new char[this->m_len + 1];
+      std::strcpy (msg, this->m_mem);
 
-    ER::E e{};
-    e.m_type = Type::UNFO;
-    e.m_data = msg;
-    e.fmt = info_trace_fmt;
-    e.free = info_trace_free;
-    e.clone = info_trace_clone;
-    this->m_event_log.push (e);
+      ER::E e{};
+      e.m_type = Type::UNFO;
+      e.m_data = msg;
+      e.fmt = info_trace_fmt;
+      e.free = info_trace_free;
+      e.clone = info_trace_clone;
+      this->m_event_log.push (e);
 
-    std::memset (this->m_mem, 0, this->m_len);
-    this->m_len = 0;
+      std::memset (this->m_mem, 0, this->m_len);
+      this->m_len = 0;
 
-    this->push (m_fn_name);
-    this->push (" :> ");
-
+      this->push (m_fn_name);
+      this->push (" :> ");
+    }
     return "";
   }
 };
