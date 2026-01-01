@@ -1,19 +1,16 @@
 #include <cstring>
-#include <exception>
-#include <iostream>
 #include <string>
 
 #include "LX.hpp"
-#include "TL.hpp"
 
 using std::string;
-using std::vector;
 
 #define TSTxCTL 0
 
 namespace TDATA
 {
 constexpr std::pair<const char *, int> INPUTS[] = {
+#if 0
   { "12 / 3 / 2 + 1", 3 },
   { "1 / 2", 0 },
   { "3 * 2 + 2 / 2", 7 },
@@ -86,6 +83,8 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "3 % 2 % 6", 1 },
   { "5 % - 3 + 1", 3 },
   { "5 % - - 3 + 1", 3 },
+#endif
+  { "s ( 1", 3 },
 };
 }
 
@@ -103,12 +102,8 @@ run ()
     {
       LX::L l{ input, arena, 0, std::strlen (input) + 1 };
       result = l.run ();
-      if (LX::TOKENIZER_FAILED == result) { return false; }
-      else
-      {
-        // l.m_events.dump_to_stdin ();
-        std::cout << l.m_input << " | " << std::to_string (l.m_tokens) << std::endl;
-      }
+      l.m_events.dump_to_stdin ();
+      l.generate_event_report ();
     }
   }
   return result;

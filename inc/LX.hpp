@@ -3,6 +3,8 @@
 
 #include "ER.hpp"
 #include "UT.hpp"
+#include <cstdio>
+#include <cstring>
 #include <limits>
 #include <string>
 
@@ -107,6 +109,61 @@ struct L
     {
       ER::E e = this->m_events[i];
       e.free (e.m_data);
+    }
+  }
+
+  void
+  generate_event_report ()
+  {
+    ER::T events = this->m_events;
+    for (size_t i = 0; i < events.m_len; ++i)
+    {
+      ER::E e = events.m_mem[i];
+      if (ER::Type::ERROR == e.m_type)
+      {
+        char *s = e.fmt (e.m_data);
+        const char *prefix = "\033[31mERROR\033[0m";
+        std::printf ("[%s] %s\n", prefix, s);
+
+        // Find the line with the error
+        size_t lines = this->m_lines;
+        size_t line_begin = this->m_begin;
+        size_t line_end = this->m_end;
+
+        // Locate the start of the line
+        for (size_t i = this->m_begin; i < this->m_end; ++i)
+        {
+          if (this->m_input[i] == '\n')
+          {
+            if (--lines == 0)
+            {
+              line_begin = i + 1;
+              break;
+            }
+          }
+        }
+
+        // Locate the end of the line
+        for (size_t i = line_begin; i < this->m_end; ++i)
+        {
+          if (this->m_input[i] == '\n')
+          {
+            line_end = i;
+            break;
+          }
+        }
+
+        // Extract the line
+        std::string msg;
+        for (size_t i = line_begin; i < line_end; ++i)
+        {
+          msg += this->m_input[i];
+        }
+
+        // Print the error context
+        std::printf ("[%s line: %ld] \"%s\"\n", prefix, this->m_lines, msg.c_str ());
+        return;
+      }
     }
   }
 

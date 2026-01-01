@@ -1,6 +1,8 @@
 #include "LX.hpp"
+#include "ER.hpp"
 #include <cassert>
 #include <cstddef>
+#include <cstdlib>
 #include <string>
 
 namespace LX
@@ -11,7 +13,7 @@ namespace
 size_t
 look_for_matching_parenthesis (LX::L &l, const char *input, size_t offset)
 {
-  auto trace = ER::Trace (l.m_arena, __FUNCTION__, l.m_events);
+  auto trace = ER::Trace (l.m_arena, __PRETTY_FUNCTION__, l.m_events);
   size_t stack = 1;
 
   for (size_t idx = offset; input[idx]; ++idx)
@@ -27,6 +29,8 @@ look_for_matching_parenthesis (LX::L &l, const char *input, size_t offset)
     }
   }
 
+  l.m_events.push (ER::ErrorE{
+      __PRETTY_FUNCTION__, (void *)" could not find matching parenthesis" });
   return TOKENIZER_FAILED;
 }
 
@@ -48,13 +52,13 @@ L::next_char ()
 void
 L::push_int ()
 {
-  auto trace = ER::Trace (this->m_arena, __FUNCTION__, this->m_events);
+  auto trace = ER::Trace (this->m_arena, __PRETTY_FUNCTION__, this->m_events);
   int result = 0;
 
   std::string s{
     this->m_input[this->m_cursor
-                  - 1 /* since we entered this function, the point where we
-                         need to start parsing is offset by 1 */
+                  - 1 /* since we entered this __PRETTY_FUNCTIONtion, the point
+                         where we need to start parsing is offset by 1 */
   ]
   };
   for (char c = this->next_char (); c; c = this->next_char ())
@@ -74,7 +78,8 @@ L::push_int ()
   }
   catch (std::exception &e)
   {
-    std::cerr << "ERROR: " << e.what () << std::endl;
+    this->m_events.push (ER::ErrorE{
+        __PRETTY_FUNCTION__, (void *)" could not parse integer" });
   }
 
   if (this->m_input[this->m_cursor])
@@ -87,7 +92,7 @@ L::push_int ()
 void
 L::push_operator (char c)
 {
-  auto trace = ER::Trace (this->m_arena, __FUNCTION__, this->m_events);
+  auto trace = ER::Trace (this->m_arena, __PRETTY_FUNCTION__, this->m_events);
 
   LX::Type t_type = LX::Type::Unknown;
   switch (c)
@@ -97,16 +102,15 @@ L::push_operator (char c)
   case '*': t_type = LX::Type::Mult; break;
   case '/': t_type = LX::Type::Div; break;
   case '%': t_type = LX::Type::Modulus; break;
-  default : /* UNREACHABLE */; break;
+  default : /* UNREACHABLE */ assert (false && "push_operator");
   }
-
   this->m_tokens.push (LX::T{ t_type });
 }
 
 size_t
 L::run ()
 {
-  auto trace = ER::Trace (this->m_arena, __FUNCTION__, this->m_events);
+  auto trace = ER::Trace (this->m_arena, __PRETTY_FUNCTION__, this->m_events);
 
   for (char c = this->next_char ();       //
        c && this->m_cursor < this->m_end; //
@@ -133,14 +137,24 @@ L::run ()
 
       result = look_for_matching_parenthesis (
           *this, this->m_input, this->m_cursor);
-      if (LX::TOKENIZER_FAILED == result) { return result; }
+      if (LX::TOKENIZER_FAILED == result)
+      {
+        this->m_events.push (
+            ER::ErrorE{ __PRETTY_FUNCTION__, (void *)" function run failed" });
+        return result;
+      }
       else { group_end = result + 1; }
 
       LX::L new_l = LX::L (*this, group_begin, group_end);
       result = new_l.run ();
 
       if (LX::TOKENIZER_FAILED != result) { this->subsume_sub_lexer (new_l); }
-      else { return result; }
+      else
+      {
+        this->m_events.push (
+            ER::ErrorE{ __PRETTY_FUNCTION__, (void *)" new_l failed" });
+        return result;
+      }
     }
     break;
     case ')':
