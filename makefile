@@ -4,7 +4,7 @@ BIN = bin
 TST = tst
 
 CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g -O0
-CFLAGS += -DTRACE_ENABLED
+# CFLAGS += -DTRACE_ENABLED
 CC = g++ $(CFLAGS) -I$(INC)
 
 #-----------------------------OBJCS-----------------------------

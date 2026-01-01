@@ -126,7 +126,7 @@ struct L
         std::printf ("[%s] %s\n", prefix, s);
 
         // Find the line with the error
-        size_t lines = this->m_lines;
+        size_t lines = this->m_lines - 1;
         size_t line_begin = this->m_begin;
         size_t line_end = this->m_end;
 
@@ -161,7 +161,7 @@ struct L
         }
 
         // Print the error context
-        std::printf ("[%s line: %ld] \"%s\"\n", prefix, this->m_lines, msg.c_str ());
+        std::printf ("   %ld |   \033[31m%s\033[0m\n", this->m_lines, msg.c_str ());
         return;
       }
     }

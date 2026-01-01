@@ -84,7 +84,7 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "5 % - 3 + 1", 3 },
   { "5 % - - 3 + 1", 3 },
 #endif
-  { "s ( 1", 3 },
+  { "gui \n( 1", 3 },
 };
 }
 
@@ -102,7 +102,7 @@ run ()
     {
       LX::L l{ input, arena, 0, std::strlen (input) + 1 };
       result = l.run ();
-      l.m_events.dump_to_stdin ();
+      // l.m_events.dump_to_stdin ();
       l.generate_event_report ();
     }
   }
