@@ -1,11 +1,10 @@
 #include "LX.hpp"
 #include <cassert>
-#include <limits>
+#include <cstddef>
 #include <string>
 
 namespace LX
 {
-constexpr size_t TOKENIZER_FAILED = std::numeric_limits<size_t>::max ();
 namespace
 {
 
@@ -52,7 +51,6 @@ L::push_int ()
   auto trace = ER::Trace (this->m_arena, __FUNCTION__, this->m_events);
   int result = 0;
 
-  LX::L l = *this; // save lexer
   std::string s{
     this->m_input[this->m_cursor
                   - 1 /* since we entered this function, the point where we
@@ -83,7 +81,6 @@ L::push_int ()
   {
     // We parsed one char more, we need to go back one step
     this->m_cursor -= 1;
-    (void)l;
   }
 }
 
@@ -106,7 +103,7 @@ L::push_operator (char c)
   this->m_tokens.push (LX::T{ t_type });
 }
 
-void
+size_t
 L::run ()
 {
   auto trace = ER::Trace (this->m_arena, __FUNCTION__, this->m_events);
@@ -129,30 +126,21 @@ L::run ()
     break;
     case '(':
     {
-      LX::L new_l = *this;
+      size_t result = 0;
+
       size_t group_begin = this->m_cursor + 1;
-      size_t group_end = look_for_matching_parenthesis (
-                             *this, this->m_input, this->m_cursor)
-                         + 1;
+      size_t group_end = 0;
 
-      new_l.m_begin = group_begin;
-      new_l.m_end = group_end;
-      new_l.run ();
+      result = look_for_matching_parenthesis (
+          *this, this->m_input, this->m_cursor);
+      if (LX::TOKENIZER_FAILED == result) { return result; }
+      else { group_end = result + 1; }
 
-      LX::T token{ new_l.m_tokens };
+      LX::L new_l = LX::L (*this, group_begin, group_end);
+      result = new_l.run ();
 
-      this->m_tokens.push (token);
-      this->m_cursor = group_end;
-
-      for (size_t i = 0; i < new_l.m_events.m_len; ++i)
-      {
-        ER::E e = new_l.m_events[i];
-        char *e_new_m_data = (char *)e.clone (e.m_data);
-
-        ER::E new_e = e;
-        new_e.m_data = (void *)e_new_m_data;
-        this->m_events.push (new_e);
-      }
+      if (LX::TOKENIZER_FAILED != result) { this->subsume_sub_lexer (new_l); }
+      else { return result; }
     }
     break;
     case ')':
@@ -177,6 +165,8 @@ L::run ()
     break;
     }
   }
+
+  return this->m_cursor;
 }
 
 } // namespace LX

@@ -27,6 +27,18 @@ $(BIN)/LX.o: $(SRC)/LX.cpp $(INC)/LX.hpp $(BIN)/AR.o
 	$(CC) -c $< -o $@
 
 #-----------------------------TESTS-----------------------------
+tests = \
+	tst_mult
+
+TOBJS = \
+	$(BIN)/LX.o \
+	$(BIN)/AR.o
+
+$(BIN)/tst_mult: $(TST)/tst_mult.cpp $(TOBJS)
+	$(CC) -o $@ $^
+
+test: $(BIN)/tst_mult $(BIN)/main
+	@$(BIN)/tst_mult
 
 .PHONY: clean bear test init
 

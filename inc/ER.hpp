@@ -130,6 +130,7 @@ public:
       const char *prolog = epilog_s.c_str ();
       size_t prolog_len = epilog_s.size ();
       char *msg = new char[prolog_len];
+      std::memset(msg, 0, prolog_len + 1);
       std::memcpy (msg, prolog, prolog_len);
 
       ER::E e{};

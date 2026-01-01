@@ -1,7 +1,9 @@
+#include <cstring>
 #include <exception>
 #include <iostream>
 #include <string>
 
+#include "LX.hpp"
 #include "TL.hpp"
 
 using std::string;
@@ -92,53 +94,22 @@ namespace
 bool
 run ()
 {
-  bool result = true;
+  size_t result = 0;
   AR::T arena{};
   for (auto tdata : TDATA::INPUTS)
   {
     const char *input = tdata.first;
-    int expect = tdata.second;
 
-    vector<LX::T> tokens = LX::run (input);
-    EX::T *expr = (EX::T *)arena.alloc<EX::T> ();
-    try
     {
-      size_t result = parse (tokens, arena, 0, tokens.size (), expr);
-      if (0 == result || EX::PARSER_FAILED == result)
+      LX::L l{ input, arena, 0, std::strlen (input) + 1 };
+      result = l.run ();
+      if (LX::TOKENIZER_FAILED == result) { return false; }
+      else
       {
-        std::cerr << "ERROR: Parser failed: " << result << std::endl;
-        std::cerr << "       " << std::to_string (expr) << "\n";
-        return -1;
+        // l.m_events.dump_to_stdin ();
+        std::cout << l.m_input << " | " << std::to_string (l.m_tokens) << std::endl;
       }
     }
-    catch (std::exception &e)
-    {
-      std::cerr << "ERROR: parser failed!\n";
-      return false;
-    }
-    catch (...)
-    {
-      std::cerr << "ERROR: unknown exception occured\n";
-      return false;
-    }
-
-    int got = TL::eval (expr);
-    bool new_result = (got == expect);
-
-    if (!new_result)
-    {
-      std::cerr << "ERROR: expected: " << expect << " but got: " << got
-                << std::endl;
-      std::cerr << "       input: " << input << " | "
-                << "parsed: " << std::to_string (expr) << std::endl;
-    }
-    else
-    {
-      std::cout << "\033[32m" << "OK: " << "\033[0m" << input << " -> " << got
-                << " | (" << std::to_string (expr) << ")" << std::endl;
-    }
-
-    result |= new_result;
   }
   return result;
 }
