@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
+#include <iostream>
 #include <string>
 
 namespace LX
@@ -49,15 +50,17 @@ L::next_char ()
   return '\0';
 }
 
-void
+size_t
 L::push_int ()
 {
   auto trace = ER::Trace (this->m_arena, __PRETTY_FUNCTION__, this->m_events);
   int result = 0;
+  size_t cursor = this->m_cursor;
+  size_t lines = this->m_lines;
 
   std::string s{
     this->m_input[this->m_cursor
-                  - 1 /* since we entered this __PRETTY_FUNCTIONtion, the point
+                  - 1 /* since we entered this function, the point
                          where we need to start parsing is offset by 1 */
   ]
   };
@@ -78,8 +81,11 @@ L::push_int ()
   }
   catch (std::exception &e)
   {
-    this->m_events.push (ER::ErrorE{
-        __PRETTY_FUNCTION__, (void *)" could not parse integer" });
+    this->m_events.push (
+        ER::ErrorE{ __PRETTY_FUNCTION__, (void *)" could not parse integer" });
+    this->m_cursor = cursor;
+    this->m_lines = lines;
+    return TOKENIZER_FAILED;
   }
 
   if (this->m_input[this->m_cursor])
@@ -87,6 +93,8 @@ L::push_int ()
     // We parsed one char more, we need to go back one step
     this->m_cursor -= 1;
   }
+
+  return this->m_cursor;
 }
 
 void
@@ -135,6 +143,8 @@ L::run ()
       size_t group_begin = this->m_cursor + 1;
       size_t group_end = 0;
 
+      std::cout << "INFO " << this->m_cursor << std::endl;
+
       result = look_for_matching_parenthesis (
           *this, this->m_input, this->m_cursor);
       if (LX::TOKENIZER_FAILED == result)
@@ -174,7 +184,8 @@ L::run ()
     break;
     default:
     {
-      this->push_int ();
+      size_t result = this->push_int ();
+      if (TOKENIZER_FAILED == result) { return result; }
     }
     break;
     }

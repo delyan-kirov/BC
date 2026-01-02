@@ -126,7 +126,7 @@ struct L
         std::printf ("[%s] %s\n", prefix, s);
 
         // Find the line with the error
-        size_t lines = this->m_lines - 1;
+        size_t line = 1;
         size_t line_begin = this->m_begin;
         size_t line_end = this->m_end;
 
@@ -135,16 +135,14 @@ struct L
         {
           if (this->m_input[i] == '\n')
           {
-            if (--lines == 0)
-            {
-              line_begin = i + 1;
-              break;
-            }
+            line_begin = i + 1;
+            line += 1;
           }
+          if (i == this->m_cursor - 1) { break; }
         }
 
         // Locate the end of the line
-        for (size_t i = line_begin; i < this->m_end; ++i)
+        for (size_t i = line_begin + 1; i < this->m_end; ++i)
         {
           if (this->m_input[i] == '\n')
           {
@@ -159,9 +157,11 @@ struct L
         {
           msg += this->m_input[i];
         }
+        size_t offset = (this->m_cursor - line_begin) + 1;
 
         // Print the error context
-        std::printf ("   %ld |   \033[31m%s\033[0m\n", this->m_lines, msg.c_str ());
+        std::printf ("   %ld |   \033[1;37m%s\033[0m\n", line, msg.c_str ());
+        std::printf ("%*c\033[31m^\033[0m\n", (int)offset + 7, ' ');
         return;
       }
     }
@@ -188,7 +188,7 @@ struct L
 
   char next_char ();
 
-  void push_int ();
+  size_t push_int ();
 
   void push_operator (char c);
 

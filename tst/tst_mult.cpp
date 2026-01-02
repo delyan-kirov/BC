@@ -84,7 +84,7 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "5 % - 3 + 1", 3 },
   { "5 % - - 3 + 1", 3 },
 #endif
-  { "gui \n( 1", 3 },
+  { "\n\n\n(12 1s 32\n (3) 2123 \n\n234 4\n( 1 2 (3) \n4 5", 3 },
 };
 }
 
