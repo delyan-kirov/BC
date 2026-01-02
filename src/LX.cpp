@@ -1,10 +1,6 @@
 #include "LX.hpp"
 #include "ER.hpp"
 #include <cassert>
-#include <cstddef>
-#include <cstdlib>
-#include <iostream>
-#include <string>
 
 namespace LX
 {
@@ -142,8 +138,6 @@ L::run ()
 
       size_t group_begin = this->m_cursor + 1;
       size_t group_end = 0;
-
-      std::cout << "INFO " << this->m_cursor << std::endl;
 
       result = look_for_matching_parenthesis (
           *this, this->m_input, this->m_cursor);

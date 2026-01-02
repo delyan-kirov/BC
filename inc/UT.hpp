@@ -3,6 +3,7 @@
 
 #include "AR.hpp"
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
@@ -68,6 +69,92 @@ template <typename O> struct V
   }
 };
 
+class SB
+{
+  size_t m_len;
+  size_t m_max_len;
+  char *m_mem;
+
+public:
+  SB () : m_len{ 0 }
+  {
+    this->m_mem = new char[sizeof (char) * V_DEFAULT_MAX_LEN];
+    this->m_max_len = V_DEFAULT_MAX_LEN;
+    std::memset (this->m_mem, 0, this->m_max_len);
+  }
+
+  static const char *
+  strdup (const char *s)
+  {
+    SB sb{};
+    sb.concat (s);
+    return sb.collect ();
+  }
+
+  SB (const SB &) = delete;            // copy constructor
+  SB &operator= (const SB &) = delete; // copy assignment
+  SB (SB &&) = delete;                 // move constructor
+  SB &operator= (SB &&) = delete;      // move assignment
+
+  ~SB ()
+  {
+    if (this->m_mem)
+    {
+      delete[] this->m_mem;
+      this->m_mem = nullptr;
+    }
+  }
+
+  void
+  size_increase (size_t new_len)
+  {
+    size_t new_max_len = 2 * (this->m_max_len + new_len);
+    this->m_mem = (char *)std::realloc (this->m_mem, new_max_len);
+    this->m_max_len = new_max_len;
+    std::memset (this->m_mem + this->m_len, 0, this->m_max_len - this->m_len);
+  }
+
+  void
+  concat (const char *s)
+  {
+    size_t available_space = this->m_max_len - this->m_len;
+    size_t s_len = std::strlen (s);
+    if (available_space < s_len) { this->size_increase (s_len); }
+    std::strcat (this->m_mem, s);
+    this->m_len += s_len;
+  }
+
+  template <size_t N> // prevents decay
+  void
+  concat (char *array[N])
+  {
+    for (size_t i = 0; i < N; ++i)
+    {
+      this->concat (array[i]);
+    }
+  }
+
+  template <typename... Args> void concatf (const char *fmt, Args &&...args);
+
+  const char *
+  collect ()
+  {
+    const char *mem = this->m_mem;
+    this->m_mem = nullptr;
+    return mem;
+  }
+};
+
+template <typename... Args>
+void
+SB::concatf (const char *fmt, Args &&...args)
+{
+  char *buffer;
+  asprintf (&buffer, fmt, std::forward<Args> (args)...);
+  this->concat (buffer);
+  free (buffer);
+}
+
 class B : public V<char>
 {
 public:
@@ -124,7 +211,6 @@ public:
     return *this;
   }
 };
-
 }
 
 #endif // UT_HEADER

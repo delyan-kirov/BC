@@ -3,15 +3,13 @@
 
 #include "ER.hpp"
 #include "UT.hpp"
-#include <cstdio>
-#include <cstring>
 #include <limits>
-#include <string>
 
 namespace LX
 {
 
 constexpr size_t TOKENIZER_FAILED = std::numeric_limits<size_t>::max ();
+
 enum class Type
 {
   Unknown = 0,
@@ -162,7 +160,6 @@ struct L
         // Print the error context
         std::printf ("   %ld |   \033[1;37m%s\033[0m\n", line, msg.c_str ());
         std::printf ("%*c\033[31m^\033[0m\n", (int)offset + 7, ' ');
-        return;
       }
     }
   }

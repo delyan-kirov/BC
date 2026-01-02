@@ -10,7 +10,7 @@ using std::string;
 namespace TDATA
 {
 constexpr std::pair<const char *, int> INPUTS[] = {
-#if 0
+#if 1
   { "12 / 3 / 2 + 1", 3 },
   { "1 / 2", 0 },
   { "3 * 2 + 2 / 2", 7 },
@@ -85,6 +85,7 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "5 % - - 3 + 1", 3 },
 #endif
   { "\n\n\n(12 1s 32\n (3) 2123 \n\n234 4\n( 1 2 (3) \n4 5", 3 },
+  { "sock", 3 },
 };
 }
 
@@ -102,7 +103,7 @@ run ()
     {
       LX::L l{ input, arena, 0, std::strlen (input) + 1 };
       result = l.run ();
-      // l.m_events.dump_to_stdin ();
+      l.m_events.dump_to_stdin ();
       l.generate_event_report ();
     }
   }
