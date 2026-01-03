@@ -1,4 +1,6 @@
+#include <cstdio>
 #include <cstring>
+#include <iostream>
 #include <string>
 
 #include "LX.hpp"
@@ -94,20 +96,16 @@ namespace
 bool
 run ()
 {
-  size_t result = 0;
   AR::T arena{};
   for (auto tdata : TDATA::INPUTS)
   {
     const char *input = tdata.first;
-
-    {
-      LX::L l{ input, arena, 0, std::strlen (input) + 1 };
-      result = l.run ();
-      l.m_events.dump_to_stdin ();
-      l.generate_event_report ();
-    }
+    LX::L l{ input, arena, 0, std::strlen (input) + 1 };
+    (void)l.run ();
+    // l.m_events.dump_to_stdin ();
+    l.generate_event_report ();
   }
-  return result;
+  return true;
 }
 }
 

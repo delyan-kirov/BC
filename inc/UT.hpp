@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <utility>
 
 #if defined(__GNUC__) || defined(__clang__)
 #define UT_PRINTF_LIKE(fmt_idx, arg_idx)                                      \
@@ -109,13 +110,16 @@ public:
   size_increase (size_t new_len)
   {
     size_t new_max_len = 2 * (this->m_max_len + new_len);
-    this->m_mem = (char *)std::realloc (this->m_mem, new_max_len);
+    char *new_mem = new char[new_max_len];
+    std::memset (new_mem, 0, new_max_len);
+    std::strcpy (new_mem, this->m_mem);
+    delete[] this->m_mem;
+    this->m_mem = new_mem;
     this->m_max_len = new_max_len;
-    std::memset (this->m_mem + this->m_len, 0, this->m_max_len - this->m_len);
   }
 
   void
-  concat (const char *s)
+  add (const char *s)
   {
     size_t available_space = this->m_max_len - this->m_len;
     size_t s_len = std::strlen (s);
@@ -124,17 +128,9 @@ public:
     this->m_len += s_len;
   }
 
-  template <size_t N> // prevents decay
-  void
-  concat (char *array[N])
-  {
-    for (size_t i = 0; i < N; ++i)
-    {
-      this->concat (array[i]);
-    }
-  }
-
+  template <typename... Args> void concat (Args &&...args);
   template <typename... Args> void concatf (const char *fmt, Args &&...args);
+  template <typename... Args> void append (Args &&...args);
 
   const char *
   collect ()
@@ -153,6 +149,20 @@ SB::concatf (const char *fmt, Args &&...args)
   asprintf (&buffer, fmt, std::forward<Args> (args)...);
   this->concat (buffer);
   free (buffer);
+}
+
+template <typename... Args>
+void
+SB::concat (Args &&...args)
+{
+  (..., this->add (std::forward<Args> (args)));
+}
+
+template <typename... Args>
+void
+SB::append (Args &&...args)
+{
+  (..., this->concat (std::forward<Args> (args), " "));
 }
 
 class B : public V<char>
