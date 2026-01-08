@@ -1,3 +1,5 @@
+.PHONY: clean bear test init
+
 SRC = src
 INC = inc
 BIN = bin
@@ -6,41 +8,41 @@ TST = tst
 CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g -O0
 # CFLAGS += -DTRACE_ENABLED
 CC = g++ $(CFLAGS) -I$(INC)
+CFSO = -fPIC -shared
 
 #-----------------------------OBJCS-----------------------------
 
-OBJS = \
-	$(BIN)/main.o \
-	$(BIN)/LX.o \
-	$(BIN)/AR.o
+FrontEndSrc = \
+	$(SRC)/AR.cpp \
+	$(SRC)/LX.cpp \
+	$(SRC)/EX.cpp
 
-$(BIN)/main: $(OBJS)
-	$(CC) -o $@ $^
+FrontEndInc = \
+	$(INC)/AR.hpp \
+	$(INC)/LX.hpp \
+	$(INC)/UT.hpp \
+	$(INC)/ER.hpp \
+	$(INC)/EX.hpp
 
-$(BIN)/main.o: $(SRC)/main.cpp $(BIN)/LX.o
-	$(CC) -c $< -o $@
+FrontEnd = $(BIN)/frontEnd.so
 
-$(BIN)/AR.o: $(SRC)/AR.cpp $(INC)/AR.hpp
-	$(CC) -c $< -o $@
+$(BIN)/main: $(FrontEnd)
+	$(CC) $(SRC)/main.cpp -o $@ $^
 
-$(BIN)/LX.o: $(SRC)/LX.cpp $(INC)/LX.hpp $(BIN)/AR.o
-	$(CC) -c $< -o $@
+$(FrontEnd): $(FrontEndInc) $(FrontEndSrc)
+	$(CC) $(CFSO) $(FrontEndSrc) -o $@
 
 #-----------------------------TESTS-----------------------------
-tests = \
-	tst_mult
 
-TOBJS = \
-	$(BIN)/LX.o \
-	$(BIN)/AR.o
+$(BIN)/tst_mult: $(TST)/tst_mult.cpp $(BIN)/main
+	$(CC) $(FrontEnd) $(TST)/tst_mult.cpp -o $@
 
-$(BIN)/tst_mult: $(TST)/tst_mult.cpp $(TOBJS)
-	$(CC) -o $@ $^
-
-test: $(BIN)/tst_mult $(BIN)/main
+test: $(BIN)/tst_mult
 	@$(BIN)/tst_mult
 
-.PHONY: clean bear test init
+all:
+	make
+	make test
 
 init:
 	mkdir -p $(BIN)

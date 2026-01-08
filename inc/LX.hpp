@@ -3,13 +3,46 @@
 
 #include "ER.hpp"
 #include "UT.hpp"
-#include <limits>
 #include <stdio.h>
 
 namespace LX
 {
 
-constexpr size_t TOKENIZER_FAILED = std::numeric_limits<size_t>::max ();
+#define LX_ERROR_REPORT(LX_ERROR_E, LX_ERROR_MSG)                             \
+  do                                                                          \
+  {                                                                           \
+    this->m_events.push (                                                     \
+        LX::ErrorE{ __PRETTY_FUNCTION__, (LX_ERROR_MSG), (LX_ERROR_E) });     \
+    return (LX_ERROR_E);                                                      \
+  } while (false)
+
+enum class E
+{
+  MIN = (ssize_t)-1,
+  OK,
+  PARENTHESIS_UNBALANCED,
+  NUMBER_PARSING_FAILURE,
+  MAX,
+};
+
+struct ErrorE : public ER::E
+{
+  ErrorE (const char *fn_name, const char *data, LX::E error)
+      : E{
+          ER::Type::ERROR,     //
+          (void *)data,        //
+          ER::info_trace_fmt,  //
+          ER::info_trace_free, //
+          ER::info_trace_clone //
+        }
+  {
+    UT::SB sb{};
+    sb.concatf ("%16c%s %s", '-', fn_name, data);
+    char *msg = (char *)sb.collect ();
+    *(LX::E *)msg = error;
+    this->m_data = (void *)msg;
+  }
+};
 
 enum class Type
 {
@@ -33,7 +66,7 @@ struct T
   size_t m_cursor;
   union
   {
-    int m_int = 0;
+    ssize_t m_int = 0;
     Tokens m_tokens;
   } as;
 
@@ -46,8 +79,9 @@ struct T
   };
 };
 
-struct L
+class L
 {
+public:
   AR::T &m_arena;
   ER::T m_events;
   const char *m_input;
@@ -111,94 +145,44 @@ struct L
     }
   }
 
-  void
-  generate_event_report ()
-  {
-    ER::T events = this->m_events;
-    for (size_t i = 0; i < events.m_len; ++i)
-    {
-      ER::E e = events.m_mem[i];
-      if (ER::Type::ERROR == e.m_type)
-      {
-        char *s = e.fmt (e.m_data);
-        const char *prefix = "\033[31mERROR\033[0m";
-        std::printf ("[%s] %s\n", prefix, s);
+  void generate_event_report ();
 
-        // Find the line with the error
-        size_t line = 1;
-        size_t line_begin = this->m_begin;
-        size_t line_end = this->m_end;
+  void subsume_sub_lexer (L &l);
 
-        // Locate the start of the line
-        for (size_t i = this->m_begin; i < this->m_end; ++i)
-        {
-          if (this->m_input[i] == '\n')
-          {
-            line_begin = i + 1;
-            line += 1;
-          }
-          if (i == this->m_cursor - 1) { break; }
-        }
-
-        // Locate the end of the line
-        for (size_t i = line_begin + 1; i < this->m_end; ++i)
-        {
-          if (this->m_input[i] == '\n')
-          {
-            line_end = i;
-            break;
-          }
-        }
-
-        // Extract the line
-        std::string msg;
-        for (size_t i = line_begin; i < line_end; ++i)
-        {
-          msg += this->m_input[i];
-        }
-        size_t offset = (this->m_cursor - line_begin) + 1;
-
-        // Print the error context
-        std::printf ("   %ld |   \033[1;37m%s\033[0m\n", line, msg.c_str ());
-        std::printf ("%*c\033[31m^\033[0m\n", (int)offset + 7, ' ');
-
-        return;
-      }
-    }
-  }
-
-  void
-  subsume_sub_lexer (L &l)
-  {
-    LX::T token{ l.m_tokens };
-
-    this->m_tokens.push (token);
-    this->m_cursor = l.m_cursor;
-
-    for (size_t i = 0; i < l.m_events.m_len; ++i)
-    {
-      ER::E e = l.m_events[i];
-      char *e_new_m_data = (char *)e.clone (e.m_data);
-
-      ER::E new_e = e;
-      new_e.m_data = (void *)e_new_m_data;
-      this->m_events.push (new_e);
-    }
-  }
+  LX::E find_matching_paren (size_t &paren_match_idx);
 
   char next_char ();
 
-  size_t push_int ();
+  E push_int ();
 
   void push_operator (char c);
 
-  size_t run ();
+  E run ();
 };
 
 } // namespace LX
 
 namespace std
 {
+
+inline string
+to_string (LX::E e)
+{
+  switch (e)
+  {
+  case LX::E::MIN                   : return "MIN";
+  case LX::E::OK                    : return "OK";
+  case LX::E::PARENTHESIS_UNBALANCED: return "PARENTHESIS_UNBALANCED";
+  case LX::E::NUMBER_PARSING_FAILURE: return "NUMBER_PARSING_FAILURE";
+  case LX::E::MAX                   : return "MAX";
+  }
+
+  string s{ "ERROR: " };
+  s += (__FUNCTION__);
+  s += " UNREACHABLE PATH REACHED!";
+  return s;
+};
+
 inline string
 to_string (LX::Type t)
 {
@@ -216,7 +200,7 @@ to_string (LX::Type t)
 
   string s{ "ERROR: " };
   s += (__FUNCTION__);
-  s += " UNREACHABLE PATCH REACHED!";
+  s += " UNREACHABLE PATH REACHED!";
   return s;
 }
 
@@ -280,7 +264,6 @@ to_string (LX::Tokens ts)
   s += " ]";
   return s;
 }
-
 }
 
 #endif // LX_HEADER

@@ -1,37 +1,32 @@
 #include "LX.hpp"
 #include "ER.hpp"
 #include <cassert>
+#include <string>
 
 namespace LX
 {
-namespace
+LX::E
+LX::L::find_matching_paren (size_t &paren_match_idx)
 {
-
-size_t
-look_for_matching_parenthesis (LX::L &l, const char *input, size_t offset)
-{
-  auto trace = ER::Trace (l.m_arena, __PRETTY_FUNCTION__, l.m_events);
+  auto trace = ER::Trace (this->m_arena, __PRETTY_FUNCTION__, this->m_events);
   size_t stack = 1;
 
-  for (size_t idx = offset; input[idx]; ++idx)
+  for (size_t idx = this->m_cursor; this->m_input[idx]; ++idx)
   {
-    char c = input[idx];
+    char c = this->m_input[idx];
     if (')' == c) { stack -= 1; }
     else if ('(' == c) { stack += 1; }
     if (0 == stack)
     {
-      trace << "Found matching paren at: " << std::to_string (idx).c_str ()
-            << trace.end ();
-      return idx;
+      paren_match_idx = idx;
+      trace << "Found matching paren at: "
+            << std::to_string (this->m_cursor).c_str () << trace.end ();
+      return LX::E::OK;
     }
   }
 
-  l.m_events.push (ER::ErrorE{
-      __PRETTY_FUNCTION__, (void *)" could not find matching parenthesis" });
-  return TOKENIZER_FAILED;
+  LX_ERROR_REPORT (LX::E::PARENTHESIS_UNBALANCED, "");
 }
-
-} // namespace anonymous
 
 char
 L::next_char ()
@@ -46,7 +41,7 @@ L::next_char ()
   return '\0';
 }
 
-size_t
+LX::E
 L::push_int ()
 {
   auto trace = ER::Trace (this->m_arena, __PRETTY_FUNCTION__, this->m_events);
@@ -77,11 +72,9 @@ L::push_int ()
   }
   catch (std::exception &e)
   {
-    this->m_events.push (
-        ER::ErrorE{ __PRETTY_FUNCTION__, (void *)" could not parse integer" });
     this->m_cursor = cursor;
     this->m_lines = lines;
-    return TOKENIZER_FAILED;
+    LX_ERROR_REPORT (E::NUMBER_PARSING_FAILURE, "");
   }
 
   if (this->m_input[this->m_cursor])
@@ -90,7 +83,7 @@ L::push_int ()
     this->m_cursor -= 1;
   }
 
-  return this->m_cursor;
+  return LX::E::OK;
 }
 
 void
@@ -111,14 +104,14 @@ L::push_operator (char c)
   this->m_tokens.push (LX::T{ t_type });
 }
 
-size_t
+LX::E
 L::run ()
 {
   auto trace = ER::Trace (this->m_arena, __PRETTY_FUNCTION__, this->m_events);
 
-  for (char c = this->next_char ();       //
-       c && this->m_cursor < this->m_end; //
-       c = this->next_char ()             //
+  for (char c = this->next_char ();          //
+       c && (this->m_cursor <= this->m_end); //
+       c = this->next_char ()                //
   )
   {
     switch (c)
@@ -134,31 +127,22 @@ L::run ()
     break;
     case '(':
     {
-      size_t result = 0;
+      auto result = LX::E::OK;
 
       size_t group_begin = this->m_cursor + 1;
-      size_t group_end = 0;
+      size_t group_end = this->m_cursor + 1;
 
-      result = look_for_matching_parenthesis (
-          *this, this->m_input, this->m_cursor);
-      if (LX::TOKENIZER_FAILED == result)
+      result = this->find_matching_paren (group_end);
+      if (LX::E::OK != result)
       {
-        this->m_events.push (
-            ER::ErrorE{ __PRETTY_FUNCTION__, (void *)" function run failed" });
-        return result;
+        LX_ERROR_REPORT (result, "Function run failed");
       }
-      else { group_end = result + 1; }
 
       LX::L new_l = LX::L (*this, group_begin, group_end);
       result = new_l.run ();
 
-      if (LX::TOKENIZER_FAILED != result) { this->subsume_sub_lexer (new_l); }
-      else
-      {
-        this->m_events.push (
-            ER::ErrorE{ __PRETTY_FUNCTION__, (void *)" new_l failed" });
-        return result;
-      }
+      if (LX::E::OK == result) { this->subsume_sub_lexer (new_l); }
+      else { LX_ERROR_REPORT (result, "new_l failed"); }
     }
     break;
     case ')':
@@ -178,14 +162,87 @@ L::run ()
     break;
     default:
     {
-      size_t result = this->push_int ();
-      if (TOKENIZER_FAILED == result) { return result; }
+      LX::E result = this->push_int ();
+      if (LX::E::OK != result) { LX_ERROR_REPORT (result, ""); }
     }
     break;
     }
   }
 
-  return this->m_cursor;
+  return LX::E::OK;
 }
 
+void
+L::generate_event_report ()
+{
+  ER::T events = this->m_events;
+  for (size_t i = 0; i < events.m_len; ++i)
+  {
+    ER::E e = events.m_mem[i];
+    if (ER::Type::ERROR == e.m_type)
+    {
+      LX::E event = *(LX::E *)e.m_data;
+      const char *prefix = "\033[31mERROR\033[0m";
+      std::printf ("[%s] %s\n", prefix, std::to_string (event).c_str ());
+
+      // Find the line with the error
+      size_t line = 1;
+      size_t line_begin = this->m_begin;
+      size_t line_end = this->m_end;
+
+      // Locate the start of the line
+      for (size_t i = this->m_begin; i < this->m_end; ++i)
+      {
+        if (this->m_input[i] == '\n')
+        {
+          line_begin = i + 1;
+          line += 1;
+        }
+        if (i == this->m_cursor - 1) { break; }
+      }
+
+      // Locate the end of the line
+      for (size_t i = line_begin + 1; i < this->m_end; ++i)
+      {
+        if (this->m_input[i] == '\n')
+        {
+          line_end = i;
+          break;
+        }
+      }
+
+      // Extract the line
+      std::string msg;
+      for (size_t i = line_begin; i < line_end; ++i)
+      {
+        msg += this->m_input[i];
+      }
+      size_t offset = (this->m_cursor - line_begin) + 1;
+
+      // Print the error context
+      std::printf ("   %ld |   \033[1;37m%s\033[0m\n", line, msg.c_str ());
+      std::printf ("%*c\033[31m^\033[0m\n", (int)offset + 7, ' ');
+
+      return;
+    }
+  }
+}
+void
+L::subsume_sub_lexer (L &l)
+{
+  LX::T token{ l.m_tokens };
+
+  this->m_tokens.push (token);
+  this->m_cursor = l.m_cursor;
+
+  for (size_t i = 0; i < l.m_events.m_len; ++i)
+  {
+    ER::E e = l.m_events[i];
+    char *e_new_m_data = (char *)e.clone (e.m_data);
+
+    ER::E new_e = e;
+    new_e.m_data = (void *)e_new_m_data;
+    this->m_events.push (new_e);
+  }
+}
 } // namespace LX

@@ -1,286 +1,75 @@
 #include "EX.hpp"
-#include "AR.hpp"
 #include "LX.hpp"
+#include <cassert>
+#include <cstdlib>
 
 namespace EX
 {
-size_t parse (const Tokens &tokens, // in
-              AR::T &arena,         // in
-              size_t begin,         // in
-              size_t end,           // in
-              EX::T *expr           // out
-);
-
-namespace // EX UTILITIES
+EX::T
+Parser::alloc_subexpr (size_t n)
 {
+  EX::T expr{};
+  if (n) { expr.exprs = EX::Exprs{ this->m_arena, n }; }
 
-size_t
-parse_op (const Tokens &tokens,     // in
-          const LX::Groups &groups, // in
-          AR::T &arena,             // in
-          size_t idx,               // in
-          EX::Type op_type,         // in
-          EX::T *expr               // out
-)
+  return expr;
+};
+
+E
+Parser::run ()
 {
-  size_t result = 0;
+  E e{};
 
-  auto left = (EX::T *)arena.alloc<EX::T> ();
-  *left = *expr;
-  LX::Group group = groups[idx];
-
-  auto right = (EX::T *)arena.alloc<EX::T> ();
-  size_t right_begin = group.m_begin + 1;
-  size_t right_end = 0;
-
+  for (size_t i = this->m_begin; i < this->m_end;)
   {
-    size_t next_idx = idx + 1;
-    for (; next_idx < groups.size (); ++next_idx)
+    LX::T t = this->m_tokens[i];
+
+    switch (t.m_type)
     {
-      // TODO: we need to be much more suffisticated here
-      auto next_group = groups[next_idx];
-      if (LX::Type::ParL == next_group.m_type) { break; }
-      if (LX::Type::Int == next_group.m_type)
-      {
-        if (EX::Type::Add == op_type      //
-            || EX::Type::Minus == op_type //
-            || EX::Type::Sub == op_type   //
-        )
-        // Check if after that we have '*' '/' '%', cut more
-        {
-          size_t mult_group_idx = next_idx + 1;
-          if (mult_group_idx < groups.size ())
-          {
-            if (LX::Type::Mult == groups[mult_group_idx].m_type
-                || LX::Type::Div == groups[mult_group_idx].m_type
-                || LX::Type::Modulus == groups[mult_group_idx].m_type)
-            {
-              size_t int_or_par_group_idx = mult_group_idx + 1; // TODO: assert
-              next_idx = int_or_par_group_idx;
-              break;
-            }
-          }
-        }
-      }
-      if (LX::Type::Minus != next_group.m_type) { break; }
-    }
-    right_end = groups[next_idx].m_end + 1;
-  }
-
-  result = parse (tokens, arena, right_begin, right_end, right);
-
-  expr->m_type = op_type;
-  expr->m_left = left;
-  expr->m_right = right;
-
-  if (EX::Type::Minus == op_type) { expr->m_left = right; }
-  else { result = right_end; }
-
-  return result;
-}
-
-size_t
-next_group_idx (size_t idx, size_t result, LX::Groups &groups)
-{
-  size_t new_idx = idx + 1;
-  for (; new_idx < groups.size (); ++new_idx)
-  {
-    auto next_group = groups[new_idx];
-    if (next_group.m_end == result - 1) { break; }
-  }
-  return new_idx;
-}
-
-} // EX UTILITIES
-
-size_t
-parse (const Tokens &tokens, // in
-       AR::T &arena,         // in
-       size_t begin,         // in
-       size_t end,           // in
-       EX::T *expr           // out
-)
-{
-  size_t result = begin;
-
-  LX::Groups groups{};
-  if (!LX::group (tokens, begin, end, groups))
-  {
-    std::cerr << "ERROR: creation of groups failed." << std::endl;
-    return PARSER_FAILED;
-  }
-
-  for (size_t idx = 0; idx < groups.size (); ++idx)
-  {
-    LX::Group group = groups[idx];
-    switch (group.m_type)
-    {
-    case LX::Type::ParR:
-    case LX::Type::Unknown:
-    {
-      std::cerr << "ERROR: invalid token: " << std::to_string (group.m_type)
-                << std::endl;
-      return PARSER_FAILED;
-    }
     case LX::Type::Int:
     {
-      expr->m_type = EX::Type::Int;
-      expr->m_int = tokens[group.m_begin].m_int;
-      result += 1;
+      EX::T expr = this->alloc_subexpr (0);
+      expr.m_type = EX::Type::Int;
+      expr.m_int = t.as.m_int;
+      this->m_exprs.push (expr);
+
+      i += 1;
     }
-    break; // Int
-    case LX::Type::ParL:
-    {
-      result = group.m_begin + 1;
-      result = parse (tokens, arena, result, group.m_end, expr);
-      result = group.m_end;
-    }
-    break; // Group
+    break;
     case LX::Type::Mult:
     {
-      // We have the left, we need to check if it's valid
-      if (!expr || EX::Type::Unknown == expr->m_type)
-      {
-        std::cerr << "ERROR: expected the left expression to be valid, found: "
-                  << std::to_string (expr) << std::endl;
-        return PARSER_FAILED;
-      }
-      else
-      {
-        result = parse_op (tokens, groups, arena, idx, EX::Type::Mult, expr);
-        idx = next_group_idx (idx, result, groups);
-      }
+      EX::T root_expr = this->alloc_subexpr (2);
+      EX::T left = *this->m_exprs.last ();
+      root_expr.m_type = EX::Type::Mult;
+
+      EX::Parser new_parser{ *this, i + 1, i + 2 };
+      new_parser.run ();
+
+      EX::T right = *new_parser.m_exprs.last ();
+      root_expr.exprs[0] = left;
+      root_expr.exprs[1] = right;
+
+      *this->m_exprs.last () = root_expr;
+
+      i += 2;
     }
-    break; // Mult
-    case LX::Type::Div:
-    {
-      // We have the left, we need to check if it's valid
-      if (!expr || EX::Type::Unknown == expr->m_type)
-      {
-        std::cerr << "ERROR: expected the left expression to be valid, found: "
-                  << std::to_string (expr) << std::endl;
-        return PARSER_FAILED;
-      }
-      else
-      {
-        result = parse_op (tokens, groups, arena, idx, EX::Type::Div, expr);
-        idx = next_group_idx (idx, result, groups);
-      }
-    }
-    break; // Div
-    case LX::Type::Modulus:
-    {
-      // We have the left, we need to check if it's valid
-      if (!expr || EX::Type::Unknown == expr->m_type)
-      {
-        std::cerr << "ERROR: expected the left expression to be valid, found: "
-                  << std::to_string (expr) << std::endl;
-        return PARSER_FAILED;
-      }
-      else
-      {
-        result
-            = parse_op (tokens, groups, arena, idx, EX::Type::Modulus, expr);
-        idx = next_group_idx (idx, result, groups);
-      }
-    }
-    break; // Modulus
-    case LX::Type::Plus:
-    {
-      // We have the left, we need to check if it's valid
-      // We have the left, we need to check if it's valid
-      if (!expr || EX::Type::Unknown == expr->m_type)
-      {
-        std::cerr << "ERROR: expected the left expression to be valid, found: "
-                  << std::to_string (expr) << std::endl;
-        return PARSER_FAILED;
-      }
-      else
-      {
-        // TODO: Factor most of this out!!!
-        size_t mult_group_idx = idx + 2;
-        if (mult_group_idx < groups.size ())
-        {
-          // Need to check if the next group is (*)
-          LX::Group mult_group = groups[mult_group_idx];
-          if (LX::Type::Mult == mult_group.m_type       //
-              || LX::Type::Div == mult_group.m_type     //
-              || LX::Type::Modulus == mult_group.m_type //
-          )
-          {
-            // We should parse the multiplication first
-            LX::Group left_mult_group = groups[idx + 1];
-            LX::Group right_mult_group = groups[mult_group_idx + 1];
-
-            auto right = (EX::T *)arena.alloc<EX::T> ();
-
-            size_t next_expr_begin = left_mult_group.m_begin;
-            size_t next_expr_end = right_mult_group.m_end + 1;
-
-            result
-                = parse (tokens, arena, next_expr_begin, next_expr_end, right);
-
-            // Now we construct the final expression
-            auto left = (EX::T *)arena.alloc<EX::T> ();
-            // TODO: make a new helper function for this
-            left->m_left = expr->m_left;
-            left->m_right = expr->m_right;
-            left->m_type = expr->m_type;
-            left->m_int = expr->m_int;
-
-            expr->m_left = left;
-            expr->m_right = right;
-            expr->m_type = EX::Type::Add;
-
-            goto expression_addition_finished;
-          }
-        }
-        result = parse_op (tokens, groups, arena, idx, EX::Type::Add, expr);
-
-      expression_addition_finished:
-        idx = next_group_idx (idx, result, groups);
-      }
-    }
-    break; // Plus
+    break;
     case LX::Type::Minus:
     {
-      // We have the left, we need to check if it's valid
-      if (!expr)
-      {
-        std::cerr << "ERROR: expected the left expression to be valid, but "
-                     "nullptr found"
-                  << std::endl;
-        return PARSER_FAILED;
-      }
-      else
-      {
-        // TODO: perhaps a small helper could be good here
-        if (0 == idx
-            || (                                     //
-                EX::Type::Add != expr->m_type        //
-                && EX::Type::Sub != expr->m_type     //
-                && EX::Type::Int != expr->m_type     //
-                && EX::Type::Mult != expr->m_type    //
-                && EX::Type::Div != expr->m_type     //
-                && EX::Type::Modulus != expr->m_type //
-                )
-            || EX::Type::Unknown == expr->m_type)
-        {
-          result
-              = parse_op (tokens, groups, arena, idx, EX::Type::Minus, expr);
-        }
-        else
-        {
-          result = parse_op (tokens, groups, arena, idx, EX::Type::Sub, expr);
-        }
-        idx = next_group_idx (idx, result, groups);
-      }
+      EX::Parser new_parser{ *this, i + 1, i + 2 };
+      new_parser.run ();
+
+      EX::T expr = this->alloc_subexpr (1);
+      expr.m_type = EX::Type::Minus;
+      expr.exprs[0] = *new_parser.m_exprs.last ();
+
+      this->m_exprs.push (expr);
+      i += 2;
     }
-    break; // Minus
+    break;
+    default: break;
     }
-    // std::cout << std::to_string (expr) << std::endl;
   }
 
-  return result;
+  return e;
 }
 } // namespace EX

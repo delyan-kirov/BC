@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 
+#include "EX.hpp"
 #include "LX.hpp"
 
 using std::string;
@@ -12,7 +13,7 @@ using std::string;
 namespace TDATA
 {
 constexpr std::pair<const char *, int> INPUTS[] = {
-#if 1
+#if 0
   { "12 / 3 / 2 + 1", 3 },
   { "1 / 2", 0 },
   { "3 * 2 + 2 / 2", 7 },
@@ -81,13 +82,13 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "1 - 2 - (3 - (4 + (5 - (6 + (7 - (8 - (9 + (10 - (11 + 12)))))))))", 4 },
   { "3 * 5 * 3", 45 },
   { "5 % 3 + 1", 3 },
-  { "5 % (3 + 1)", 1 },
   { "3 % 2 % 6", 1 },
   { "5 % - 3 + 1", 3 },
   { "5 % - - 3 + 1", 3 },
-#endif
   { "\n\n\n(12 1s 32\n (3) 2123 \n\n234 4\n( 1 2 (3) \n4 5", 3 },
   { "sock", 3 },
+#endif
+  { "-5 * 1 * 2 * 4", 5 },
 };
 }
 
@@ -96,15 +97,18 @@ namespace
 bool
 run ()
 {
+
   AR::T arena{};
   for (auto tdata : TDATA::INPUTS)
   {
     const char *input = tdata.first;
-    LX::L l{ input, arena, 0, std::strlen (input) + 1 };
+    LX::L l{ input, arena, 0, std::strlen (input) };
     (void)l.run ();
-    // l.m_events.dump_to_stdin ();
-    l.generate_event_report ();
+    EX::Parser parser{ l };
+    parser.run ();
+    std::cout << std::to_string (*parser.m_exprs.last ()) << std::endl;
   }
+
   return true;
 }
 }

@@ -83,42 +83,25 @@ struct TraceE : public E
   }
 };
 
-struct ErrorE : public E
-{
-  ErrorE (void *data)
-      : E{
-          Type::ERROR,     //
-          data,            //
-          info_trace_fmt,  //
-          info_trace_free, //
-          info_trace_clone //
-        }
-  {
-    UT::SB sb{};
-    sb.concatf ("%s %s", data);
-    this->m_data = (void *)sb.collect ();
-  }
-  ErrorE (const char *fn_name, void *data)
-      : E{
-          Type::ERROR,     //
-          data,            //
-          info_trace_fmt,  //
-          info_trace_free, //
-          info_trace_clone //
-        }
-  {
-    UT::SB sb{};
-    sb.concatf ("%s %s", fn_name, data);
-    this->m_data = (void *)sb.collect ();
-  }
-};
-
 class T : public UT::V<E>
 {
 public:
   T (AR::T &arena) : UT::V<E>{ arena } {}
   T () = delete;
   ~T () = default;
+  T (const T &other) = default;
+  T (T &&other)
+  {
+    this->m_arena = other.m_arena;
+    this->m_len = other.m_len;
+    this->m_max_len = other.m_max_len;
+    this->m_mem = other.m_mem;
+
+    other.m_mem = nullptr;
+    other.m_len = 0;
+    other.m_max_len = 0;
+    other.m_arena = nullptr;
+  }
 
   using UT::V<E>::push;
   using UT::V<E>::operator[];

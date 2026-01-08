@@ -6,6 +6,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <initializer_list>
+#include <string>
 #include <utility>
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -15,11 +17,102 @@
 #define UT_PRINTF_LIKE(fmt_idx, arg_idx)
 #endif
 
-// TODO: string builder
 // TODO: `TODO` `UNREACHABLE` `ENUM UNREACHABLE` `ASSERT` `Views` macros
+
+#define UT_TODO(_TODO_MSG) UT::IMPL::todo (__PRETTY_FUNCTION__, _TODO_MSG)
 
 namespace UT
 {
+
+namespace IMPL
+{
+__attribute__ ((noreturn)) inline void
+todo (const char *fn_name, const char *msg)
+{
+  std::printf ("[TODO] %s: %s\n", fn_name, msg);
+  abort ();
+}
+
+__attribute__ ((noreturn)) inline void
+todo (const char *fn_name, std::string msg)
+{
+  std::printf ("[TODO] %s: %s\n", fn_name, msg.c_str ());
+  abort ();
+}
+
+__attribute__ ((noreturn)) inline void
+todo (const char *fn_name)
+{
+  std::printf ("[TODO] %s\n", fn_name);
+  abort ();
+}
+
+__attribute__ ((noreturn)) inline void
+assert (const char *fn_name, const char *msg)
+{
+  std::printf ("[ERROR] %s: %s\n", fn_name, msg);
+  abort ();
+}
+
+__attribute__ ((noreturn)) inline void
+assert (const char *fn_name)
+{
+  std::printf ("[ERROR] asserting failure %s\n", fn_name);
+  abort ();
+}
+
+__attribute__ ((noreturn)) inline void
+unreachable (const char *fn_name, const char *msg)
+{
+  std::printf ("[ERROR] UNREACHABLE BRANCH ENTERED (%s): %s\n", fn_name, msg);
+  abort ();
+}
+
+__attribute__ ((noreturn)) inline void
+unreachable (const char *fn_name, std::string msg)
+{
+  std::printf (
+      "[ERROR] UNREACHABLE BRANCH ENTERED (%s): %s\n", fn_name, msg.c_str ());
+  abort ();
+}
+
+__attribute__ ((noreturn)) inline void
+unreachable (const char *fn_name)
+{
+  std::printf ("[ERROR] UNREACHABLE BRANCH ENTERED (%s)\n", fn_name);
+  abort ();
+}
+
+__attribute__ ((noreturn)) inline void
+unreachable_enum (ssize_t enum_value, const char *fn_name, const char *msg)
+{
+  std::printf ("[ERROR] UNREACHABLE ENUM(%ld) BRANCH ENTERED (%s): %s\n",
+               enum_value,
+               fn_name,
+               msg);
+  abort ();
+}
+
+__attribute__ ((noreturn)) inline void
+unreachable_enum (ssize_t enum_value, const char *fn_name, std::string msg)
+{
+  std::printf ("[ERROR] UNREACHABLE ENUM(%ld) BRANCH ENTERED (%s): %s\n",
+               enum_value,
+               fn_name,
+               msg.c_str ());
+  abort ();
+}
+
+__attribute__ ((noreturn)) inline void
+unreachable_enum (ssize_t enum_value, const char *fn_name)
+{
+  std::printf ("[ERROR] UNREACHABLE ENUM(%ld) BRANCH ENTERED (%s)\n",
+               enum_value,
+               fn_name);
+  abort ();
+}
+
+} // namespace UT::IMPL
 
 constexpr size_t V_DEFAULT_MAX_LEN = 1 << 6;
 
@@ -32,6 +125,16 @@ template <typename O> struct V
 
   V () = default;
   ~V () = default;
+  V (const V &other) = default;
+  V &operator= (const V &) = default;
+
+  V (V &&other) : V{ other }
+  {
+    other.m_arena = nullptr;
+    other.m_len = 0;
+    other.m_max_len = 0;
+    other.m_mem = nullptr;
+  }
 
   V (AR::T &arena, size_t len = 0)
       : m_len{ 0 }, m_max_len{ V_DEFAULT_MAX_LEN }, m_arena{ &arena }
@@ -40,17 +143,60 @@ template <typename O> struct V
     this->m_mem = (O *)arena.alloc<O> (alloc_len);
   };
 
+  V (std::initializer_list<size_t> lst)
+      : m_arena{ 0 }, m_len{ 0 }, m_max_len{ 0 }, m_mem{ 0 }
+  {
+    (void)lst;
+  };
+
+  V (AR::T &arena, std::initializer_list<O> lst)
+      : m_arena{ 0 }, m_len{ 0 }, m_max_len{ V_DEFAULT_MAX_LEN }, m_mem{ 0 }
+  {
+    this->m_mem = (O *)arena.alloc<O> (this->m_max_len);
+    for (const O &o : lst)
+    {
+      this->push (o);
+    }
+  };
+
+  const O *
+  begin () const
+  {
+    return this->m_mem;
+  };
+  const O *
+  end () const
+  {
+    return this->m_mem + this->m_len;
+  };
+  O *
+  begin ()
+  {
+    return this->m_mem;
+  };
+  O *
+  end ()
+  {
+    return this->m_mem + this->m_len;
+  };
+
+  O *
+  last ()
+  {
+    return this->m_mem + (this->m_len - 1);
+  };
+
   O &
   operator[] (size_t i)
   { // for writing
     return this->m_mem[i];
-  }
+  };
 
   const O &
   operator[] (size_t i) const
   { // for reading from const objects
     return this->m_mem[i];
-  }
+  };
 
   void
   push (O o)
@@ -60,14 +206,14 @@ template <typename O> struct V
       // We need more space
       O *new_mem
           = (O *)this->m_arena->alloc (sizeof (O) * 2 * this->m_max_len);
-      std::memcpy (new_mem, this->m_mem, sizeof (O) * this->m_len);
+      std::memcpy ((void *)new_mem, this->m_mem, sizeof (O) * this->m_len);
 
       this->m_mem = new_mem;
       this->m_max_len *= 2;
     }
     this->m_mem[this->m_len] = o;
     this->m_len += 1;
-  }
+  };
 };
 
 class SB
@@ -107,7 +253,7 @@ public:
   }
 
   void
-  size_increase (size_t new_len)
+  resize (size_t new_len)
   {
     size_t new_max_len = 2 * (this->m_max_len + new_len);
     char *new_mem = new char[new_max_len];
@@ -123,7 +269,7 @@ public:
   {
     size_t available_space = this->m_max_len - this->m_len;
     size_t s_len = std::strlen (s);
-    if (available_space < s_len) { this->size_increase (s_len); }
+    if (available_space < s_len) { this->resize (s_len); }
     std::strcat (this->m_mem, s);
     this->m_len += s_len;
   }

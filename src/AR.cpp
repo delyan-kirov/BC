@@ -36,6 +36,7 @@ AR::T::~T ()
 void *
 AR::T::alloc (size_t size)
 {
+  if (!size) { return nullptr; }
 now_allocate:
   Block *block = this->mem[this->len - 1];
   size_t size_of_ptr = sizeof (void *);
