@@ -8,10 +8,10 @@ namespace AR
 {
 constexpr size_t BLOCK_DEFAULT_LEN = (1 << 10);
 
-class T;
+class Arena;
 class Block
 {
-  friend class T;
+  friend class Arena;
 
 private:
   size_t len;
@@ -28,7 +28,7 @@ private:
   Block &operator= (Block &&) = delete;
 };
 
-class T
+class Arena
 {
 public:
   void *alloc (size_t size);
@@ -54,8 +54,8 @@ public:
     return alloc (sizeof (t));
   }
 
-  T ();
-  ~T ();
+  Arena ();
+  ~Arena ();
 
 private:
   size_t len;

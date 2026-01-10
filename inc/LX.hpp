@@ -56,10 +56,10 @@ enum class Type
   Group,
 };
 
-struct T;
-using Tokens = UT::V<T>;
+struct Token;
+using Tokens = UT::Vec<Token>;
 
-struct T
+struct Token
 {
   Type m_type;
   size_t m_line;
@@ -70,20 +70,20 @@ struct T
     Tokens m_tokens;
   } as;
 
-  T () = default;
-  ~T () = default;
-  T (Type t) : m_type{ t }, m_line{ 0 }, m_cursor{ 0 }, as{} {};
-  T (Tokens tokens) : m_type{ Type::Group }, m_line{ 0 }, m_cursor{ 0 }
+  Token () = default;
+  ~Token () = default;
+  Token (Type t) : m_type{ t }, m_line{ 0 }, m_cursor{ 0 }, as{} {};
+  Token (Tokens tokens) : m_type{ Type::Group }, m_line{ 0 }, m_cursor{ 0 }
   {
     new (&as.m_tokens) Tokens (tokens); // NOTE: placement new
   };
 };
 
-class L
+class Lexer
 {
 public:
-  AR::T &m_arena;
-  ER::T m_events;
+  AR::Arena &m_arena;
+  ER::Events m_events;
   const char *m_input;
   Tokens m_tokens;
   size_t m_lines;
@@ -91,7 +91,7 @@ public:
   size_t m_begin;
   size_t m_end;
 
-  L (const char *const input, AR::T &arena, size_t begin, size_t end)
+  Lexer (const char *const input, AR::Arena &arena, size_t begin, size_t end)
       : m_arena{ arena },           //
         m_events{ arena },          //
         m_input{ input },           //
@@ -103,7 +103,7 @@ public:
   {
   }
 
-  L (L const &l)
+  Lexer (Lexer const &l)
       : m_arena (l.m_arena),   //
         m_events (l.m_events), //
         m_input{ l.m_input },  //
@@ -124,7 +124,7 @@ public:
     }
   };
 
-  L (L const &l, size_t begin, size_t end)
+  Lexer (Lexer const &l, size_t begin, size_t end)
       : m_arena{ l.m_arena }, m_events (l.m_arena)
   {
     this->m_begin = l.m_begin;
@@ -136,7 +136,7 @@ public:
     new (&this->m_tokens) Tokens{ l.m_arena };
   }
 
-  ~L ()
+  ~Lexer ()
   {
     for (size_t i = 0; i < this->m_events.m_len; ++i)
     {
@@ -147,7 +147,7 @@ public:
 
   void generate_event_report ();
 
-  void subsume_sub_lexer (L &l);
+  void subsume_sub_lexer (Lexer &l);
 
   LX::E find_matching_paren (size_t &paren_match_idx);
 
@@ -206,7 +206,7 @@ to_string (LX::Type t)
 
 inline string to_string (LX::Tokens ts);
 inline string
-to_string (LX::T t)
+to_string (LX::Token t)
 {
   switch (t.m_type)
   {
@@ -250,7 +250,7 @@ to_string (LX::Tokens ts)
   string s{ "[ " };
   for (size_t i = 0; i < ts.m_len; ++i)
   {
-    LX::T t = ts[i];
+    LX::Token t = ts[i];
     if (LX::Type::Group == t.m_type)
     {
       s += to_string ((LX::Tokens)t.as.m_tokens); //

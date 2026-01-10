@@ -83,14 +83,14 @@ struct TraceE : public E
   }
 };
 
-class T : public UT::V<E>
+class Events : public UT::Vec<E>
 {
 public:
-  T (AR::T &arena) : UT::V<E>{ arena } {}
-  T () = delete;
-  ~T () = default;
-  T (const T &other) = default;
-  T (T &&other)
+  Events (AR::Arena &arena) : UT::Vec<E>{ arena } {}
+  Events () = delete;
+  ~Events () = default;
+  Events (const Events &other) = default;
+  Events (Events &&other)
   {
     this->m_arena = other.m_arena;
     this->m_len = other.m_len;
@@ -103,8 +103,8 @@ public:
     other.m_arena = nullptr;
   }
 
-  using UT::V<E>::push;
-  using UT::V<E>::operator[];
+  using UT::Vec<E>::push;
+  using UT::Vec<E>::operator[];
 
   void
   dump_to_stdin ()
@@ -127,15 +127,15 @@ public:
   // void trace (E e, const char *fmt, ...) UT_PRINTF_LIKE (3, 4);
 };
 
-class Trace : public UT::B
+class Trace : public UT::Block
 {
 public:
   // TODO: support format
   const char *m_fn_name;
-  T &m_event_log;
+  Events &m_event_log;
 
-  Trace (AR::T &arena, const char *fn_name, T &event_log)
-      : UT::B{ arena, std::strlen (fn_name) + 2 * UT::V_DEFAULT_MAX_LEN }, //
+  Trace (AR::Arena &arena, const char *fn_name, Events &event_log)
+      : UT::Block{ arena, std::strlen (fn_name) + 2 * UT::V_DEFAULT_MAX_LEN }, //
         m_fn_name{ fn_name },                                              //
         m_event_log{ event_log }                                           //
   {
@@ -164,7 +164,7 @@ public:
     }
   }
 
-  B &
+  Block &
   operator<< (const char *s)
   {
     if (TRACE_ENABLE)

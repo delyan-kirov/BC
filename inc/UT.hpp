@@ -17,120 +17,131 @@
 #define UT_PRINTF_LIKE(fmt_idx, arg_idx)
 #endif
 
-// TODO: `TODO` `UNREACHABLE` `ENUM UNREACHABLE` `ASSERT` `Views` macros
+#define UT_TODO(TODO_MSG)                                                     \
+  UT::IMPL::assertion (__PRETTY_FUNCTION__, "TODO", #TODO_MSG)
 
-#define UT_TODO(TODO_MSG) UT::IMPL::todo (__PRETTY_FUNCTION__, TODO_MSG)
-#define UT_ASSERT(ASSERT_MSG)                                                 \
-  UT::IMPL::assert (__PRETTY_FUNCTION__, ASSERT_MSG)
+#define UT_ASSERT(CONDITION)                                                  \
+  do                                                                          \
+  {                                                                           \
+    if (CONDITION)                                                            \
+    {                                                                         \
+      UT::IMPL::assertion (__PRETTY_FUNCTION__, "ERROR", #CONDITION);         \
+    }                                                                         \
+  } while (false)
 
 namespace UT
 {
 
 namespace IMPL
 {
-__attribute__ ((noreturn)) inline void
-todo (const char *fn_name, const char *msg)
-{
-  std::printf ("[TODO] %s: %s\n", fn_name, msg);
-  abort ();
-}
 
-__attribute__ ((noreturn)) inline void
-todo (const char *fn_name, std::string msg)
+inline void
+abort ()
 {
-  std::printf ("[TODO] %s: %s\n", fn_name, msg.c_str ());
-  abort ();
-}
+#if defined(_MSC_VER)
+  std::abort ();
+#elif defined(__x86_64__) || defined(_M_X64) || defined(__i386__)             \
+    || defined(_M_IX86)
+  asm ("int3");
+#else
+  std::abort ();
+#endif
+};
 
-__attribute__ ((noreturn)) inline void
-todo (const char *fn_name)
+inline void
+assertion (const char *fn_name, const char *prefix, const char *msg)
 {
-  std::printf ("[TODO] %s\n", fn_name);
-  abort ();
-}
-
-__attribute__ ((noreturn)) inline void
-assert (const char *fn_name, const char *msg)
-{
-  std::printf ("[ERROR] %s: %s\n", fn_name, msg);
-  abort ();
-}
-
-__attribute__ ((noreturn)) inline void
-assert (const char *fn_name)
-{
-  std::printf ("[ERROR] asserting failure %s\n", fn_name);
-  abort ();
-}
-
-__attribute__ ((noreturn)) inline void
-unreachable (const char *fn_name, const char *msg)
-{
-  std::printf ("[ERROR] UNREACHABLE BRANCH ENTERED (%s): %s\n", fn_name, msg);
-  abort ();
-}
-
-__attribute__ ((noreturn)) inline void
-unreachable (const char *fn_name, std::string msg)
-{
-  std::printf (
-      "[ERROR] UNREACHABLE BRANCH ENTERED (%s): %s\n", fn_name, msg.c_str ());
-  abort ();
-}
-
-__attribute__ ((noreturn)) inline void
-unreachable (const char *fn_name)
-{
-  std::printf ("[ERROR] UNREACHABLE BRANCH ENTERED (%s)\n", fn_name);
-  abort ();
-}
-
-__attribute__ ((noreturn)) inline void
-unreachable_enum (ssize_t enum_value, const char *fn_name, const char *msg)
-{
-  std::printf ("[ERROR] UNREACHABLE ENUM(%ld) BRANCH ENTERED (%s): %s\n",
-               enum_value,
-               fn_name,
-               msg);
-  abort ();
-}
-
-__attribute__ ((noreturn)) inline void
-unreachable_enum (ssize_t enum_value, const char *fn_name, std::string msg)
-{
-  std::printf ("[ERROR] UNREACHABLE ENUM(%ld) BRANCH ENTERED (%s): %s\n",
-               enum_value,
-               fn_name,
-               msg.c_str ());
-  abort ();
-}
-
-__attribute__ ((noreturn)) inline void
-unreachable_enum (ssize_t enum_value, const char *fn_name)
-{
-  std::printf ("[ERROR] UNREACHABLE ENUM(%ld) BRANCH ENTERED (%s)\n",
-               enum_value,
-               fn_name);
-  abort ();
+  if (msg)
+  {
+    std::printf ("[%s] %s: %s\n", prefix, fn_name, msg);
+    UT::IMPL::abort ();
+  }
 }
 
 } // namespace UT::IMPL
 
 constexpr size_t V_DEFAULT_MAX_LEN = 1 << 6;
 
-template <typename O> struct V
+template <typename O> struct Vu
+{
+  size_t m_len;
+  O *m_mem;
+
+  Vu (O *o, size_t len) : m_len{ len }, m_mem{ o } {};
+
+  Vu (const char *s) : m_mem{ s }
+  {
+    if (s) { this->m_len = std::strlen (s); }
+    else { UT_ASSERT ("Provided string is null"); }
+  };
+
+  Vu (std::string s) : m_mem{ s.c_str () } { this->m_len = s.size (); }
+
+  bool
+  is_empty ()
+  {
+    return 0 == m_len;
+  };
+
+  O *
+  get ()
+  {
+    return this->m_mem;
+  };
+
+  O &
+  operator[] (size_t i)
+  { // for writing
+    return this->m_mem[i];
+  };
+
+  const O &
+  operator[] (size_t i) const
+  { // for reading from const objects
+    return this->m_mem[i];
+  };
+
+  const O *
+  begin () const
+  {
+    return this->m_mem;
+  };
+  const O *
+  end () const
+  {
+    return this->m_mem + this->m_len;
+  };
+  O *
+  begin ()
+  {
+    return this->m_mem;
+  };
+  O *
+  end ()
+  {
+    return this->m_mem + this->m_len;
+  };
+
+  O *
+  last ()
+  {
+    return this->m_mem + (this->m_len - 1);
+  };
+};
+
+template <typename O> struct Vec
 {
   size_t m_len;
   size_t m_max_len;
   O *m_mem;
-  AR::T *m_arena;
+  AR::Arena *m_arena;
 
-  V () = default;
-  ~V () = default;
-  V (const V &other) = default;
-  V &operator= (const V &) = default;
+  Vec () = default;
+  ~Vec () = default;
+  Vec (const Vec &other) = default;
+  Vec &operator= (const Vec &) = default;
 
-  V (V &&other) : V{ other }
+  Vec (Vec &&other) : Vec{ other }
   {
     other.m_arena = nullptr;
     other.m_len = 0;
@@ -138,20 +149,20 @@ template <typename O> struct V
     other.m_mem = nullptr;
   }
 
-  V (AR::T &arena, size_t len = 0)
+  Vec (AR::Arena &arena, size_t len = 0)
       : m_len{ 0 }, m_max_len{ V_DEFAULT_MAX_LEN }, m_arena{ &arena }
   {
     size_t alloc_len = (0 == len) ? V_DEFAULT_MAX_LEN : len;
     this->m_mem = (O *)arena.alloc<O> (alloc_len);
   };
 
-  V (std::initializer_list<size_t> lst)
+  Vec (std::initializer_list<size_t> lst)
       : m_arena{ 0 }, m_len{ 0 }, m_max_len{ 0 }, m_mem{ 0 }
   {
     (void)lst;
   };
 
-  V (AR::T &arena, std::initializer_list<O> lst)
+  Vec (AR::Arena &arena, std::initializer_list<O> lst)
       : m_arena{ 0 }, m_len{ 0 }, m_max_len{ V_DEFAULT_MAX_LEN }, m_mem{ 0 }
   {
     this->m_mem = (O *)arena.alloc<O> (this->m_max_len);
@@ -302,7 +313,7 @@ SB::concatf (const char *fmt, Args &&...args)
   char *buffer;
   asprintf (&buffer, fmt, std::forward<Args> (args)...);
   this->concat (buffer);
-  free (buffer);
+  std::free (buffer);
 }
 
 template <typename... Args>
@@ -319,12 +330,12 @@ SB::append (Args &&...args)
   (..., this->concat (std::forward<Args> (args), " "));
 }
 
-class B : public V<char>
+class Block : public Vec<char>
 {
 public:
-  B () = delete;
+  Block () = delete;
 
-  B (AR::T &arena, size_t size)
+  Block (AR::Arena &arena, size_t size)
   {
     this->m_arena = &arena;
     this->m_len = 0;
@@ -333,9 +344,9 @@ public:
     std::memset (this->m_mem, 0, this->m_max_len);
   }
 
-  B (AR::T &arena) : B{ arena, V_DEFAULT_MAX_LEN } {}
+  Block (AR::Arena &arena) : Block{ arena, V_DEFAULT_MAX_LEN } {}
 
-  using V<char>::push;
+  using Vec<char>::push;
   void
   push (const char *s)
   {
@@ -356,14 +367,14 @@ public:
     this->m_len += s_len;
   }
 
-  B &
+  Block &
   operator<< (char c)
   {
     this->push (c);
     return *this;
   }
 
-  B &
+  Block &
   operator<< (const char *s)
   {
     while (*s)

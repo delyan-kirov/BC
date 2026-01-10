@@ -6,7 +6,7 @@
 namespace LX
 {
 LX::E
-LX::L::find_matching_paren (size_t &paren_match_idx)
+LX::Lexer::find_matching_paren (size_t &paren_match_idx)
 {
   auto trace = ER::Trace (this->m_arena, __PRETTY_FUNCTION__, this->m_events);
   size_t stack = 1;
@@ -29,7 +29,7 @@ LX::L::find_matching_paren (size_t &paren_match_idx)
 }
 
 char
-L::next_char ()
+Lexer::next_char ()
 {
   if (this->m_input[this->m_cursor])
   {
@@ -42,7 +42,7 @@ L::next_char ()
 }
 
 LX::E
-L::push_int ()
+Lexer::push_int ()
 {
   auto trace = ER::Trace (this->m_arena, __PRETTY_FUNCTION__, this->m_events);
   int result = 0;
@@ -66,7 +66,7 @@ L::push_int ()
   {
     result = std::stoi (s.c_str (), nullptr, 10);
 
-    LX::T t{ LX::Type::Int };
+    LX::Token t{ LX::Type::Int };
     t.as.m_int = result;
     this->m_tokens.push (t);
   }
@@ -87,7 +87,7 @@ L::push_int ()
 }
 
 void
-L::push_operator (char c)
+Lexer::push_operator (char c)
 {
   auto trace = ER::Trace (this->m_arena, __PRETTY_FUNCTION__, this->m_events);
 
@@ -101,11 +101,11 @@ L::push_operator (char c)
   case '%': t_type = LX::Type::Modulus; break;
   default : /* UNREACHABLE */ assert (false && "push_operator");
   }
-  this->m_tokens.push (LX::T{ t_type });
+  this->m_tokens.push (LX::Token{ t_type });
 }
 
 LX::E
-L::run ()
+Lexer::run ()
 {
   auto trace = ER::Trace (this->m_arena, __PRETTY_FUNCTION__, this->m_events);
 
@@ -138,7 +138,7 @@ L::run ()
         LX_ERROR_REPORT (result, "Function run failed");
       }
 
-      LX::L new_l = LX::L (*this, group_begin, group_end);
+      LX::Lexer new_l = LX::Lexer (*this, group_begin, group_end);
       result = new_l.run ();
 
       if (LX::E::OK == result) { this->subsume_sub_lexer (new_l); }
@@ -173,9 +173,9 @@ L::run ()
 }
 
 void
-L::generate_event_report ()
+Lexer::generate_event_report ()
 {
-  ER::T events = this->m_events;
+  ER::Events events = this->m_events;
   for (size_t i = 0; i < events.m_len; ++i)
   {
     ER::E e = events.m_mem[i];
@@ -228,9 +228,9 @@ L::generate_event_report ()
   }
 }
 void
-L::subsume_sub_lexer (L &l)
+Lexer::subsume_sub_lexer (Lexer &l)
 {
-  LX::T token{ l.m_tokens };
+  LX::Token token{ l.m_tokens };
 
   this->m_tokens.push (token);
   this->m_cursor = l.m_cursor;

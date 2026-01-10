@@ -77,18 +77,18 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "(1 + 2) - (3 + (4 - 5))", 1 },
   { "((1 + 2) - 3) + (4 - 5)", -1 },
   { "0 - (0 - (0 - (0 - 1)))", 1 },
-  { "1 - 2 - (3 - (4 + (5 - (6 + (7 - (8 - (9 + (10 - (11 + 12)))))))))", 4 },
   { "5 % 3 + 1", 3 },
   { "3 % 2 % 6", 1 },
   { "5 % - 3 + 1", 3 },
   { "5 % - - 3 + 1", 3 },
   { "\n\n\n(12 1s 32\n (3) 2123 \n\n234 4\n( 1 2 (3) \n4 5", 3 },
   { "sock", 3 },
+#endif
+  { "1 - 2 - (3 - (4 + (5 - (6 + (7 - (8 - (9 + (10 - (11 + 12)))))))))", 4 },
   { "-2", -2 },
   { "3 * 5 * 3", 45 },
   { "-1 - 2 * 3 + 3", 5 },
-#endif
-  { "-1 + (1 + (1 * 1))", 3 },
+  { "-1 + (1 + 1) * 1)", 3 },
 };
 }
 
@@ -98,11 +98,11 @@ bool
 run ()
 {
 
-  AR::T arena{};
+  AR::Arena arena{};
   for (auto tdata : TDATA::INPUTS)
   {
     const char *input = tdata.first;
-    LX::L l{ input, arena, 0, std::strlen (input) };
+    LX::Lexer l{ input, arena, 0, std::strlen (input) };
     (void)l.run ();
     EX::Parser parser{ l };
     parser.run ();

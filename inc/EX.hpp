@@ -27,9 +27,9 @@ enum class Type
   Modulus,
 };
 
-struct T;
-using Exprs = UT::V<T>;
-struct T
+struct Expr;
+using Exprs = UT::Vec<Expr>;
+struct Expr
 {
   Exprs exprs;
   ssize_t m_int;
@@ -39,15 +39,15 @@ struct T
 class Parser
 {
 public:
-  AR::T &m_arena;
-  ER::T m_events;
+  AR::Arena &m_arena;
+  ER::Events m_events;
   const char *m_input;
   const LX::Tokens m_tokens;
   size_t m_begin;
   size_t m_end;
   Exprs m_exprs;
 
-  Parser (LX::L l)
+  Parser (LX::Lexer l)
       : m_arena{ l.m_arena },               //
         m_events{ std::move (l.m_events) }, //
         m_input{ l.m_input },               //
@@ -81,7 +81,7 @@ public:
 
   E run ();
 
-  EX::T alloc_subexpr (size_t n);
+  EX::Expr alloc_subexpr (size_t n);
 
   E parse_binop (EX::Type type, size_t start, size_t end);
 
@@ -112,10 +112,10 @@ to_string (EX::Type expr_type)
   }
 }
 
-inline string to_string (EX::T *expr);
+inline string to_string (EX::Expr *expr);
 
 inline string
-to_string (EX::T expr)
+to_string (EX::Expr expr)
 {
   string s{ "" };
 

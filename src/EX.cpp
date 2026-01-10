@@ -1,15 +1,16 @@
 #include "EX.hpp"
 #include "LX.hpp"
+#include "UT.hpp"
 #include <cassert>
 #include <cstdlib>
 
 namespace EX
 {
 
-EX::T
+EX::Expr
 Parser::alloc_subexpr (size_t n)
 {
-  EX::T expr{};
+  EX::Expr expr{};
   if (n) { expr.exprs = EX::Exprs{ this->m_arena, n }; }
 
   return expr;
@@ -20,14 +21,14 @@ Parser::parse_binop (EX::Type type, size_t start, size_t end)
 {
   E result = E::OK;
 
-  EX::T root_expr = this->alloc_subexpr (2);
-  EX::T left = *this->m_exprs.last ();
+  EX::Expr root_expr = this->alloc_subexpr (2);
+  EX::Expr left = *this->m_exprs.last ();
   root_expr.m_type = type;
 
   EX::Parser new_parser{ *this, start, end };
   result = new_parser.run ();
 
-  EX::T right = *new_parser.m_exprs.last ();
+  EX::Expr right = *new_parser.m_exprs.last ();
   root_expr.exprs[0] = left;
   root_expr.exprs[1] = right;
 
@@ -43,13 +44,13 @@ Parser::run ()
 
   for (size_t i = this->m_begin; i < this->m_end;)
   {
-    LX::T t = this->m_tokens[i];
+    LX::Token t = this->m_tokens[i];
 
     switch (t.m_type)
     {
     case LX::Type::Int:
     {
-      EX::T expr = this->alloc_subexpr (0);
+      EX::Expr expr = this->alloc_subexpr (0);
       expr.m_type = EX::Type::Int;
       expr.m_int = t.as.m_int;
       this->m_exprs.push (expr);
@@ -110,7 +111,7 @@ Parser::run ()
         EX::Parser new_parser{ *this, i + 1, i + 2 };
         new_parser.run ();
 
-        EX::T expr = this->alloc_subexpr (1);
+        EX::Expr expr = this->alloc_subexpr (1);
         expr.m_type = EX::Type::Minus;
         expr.exprs[0] = *new_parser.m_exprs.last ();
 
@@ -119,7 +120,8 @@ Parser::run ()
       }
       else // Binary minus
       {
-        if (this->match_token_type (LX::Type::Int, i + 1))
+        if (this->match_token_type (LX::Type::Int, i + 1)
+            || this->match_token_type (LX::Type::Group, i + 1))
         {
           if (this->match_token_type (LX::Type::Mult, i + 2))
           {
@@ -132,7 +134,10 @@ Parser::run ()
             i += 2;
           }
         }
-        else { asm ("int3"); }
+        else
+        {
+          UT_ASSERT ("Reached unreachable branch"); //
+        }
       }
     }
     break;

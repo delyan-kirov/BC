@@ -6,7 +6,7 @@ namespace AR
 {
 constexpr size_t DEFAULT_T_MEM_SIZE = 8;
 
-AR::T::T ()
+AR::Arena::Arena ()
 {
   this->len = 1;
   this->max_len = DEFAULT_T_MEM_SIZE;
@@ -21,7 +21,7 @@ AR::T::T ()
   this->mem[0] = block;
 }
 
-AR::T::~T ()
+AR::Arena::~Arena ()
 {
   for (size_t i = 0; i < this->len; ++i)
   {
@@ -34,7 +34,7 @@ AR::T::~T ()
 }
 
 void *
-AR::T::alloc (size_t size)
+AR::Arena::alloc (size_t size)
 {
   if (!size) { return nullptr; }
 now_allocate:
