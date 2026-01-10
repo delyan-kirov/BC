@@ -19,7 +19,9 @@
 
 // TODO: `TODO` `UNREACHABLE` `ENUM UNREACHABLE` `ASSERT` `Views` macros
 
-#define UT_TODO(_TODO_MSG) UT::IMPL::todo (__PRETTY_FUNCTION__, _TODO_MSG)
+#define UT_TODO(TODO_MSG) UT::IMPL::todo (__PRETTY_FUNCTION__, TODO_MSG)
+#define UT_ASSERT(ASSERT_MSG)                                                 \
+  UT::IMPL::assert (__PRETTY_FUNCTION__, ASSERT_MSG)
 
 namespace UT
 {
@@ -214,6 +216,12 @@ template <typename O> struct V
     this->m_mem[this->m_len] = o;
     this->m_len += 1;
   };
+
+  bool
+  is_empty ()
+  {
+    return 0 == this->m_len;
+  }
 };
 
 class SB

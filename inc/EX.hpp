@@ -69,9 +69,27 @@ public:
         m_exprs{ old.m_arena }    //
   {};
 
+  Parser (EX::Parser &parent_parser, LX::Tokens &t)
+      : m_arena{ parent_parser.m_arena },  //
+        m_events{ parent_parser.m_arena }, //
+        m_input{ parent_parser.m_input },  //
+        m_tokens{ t },                     //
+        m_begin{ 0 },                      //
+        m_end{ t.m_len },                  //
+        m_exprs{ parent_parser.m_arena }   //
+  {};
+
   E run ();
 
   EX::T alloc_subexpr (size_t n);
+
+  E parse_binop (EX::Type type, size_t start, size_t end);
+
+  bool
+  match_token_type (const LX::Type type, size_t start)
+  {
+    return type == this->m_tokens[start].m_type;
+  }
 };
 
 }

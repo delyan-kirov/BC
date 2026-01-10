@@ -1,44 +1,53 @@
-.PHONY: clean bear test init
+#------------------------------DIRS-----------------------------
 
-SRC = src
-INC = inc
-BIN = bin
-TST = tst
+SRC = src/
+INC = inc/
+BIN = bin/
+TST = tst/
 
 CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g -O0
-# CFLAGS += -DTRACE_ENABLED
+CFLAGS += -DTRACE_ENABLED
 CC = g++ $(CFLAGS) -I$(INC)
 CFSO = -fPIC -shared
 
-#-----------------------------OBJCS-----------------------------
+#------------------------------MAIN-----------------------------
+# 
+test: $(BIN)tst_mult
+	@$(BIN)tst_mult
 
-FrontEndSrc = \
-	$(SRC)/AR.cpp \
-	$(SRC)/LX.cpp \
-	$(SRC)/EX.cpp
+#------------------------------OBJC-----------------------------
+BCsrc = \
+	$(SRC)AR.cpp \
+	$(SRC)LX.cpp \
+	$(SRC)EX.cpp
 
-FrontEndInc = \
-	$(INC)/AR.hpp \
-	$(INC)/LX.hpp \
-	$(INC)/UT.hpp \
-	$(INC)/ER.hpp \
-	$(INC)/EX.hpp
+BCinc = \
+	$(INC)AR.hpp \
+	$(INC)LX.hpp \
+	$(INC)UT.hpp \
+	$(INC)ER.hpp \
+	$(INC)EX.hpp
 
-FrontEnd = $(BIN)/frontEnd.so
+BC = $(BIN)bc.so
 
-$(BIN)/main: $(FrontEnd)
-	$(CC) $(SRC)/main.cpp -o $@ $^
+# $(BIN)main: $(BC)
+# 	$(CC) $(SRC)main.cpp -o $@ $^
 
-$(FrontEnd): $(FrontEndInc) $(FrontEndSrc)
-	$(CC) $(CFSO) $(FrontEndSrc) -o $@
+$(BC): $(BCinc) $(BCsrc)
+	$(CC) $(CFSO) $(BCsrc) -o $@
 
-#-----------------------------TESTS-----------------------------
+#-----------------------------TEST------------------------------
 
-$(BIN)/tst_mult: $(TST)/tst_mult.cpp $(BIN)/main
-	$(CC) $(FrontEnd) $(TST)/tst_mult.cpp -o $@
+$(BIN)tst_mult: $(TST)tst_mult.cpp $(BC)
+	$(CC) $(BC) $(TST)tst_mult.cpp -o $@
 
-test: $(BIN)/tst_mult
-	@$(BIN)/tst_mult
+#-----------------------------CMND------------------------------
+COMMANDS = clean bear test init list
+.PHONY: COMMANDS
+
+list:
+	@true
+	$(foreach command, $(COMMANDS), $(info $(command)))
 
 all:
 	make
@@ -50,9 +59,9 @@ init:
 	make test
 
 clean:
-	rm -f $(BIN)/*
+	rm -f $(BIN)*
 
 bear:
 	mkdir -p $(BIN)
 	make clean
-	bear -- make $(BIN)/main test
+	bear -- make test
