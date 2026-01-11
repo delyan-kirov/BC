@@ -1,4 +1,3 @@
-#include <cstdio>
 #include <cstring>
 #include <iostream>
 #include <string>
@@ -113,6 +112,7 @@ run ()
               << std::endl;
   }
 
+  exit(0);
   return true;
 }
 }
