@@ -2,10 +2,71 @@
 #include "LX.hpp"
 #include "UT.hpp"
 #include <cassert>
-#include <cstdlib>
 
 namespace EX
 {
+E
+Parser::parse_min_precedence_arithmetic_op (EX::Type type, size_t &idx)
+{
+  UT_FAIL_IF (not(EX::Type::Add == type || EX::Type::Sub == type));
+  E result = E::OK;
+
+  if (this->match_token_type (idx + 1, LX::Type::Int, LX::Type::Group))
+  {
+    if (this->match_token_type (idx + 2, LX::Type::Mult, LX::Type::Modulus))
+    {
+      if (EX::Type::Sub == type)
+      {
+        parse_binop (EX::Type::Add, idx, this->m_end);
+        idx += this->m_end + 1;
+      }
+      else
+      {
+        parse_binop (type, idx + 1, this->m_end);
+        idx += this->m_end + 1;
+      }
+    }
+    else
+    {
+      this->parse_binop (type, idx + 1, idx + 2);
+      idx += 2;
+    }
+  }
+  else if (this->match_token_type (idx + 1, LX::Type::Minus))
+  {
+    parse_binop (type, idx + 1, idx + 2);
+    idx += 3;
+  }
+  else
+  {
+    UT_FAIL_IF ("Unreachable branch reached (LX::Type::Plus)"); //
+  }
+
+  return result;
+}
+
+E
+Parser::parse_max_precedence_arithmetic_op (EX::Type type, size_t &idx)
+{
+  E result = E::OK;
+
+  if (this->match_token_type (idx + 1, LX::Type::Int, LX::Type::Group))
+  {
+    this->parse_binop (type, idx + 1, idx + 2);
+    idx += 2;
+  }
+  else if (this->match_token_type (idx + 1, LX::Type::Minus))
+  {
+    parse_binop (type, idx + 1, idx + 2);
+    idx += 3;
+  }
+  else
+  {
+    UT_FAIL_IF ("Unreachable branch reached (LX::Type::Mult)"); //
+  }
+
+  return result;
+}
 
 EX::Expr
 Parser::alloc_subexpr (size_t n)
@@ -69,45 +130,36 @@ Parser::run ()
     break;
     case LX::Type::Plus:
     {
-      if (this->match_token_type (LX::Type::Int, i + 1)
-          || this->match_token_type (LX::Type::Group, i + 1))
-      {
-        if (this->match_token_type (LX::Type::Mult, i + 2))
-        {
-          parse_binop (EX::Type::Add, i + 1, this->m_end);
-          i += this->m_end + 1;
-        }
-        else
-        {
-          this->parse_binop (EX::Type::Add, i + 1, i + 2);
-          i += 2;
-        }
-      }
-      else { asm ("int3"); }
+      this->parse_min_precedence_arithmetic_op (EX::Type::Add, i);
     }
     break;
     case LX::Type::Mult:
     {
-      if (this->match_token_type (LX::Type::Int, i + 1))
-      {
-        if (this->match_token_type (LX::Type::Mult, i + 2))
-        {
-          parse_binop (EX::Type::Mult, i + 1, this->m_end);
-          i += this->m_end + 1;
-        }
-        else
-        {
-          this->parse_binop (EX::Type::Mult, i + 1, i + 2);
-          i += 2;
-        }
-      }
-      else { asm ("int3"); }
+      this->parse_max_precedence_arithmetic_op (EX::Type::Mult, i);
+    }
+    break;
+    case LX::Type::Div:
+    {
+      this->parse_max_precedence_arithmetic_op (EX::Type::Div, i);
+    }
+    break;
+    case LX::Type::Modulus:
+    {
+      this->parse_max_precedence_arithmetic_op (EX::Type::Modulus, i);
     }
     break;
     case LX::Type::Minus:
     {
-      if (this->m_exprs.is_empty ()) // The minus is unary
+      if (this->m_exprs.is_empty ()
+          || this->match_token_type (i - 1,
+                                     LX::Type::Mult,
+                                     LX::Type::Plus,
+                                     LX::Type::Div,
+                                     LX::Type::Modulus)) // The minus is unary
       {
+        UT_FAIL_IF (not this->match_token_type (
+            i + 1, LX::Type::Group, LX::Type::Int));
+
         EX::Parser new_parser{ *this, i + 1, i + 2 };
         new_parser.run ();
 
@@ -120,24 +172,10 @@ Parser::run ()
       }
       else // Binary minus
       {
-        if (this->match_token_type (LX::Type::Int, i + 1)
-            || this->match_token_type (LX::Type::Group, i + 1))
-        {
-          if (this->match_token_type (LX::Type::Mult, i + 2))
-          {
-            parse_binop (EX::Type::Add, i, this->m_end);
-            i += this->m_end + 1;
-          }
-          else
-          {
-            this->parse_binop (EX::Type::Sub, i + 1, i + 2);
-            i += 2;
-          }
-        }
-        else
-        {
-          UT_ASSERT ("Reached unreachable branch"); //
-        }
+        UT_FAIL_IF (not this->match_token_type (
+            i + 1, LX::Type::Group, LX::Type::Int));
+
+        parse_min_precedence_arithmetic_op (EX::Type::Sub, i);
       }
     }
     break;

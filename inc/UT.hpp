@@ -18,14 +18,14 @@
 #endif
 
 #define UT_TODO(TODO_MSG)                                                     \
-  UT::IMPL::assertion (__PRETTY_FUNCTION__, "TODO", #TODO_MSG)
+  UT::IMPL::fail_if (__PRETTY_FUNCTION__, "TODO", #TODO_MSG)
 
-#define UT_ASSERT(CONDITION)                                                  \
+#define UT_FAIL_IF(CONDITION)                                                 \
   do                                                                          \
   {                                                                           \
     if (CONDITION)                                                            \
     {                                                                         \
-      UT::IMPL::assertion (__PRETTY_FUNCTION__, "ERROR", #CONDITION);         \
+      UT::IMPL::fail_if (__PRETTY_FUNCTION__, "ERROR", #CONDITION);         \
     }                                                                         \
   } while (false)
 
@@ -49,7 +49,7 @@ abort ()
 };
 
 inline void
-assertion (const char *fn_name, const char *prefix, const char *msg)
+fail_if (const char *fn_name, const char *prefix, const char *msg)
 {
   if (msg)
   {
@@ -72,7 +72,7 @@ template <typename O> struct Vu
   Vu (const char *s) : m_mem{ s }
   {
     if (s) { this->m_len = std::strlen (s); }
-    else { UT_ASSERT ("Provided string is null"); }
+    else { UT_FAIL_IF ("Provided string is null"); }
   };
 
   Vu (std::string s) : m_mem{ s.c_str () } { this->m_len = s.size (); }

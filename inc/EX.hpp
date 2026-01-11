@@ -4,6 +4,7 @@
 #include "AR.hpp"
 #include "LX.hpp"
 #include <string>
+#include <type_traits>
 
 namespace EX
 {
@@ -85,10 +86,22 @@ public:
 
   E parse_binop (EX::Type type, size_t start, size_t end);
 
+  E parse_max_precedence_arithmetic_op (EX::Type, size_t &idx);
+  E parse_min_precedence_arithmetic_op (EX::Type, size_t &idx);
+
   bool
-  match_token_type (const LX::Type type, size_t start)
+  match_token_type (size_t start, const LX::Type type)
   {
     return type == this->m_tokens[start].m_type;
+  }
+
+  template <typename... Args>
+  bool
+  match_token_type (size_t start, Args &&...args)
+  {
+    static_assert ((std::is_same_v<std::decay_t<Args>, LX::Type> && ...),
+                   "[TYPE-ERROR] All extra arguments must be LX::Type");
+    return (... || this->match_token_type (start, args));
   }
 };
 
