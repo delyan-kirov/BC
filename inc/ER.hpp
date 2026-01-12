@@ -30,15 +30,13 @@ enum class Type
 
 struct E
 {
-  Type m_type = Type::MIN;
-  AR::Arena *m_arena = nullptr;
-  void *m_data = nullptr;
+  Type m_type                 = Type::MIN;
+  AR::Arena *m_arena          = nullptr;
+  void *m_data                = nullptr;
   char *(*fmt) (void *m_data) = nullptr;
 
   E ();
-  E (Type type,
-     AR::Arena &arena,
-     void *data = nullptr,
+  E (Type type, AR::Arena &arena, void *data = nullptr,
      char *(*fmt_fn) (void *) = nullptr)
       : m_type{ type },    //
         m_arena{ &arena }, //
@@ -76,20 +74,20 @@ class Events : public UT::Vec<E>
 {
 public:
   Events (AR::Arena &arena) : UT::Vec<E>{ arena } {}
-  Events () = delete;
-  ~Events () = default;
+  Events ()                    = delete;
+  ~Events ()                   = default;
   Events (const Events &other) = default;
   Events (Events &&other)
   {
-    this->m_arena = other.m_arena;
-    this->m_len = other.m_len;
+    this->m_arena   = other.m_arena;
+    this->m_len     = other.m_len;
     this->m_max_len = other.m_max_len;
-    this->m_mem = other.m_mem;
+    this->m_mem     = other.m_mem;
 
-    other.m_mem = nullptr;
-    other.m_len = 0;
+    other.m_mem     = nullptr;
+    other.m_len     = 0;
     other.m_max_len = 0;
-    other.m_arena = nullptr;
+    other.m_arena   = nullptr;
   }
 
   using UT::Vec<E>::push;
@@ -100,8 +98,8 @@ public:
   {
     for (size_t i = 0; i < this->m_len; ++i)
     {
-      E e = this->m_mem[i];
-      char *s = e.fmt (e.m_data);
+      E e                = this->m_mem[i];
+      char *s            = e.fmt (e.m_data);
       const char *prefix = "";
       switch (e.m_type)
       {
@@ -133,7 +131,7 @@ public:
       UT::SB sb{};
       sb.concatf ("%s :> begin", fn_name);
 
-      auto s = sb.collect ();
+      auto s    = sb.collect ();
       auto data = UT::memcopy (*this->m_arena, s, sb.m_len);
       ER::TraceE e{ data.m_mem, arena };
       this->m_event_log.push (e);

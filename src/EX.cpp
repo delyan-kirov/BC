@@ -83,13 +83,13 @@ Parser::parse_binop (EX::Type type, size_t start, size_t end)
   E result = E::OK;
 
   EX::Expr root_expr = this->alloc_subexpr (2);
-  EX::Expr left = *this->m_exprs.last ();
-  root_expr.m_type = type;
+  EX::Expr left      = *this->m_exprs.last ();
+  root_expr.m_type   = type;
 
   EX::Parser new_parser{ *this, start, end };
   result = new_parser.run ();
 
-  EX::Expr right = *new_parser.m_exprs.last ();
+  EX::Expr right     = *new_parser.m_exprs.last ();
   root_expr.exprs[0] = left;
   root_expr.exprs[1] = right;
 
@@ -112,8 +112,8 @@ Parser::run ()
     case LX::Type::Int:
     {
       EX::Expr expr = this->alloc_subexpr (0);
-      expr.m_type = EX::Type::Int;
-      expr.m_int = t.as.m_int;
+      expr.m_type   = EX::Type::Int;
+      expr.m_int    = t.as.m_int;
       this->m_exprs.push (expr);
 
       i += 1;
@@ -151,20 +151,18 @@ Parser::run ()
     case LX::Type::Minus:
     {
       if (this->m_exprs.is_empty ()
-          || this->match_token_type (i - 1,
-                                     LX::Type::Mult,
-                                     LX::Type::Plus,
+          || this->match_token_type (i - 1, LX::Type::Mult, LX::Type::Plus,
                                      LX::Type::Div,
                                      LX::Type::Modulus)) // The minus is unary
       {
-        UT_FAIL_IF (not this->match_token_type (
-            i + 1, LX::Type::Group, LX::Type::Int));
+        UT_FAIL_IF (not this->match_token_type (i + 1, LX::Type::Group,
+                                                LX::Type::Int));
 
         EX::Parser new_parser{ *this, i + 1, i + 2 };
         new_parser.run ();
 
         EX::Expr expr = this->alloc_subexpr (1);
-        expr.m_type = EX::Type::Minus;
+        expr.m_type   = EX::Type::Minus;
         expr.exprs[0] = *new_parser.m_exprs.last ();
 
         this->m_exprs.push (expr);
@@ -172,8 +170,8 @@ Parser::run ()
       }
       else // Binary minus
       {
-        UT_FAIL_IF (not this->match_token_type (
-            i + 1, LX::Type::Group, LX::Type::Int));
+        UT_FAIL_IF (not this->match_token_type (i + 1, LX::Type::Group,
+                                                LX::Type::Int));
 
         parse_min_precedence_arithmetic_op (EX::Type::Sub, i);
       }

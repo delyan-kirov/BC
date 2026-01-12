@@ -18,13 +18,13 @@ private:
   size_t max_len;
   uint8_t mem[];
 
-  Block () = delete;
+  Block ()  = delete;
   ~Block () = delete;
 
-  Block (const Block &) = delete;
+  Block (const Block &)            = delete;
   Block &operator= (const Block &) = delete;
 
-  Block (Block &&) = delete;
+  Block (Block &&)            = delete;
   Block &operator= (Block &&) = delete;
 };
 

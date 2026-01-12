@@ -12,8 +12,8 @@ namespace LX
 #define LX_ERROR_REPORT(LX_ERROR_E, LX_ERROR_MSG)                             \
   do                                                                          \
   {                                                                           \
-    this->m_events.push (LX::ErrorE{                                          \
-        this->m_arena, __PRETTY_FUNCTION__, (LX_ERROR_MSG), (LX_ERROR_E) });  \
+    this->m_events.push (LX::ErrorE{ this->m_arena, __PRETTY_FUNCTION__,      \
+                                     (LX_ERROR_MSG), (LX_ERROR_E) });         \
     return (LX_ERROR_E);                                                      \
   } while (false)
 
@@ -38,9 +38,9 @@ struct ErrorE : public ER::E
   {
     UT::SB sb{};
     sb.concatf ("%16c%s %s", '-', fn_name, data);
-    UT::Vu<char> msg = UT::memcopy (*this->m_arena, sb.vu ().m_mem);
+    UT::Vu<char> msg    = UT::memcopy (*this->m_arena, sb.vu ().m_mem);
     *(LX::E *)msg.m_mem = error;
-    this->m_data = (void *)msg.m_mem;
+    this->m_data        = (void *)msg.m_mem;
   }
 };
 
@@ -71,7 +71,7 @@ struct Token
     ssize_t m_int = 0;
   } as;
 
-  Token () = default;
+  Token ()  = default;
   ~Token () = default;
   Token (Type t) : m_type{ t }, m_line{ 0 }, m_cursor{ 0 }, as{} {};
   Token (Tokens tokens) : m_type{ Type::Group }, m_line{ 0 }, m_cursor{ 0 }
@@ -124,12 +124,12 @@ public:
   Lexer (Lexer const &l, size_t begin, size_t end)
       : m_arena{ l.m_arena }, m_events (l.m_arena)
   {
-    this->m_begin = l.m_begin;
-    this->m_end = l.m_end;
+    this->m_begin  = l.m_begin;
+    this->m_end    = l.m_end;
     this->m_cursor = l.m_cursor;
-    this->m_input = l.m_input;
-    this->m_begin = begin;
-    this->m_end = end;
+    this->m_input  = l.m_input;
+    this->m_begin  = begin;
+    this->m_end    = end;
     new (&this->m_tokens) Tokens{ l.m_arena };
   }
 

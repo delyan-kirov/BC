@@ -47,7 +47,7 @@ Lexer::push_int ()
   auto trace = ER::Trace (this->m_arena, __PRETTY_FUNCTION__, this->m_events);
   int result = 0;
   size_t cursor = this->m_cursor;
-  size_t lines = this->m_lines;
+  size_t lines  = this->m_lines;
 
   std::string s{
     this->m_input[this->m_cursor
@@ -76,7 +76,7 @@ Lexer::push_int ()
   catch (std::exception &e)
   {
     this->m_cursor = cursor;
-    this->m_lines = lines;
+    this->m_lines  = lines;
     LX_ERROR_REPORT (E::NUMBER_PARSING_FAILURE, "");
   }
 
@@ -133,7 +133,7 @@ Lexer::run ()
       auto result = LX::E::OK;
 
       size_t group_begin = this->m_cursor + 1;
-      size_t group_end = this->m_cursor + 1;
+      size_t group_end   = this->m_cursor + 1;
 
       result = this->find_matching_paren (group_end);
       if (LX::E::OK != result)
@@ -142,7 +142,7 @@ Lexer::run ()
       }
 
       LX::Lexer new_l = LX::Lexer (*this, group_begin, group_end);
-      result = new_l.run ();
+      result          = new_l.run ();
 
       if (LX::E::OK == result) { this->subsume_sub_lexer (new_l); }
       else
@@ -187,14 +187,14 @@ Lexer::generate_event_report ()
     ER::E e = events.m_mem[i];
     if (ER::Type::ERROR == e.m_type)
     {
-      LX::E event = *(LX::E *)e.m_data;
+      LX::E event        = *(LX::E *)e.m_data;
       const char *prefix = "\033[31mERROR\033[0m";
       std::printf ("[%s] %s\n", prefix, std::to_string (event).c_str ());
 
       // Find the line with the error
-      size_t line = 1;
+      size_t line       = 1;
       size_t line_begin = this->m_begin;
-      size_t line_end = this->m_end;
+      size_t line_end   = this->m_end;
 
       // Locate the start of the line
       for (size_t i = this->m_begin; i < this->m_end; ++i)

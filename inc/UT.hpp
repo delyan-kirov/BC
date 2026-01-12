@@ -139,8 +139,8 @@ inline UT::Vu<char>
 memcopy (AR::Arena &arena, const char *s)
 {
   size_t s_len = std::strlen (s);
-  auto new_s = (char *)arena.alloc (s_len + 1);
-  auto _ = std::memcmp (new_s, s, s_len);
+  auto new_s   = (char *)arena.alloc (s_len + 1);
+  (void)std::memcmp (new_s, s, s_len);
   Vu<char> result{ new_s, s_len };
   return result;
 }
@@ -149,7 +149,7 @@ inline UT::Vu<char>
 memcopy (AR::Arena &arena, const char *s, size_t len)
 {
   auto new_s = (char *)arena.alloc (len);
-  auto _ = std::memcmp (new_s, s, len);
+  (void)std::memcmp (new_s, s, len);
   Vu<char> result{ new_s, len };
   return result;
 }
@@ -161,24 +161,24 @@ template <typename O> struct Vec
   O *m_mem;
   AR::Arena *m_arena;
 
-  Vec () = default;
-  ~Vec () = default;
-  Vec (const Vec &other) = default;
+  Vec ()                       = default;
+  ~Vec ()                      = default;
+  Vec (const Vec &other)       = default;
   Vec &operator= (const Vec &) = default;
 
   Vec (Vec &&other) : Vec{ other }
   {
-    other.m_arena = nullptr;
-    other.m_len = 0;
+    other.m_arena   = nullptr;
+    other.m_len     = 0;
     other.m_max_len = 0;
-    other.m_mem = nullptr;
+    other.m_mem     = nullptr;
   }
 
   Vec (AR::Arena &arena, size_t len = 0)
       : m_len{ 0 }, m_max_len{ V_DEFAULT_MAX_LEN }, m_arena{ &arena }
   {
     size_t alloc_len = (0 == len) ? V_DEFAULT_MAX_LEN : len;
-    this->m_mem = (O *)arena.alloc<O> (alloc_len);
+    this->m_mem      = (O *)arena.alloc<O> (alloc_len);
   };
 
   Vec (std::initializer_list<size_t> lst)
@@ -191,10 +191,7 @@ template <typename O> struct Vec
       : m_arena{ 0 }, m_len{ 0 }, m_max_len{ V_DEFAULT_MAX_LEN }, m_mem{ 0 }
   {
     this->m_mem = (O *)arena.alloc<O> (this->m_max_len);
-    for (const O &o : lst)
-    {
-      this->push (o);
-    }
+    for (const O &o : lst) { this->push (o); }
   };
 
   const O *
@@ -269,7 +266,7 @@ public:
 
   SB () : m_len{ 0 }
   {
-    this->m_mem = new char[sizeof (char) * V_DEFAULT_MAX_LEN];
+    this->m_mem     = new char[sizeof (char) * V_DEFAULT_MAX_LEN];
     this->m_max_len = V_DEFAULT_MAX_LEN;
     std::memset (this->m_mem, 0, this->m_max_len);
   }
@@ -282,10 +279,10 @@ public:
     return sb.collect ();
   }
 
-  SB (const SB &) = delete;            // copy constructor
+  SB (const SB &)            = delete; // copy constructor
   SB &operator= (const SB &) = delete; // copy assignment
-  SB (SB &&) = delete;                 // move constructor
-  SB &operator= (SB &&) = delete;      // move assignment
+  SB (SB &&)                 = delete; // move constructor
+  SB &operator= (SB &&)      = delete; // move assignment
 
   ~SB ()
   {
@@ -300,11 +297,11 @@ public:
   resize (size_t new_len)
   {
     size_t new_max_len = 2 * (this->m_max_len + new_len);
-    char *new_mem = new char[new_max_len];
+    char *new_mem      = new char[new_max_len];
     std::memset (new_mem, 0, new_max_len);
     std::strcpy (new_mem, this->m_mem);
     delete[] this->m_mem;
-    this->m_mem = new_mem;
+    this->m_mem     = new_mem;
     this->m_max_len = new_max_len;
   }
 
@@ -312,7 +309,7 @@ public:
   add (const char *s)
   {
     size_t available_space = this->m_max_len - this->m_len;
-    size_t s_len = std::strlen (s);
+    size_t s_len           = std::strlen (s);
     if (available_space < s_len) { this->resize (s_len); }
     std::strcat (this->m_mem, s);
     this->m_len += s_len;
@@ -326,7 +323,7 @@ public:
   collect ()
   {
     const char *mem = this->m_mem;
-    this->m_mem = nullptr;
+    this->m_mem     = nullptr;
     return mem;
   }
 
@@ -342,7 +339,7 @@ void
 SB::concatf (const char *fmt, Args &&...args)
 {
   char *buffer;
-  asprintf (&buffer, fmt, std::forward<Args> (args)...);
+  (void)asprintf (&buffer, fmt, std::forward<Args> (args)...);
   this->concat (buffer);
   std::free (buffer);
 }
@@ -368,10 +365,10 @@ public:
 
   Block (AR::Arena &arena, size_t size)
   {
-    this->m_arena = &arena;
-    this->m_len = 0;
+    this->m_arena   = &arena;
+    this->m_len     = 0;
     this->m_max_len = size;
-    this->m_mem = (char *)arena.alloc (this->m_max_len * sizeof (char));
+    this->m_mem     = (char *)arena.alloc (this->m_max_len * sizeof (char));
     std::memset (this->m_mem, 0, this->m_max_len);
   }
 
@@ -382,7 +379,7 @@ public:
   push (const char *s)
   {
     if (!s || !(*s)) { return; }
-    size_t s_len = std::strlen (s);
+    size_t s_len         = std::strlen (s);
     size_t available_mem = this->m_max_len - this->m_len;
     if (s_len >= available_mem)
     {
@@ -392,7 +389,7 @@ public:
       std::memset (new_mem, 0, new_max_len);
       std::memcpy (new_mem, this->m_mem, this->m_len);
       this->m_max_len = new_max_len;
-      this->m_mem = new_mem;
+      this->m_mem     = new_mem;
     }
     std::memcpy (this->m_mem + this->m_len, s, s_len);
     this->m_len += s_len;

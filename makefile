@@ -5,9 +5,9 @@ INC = inc/
 BIN = bin/
 TST = tst/
 
-CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g -O0
+CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g -O1
 # CFLAGS += -DTRACE_ENABLED
-CC = g++ $(CFLAGS) -I$(INC)
+CC = clang++ $(CFLAGS) -I$(INC)
 CFSO = -fPIC -shared
 
 #------------------------------MAIN-----------------------------
@@ -42,12 +42,15 @@ $(BIN)tst_mult: $(TST)tst_mult.cpp $(BC)
 	$(CC) $(BC) $(TST)tst_mult.cpp -o $@
 
 #-----------------------------CMND------------------------------
-COMMANDS = clean bear test init list
+COMMANDS = clean bear test init list format
 .PHONY: COMMANDS
 
 list:
 	@true
 	$(foreach command, $(COMMANDS), $(info $(command)))
+
+format:
+	find . -regex '.*\.\(cpp\|hpp\|c\|h\)$\' -exec clang-format -i {} + 
 
 all:
 	make
