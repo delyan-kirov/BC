@@ -1,10 +1,14 @@
 #ifndef ER_HEADER
 #define ER_HEADER
 
+#include "AR.hpp"
 #include "UT.hpp"
 #include <cstdio>
 #include <cstring>
 #include <string>
+
+// TODO: We should have proper event reporting with the arena
+//    with types and with levels
 
 namespace ER
 {
@@ -27,19 +31,19 @@ enum class Type
 struct E
 {
   Type m_type = Type::MIN;
+  AR::Arena *m_arena = nullptr;
   void *m_data = nullptr;
   char *(*fmt) (void *m_data) = nullptr;
-  void (*free) (void *m_data) = nullptr;
-  void *(*clone) (void *m_data) = nullptr;
 
   E ();
   E (Type type,
+     AR::Arena &arena,
      void *data = nullptr,
-     char *(*fmt_fn) (void *) = nullptr,
-     void (*free_fn) (void *) = nullptr,
-     void *(*clone_fn) (void *) = nullptr)
-      : m_type (type), m_data (data), fmt (fmt_fn), free (free_fn),
-        clone (clone_fn)
+     char *(*fmt_fn) (void *) = nullptr)
+      : m_type{ type },    //
+        m_arena{ &arena }, //
+        m_data{ data },    //
+        fmt{ fmt_fn }      //
   {
   }
 };
@@ -53,31 +57,16 @@ info_trace_fmt (void *m_data)
   return info_event;
 }
 
-void
-info_trace_free (void *m_data)
-{
-  if (m_data) { delete[] (char *)m_data; }
-}
-
-void *
-info_trace_clone (void *m_data)
-{
-  char *new_data = new char[std::strlen ((char *)m_data) + 1];
-  std::strcpy (new_data, (char *)m_data);
-  return (char *)new_data;
-}
-
 }
 
 struct TraceE : public E
 {
-  TraceE (void *data)
+  TraceE (void *data, AR::Arena &arena)
       : E{
-          Type::UNFO,      //
-          data,            //
-          info_trace_fmt,  //
-          info_trace_free, //
-          info_trace_clone //
+          Type::UNFO, //
+          arena,
+          data,           //
+          info_trace_fmt, //
         }
   {
   }
@@ -130,25 +119,29 @@ public:
 class Trace : public UT::Block
 {
 public:
-  // TODO: support format
   const char *m_fn_name;
   Events &m_event_log;
 
   Trace (AR::Arena &arena, const char *fn_name, Events &event_log)
-      : UT::Block{ arena, std::strlen (fn_name) + 2 * UT::V_DEFAULT_MAX_LEN }, //
-        m_fn_name{ fn_name },                                              //
-        m_event_log{ event_log }                                           //
+      : UT::Block{ arena,
+                   std::strlen (fn_name) + 2 * UT::V_DEFAULT_MAX_LEN }, //
+        m_fn_name{ fn_name },                                           //
+        m_event_log{ event_log }                                        //
   {
     if (TRACE_ENABLE)
     {
       UT::SB sb{};
       sb.concatf ("%s :> begin", fn_name);
 
-      ER::TraceE e{ (void *)sb.collect () };
+      auto s = sb.collect ();
+      auto data = UT::memcopy (*this->m_arena, s, sb.m_len);
+      ER::TraceE e{ data.m_mem, arena };
       this->m_event_log.push (e);
 
       this->push (this->m_fn_name);
       this->push (":> ");
+
+      std::free ((void *)s);
     }
   };
 
@@ -159,7 +152,7 @@ public:
       UT::SB sb{};
       sb.concatf ("%s :> end", this->m_fn_name);
 
-      ER::TraceE e{ (void *)sb.collect () };
+      ER::TraceE e{ (void *)sb.collect (), *this->m_arena };
       this->m_event_log.push (e);
     }
   }
@@ -179,7 +172,7 @@ public:
   {
     if (TRACE_ENABLE)
     {
-      ER::TraceE e{ (void *)UT::SB::strdup (this->m_mem) };
+      ER::TraceE e{ (void *)UT::SB::strdup (this->m_mem), *this->m_arena };
       this->m_event_log.push (e);
 
       std::memset (this->m_mem, 0, this->m_len);

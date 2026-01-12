@@ -3,6 +3,7 @@
 
 #include "AR.hpp"
 #include "LX.hpp"
+#include "UT.hpp"
 #include <string>
 #include <type_traits>
 
@@ -92,7 +93,16 @@ public:
   bool
   match_token_type (size_t start, const LX::Type type)
   {
-    return type == this->m_tokens[start].m_type;
+    LX::Type m_type = this->m_tokens[start].m_type;
+    if (this->m_tokens.m_len <= start)
+    {
+      return false; //
+    }
+    else
+    {
+      UT_FAIL_IF (LX::Type::Max <= m_type || LX::Type::Min >= m_type);
+      return type == m_type;
+    }
   }
 
   template <typename... Args>

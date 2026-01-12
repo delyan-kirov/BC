@@ -59,7 +59,10 @@ Lexer::push_int ()
   {
     if (!c) { break; }
     if (std::isdigit (c)) { s += c; }
-    else { break; }
+    else
+    {
+      break;
+    }
   }
 
   try
@@ -91,7 +94,7 @@ Lexer::push_operator (char c)
 {
   auto trace = ER::Trace (this->m_arena, __PRETTY_FUNCTION__, this->m_events);
 
-  LX::Type t_type = LX::Type::Unknown;
+  LX::Type t_type = LX::Type::Min;
   switch (c)
   {
   case '-': t_type = LX::Type::Minus; break;
@@ -142,7 +145,10 @@ Lexer::run ()
       result = new_l.run ();
 
       if (LX::E::OK == result) { this->subsume_sub_lexer (new_l); }
-      else { LX_ERROR_REPORT (result, "new_l failed"); }
+      else
+      {
+        LX_ERROR_REPORT (result, "new_l failed");
+      }
     }
     break;
     case ')':
@@ -238,11 +244,7 @@ Lexer::subsume_sub_lexer (Lexer &l)
   for (size_t i = 0; i < l.m_events.m_len; ++i)
   {
     ER::E e = l.m_events[i];
-    char *e_new_m_data = (char *)e.clone (e.m_data);
-
-    ER::E new_e = e;
-    new_e.m_data = (void *)e_new_m_data;
-    this->m_events.push (new_e);
+    this->m_events.push (e);
   }
 }
 } // namespace LX

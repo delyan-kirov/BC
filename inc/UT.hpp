@@ -17,6 +17,7 @@
 #define UT_PRINTF_LIKE(fmt_idx, arg_idx)
 #endif
 
+// TODO: should report line and file
 #define UT_TODO(TODO_MSG)                                                     \
   UT::IMPL::fail_if (__PRETTY_FUNCTION__, "TODO", #TODO_MSG)
 
@@ -25,7 +26,7 @@
   {                                                                           \
     if (CONDITION)                                                            \
     {                                                                         \
-      UT::IMPL::fail_if (__PRETTY_FUNCTION__, "ERROR", #CONDITION);         \
+      UT::IMPL::fail_if (__PRETTY_FUNCTION__, "ERROR", #CONDITION);           \
     }                                                                         \
   } while (false)
 
@@ -69,10 +70,15 @@ template <typename O> struct Vu
 
   Vu (O *o, size_t len) : m_len{ len }, m_mem{ o } {};
 
+  Vu (const char *s, size_t len) : m_mem{ s }, m_len{ len } {};
+
   Vu (const char *s) : m_mem{ s }
   {
     if (s) { this->m_len = std::strlen (s); }
-    else { UT_FAIL_IF ("Provided string is null"); }
+    else
+    {
+      UT_FAIL_IF ("Provided string is null");
+    }
   };
 
   Vu (std::string s) : m_mem{ s.c_str () } { this->m_len = s.size (); }
@@ -128,6 +134,25 @@ template <typename O> struct Vu
     return this->m_mem + (this->m_len - 1);
   };
 };
+
+inline UT::Vu<char>
+memcopy (AR::Arena &arena, const char *s)
+{
+  size_t s_len = std::strlen (s);
+  auto new_s = (char *)arena.alloc (s_len + 1);
+  auto _ = std::memcmp (new_s, s, s_len);
+  Vu<char> result{ new_s, s_len };
+  return result;
+}
+
+inline UT::Vu<char>
+memcopy (AR::Arena &arena, const char *s, size_t len)
+{
+  auto new_s = (char *)arena.alloc (len);
+  auto _ = std::memcmp (new_s, s, len);
+  Vu<char> result{ new_s, len };
+  return result;
+}
 
 template <typename O> struct Vec
 {
@@ -237,11 +262,11 @@ template <typename O> struct Vec
 
 class SB
 {
+public:
   size_t m_len;
   size_t m_max_len;
   char *m_mem;
 
-public:
   SB () : m_len{ 0 }
   {
     this->m_mem = new char[sizeof (char) * V_DEFAULT_MAX_LEN];
@@ -303,6 +328,12 @@ public:
     const char *mem = this->m_mem;
     this->m_mem = nullptr;
     return mem;
+  }
+
+  const Vu<char>
+  vu ()
+  {
+    return Vu<char>{ this->m_mem, this->m_len };
   }
 };
 

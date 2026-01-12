@@ -1,6 +1,7 @@
 #ifndef LX_HEADER
 #define LX_HEADER
 
+#include "AR.hpp"
 #include "ER.hpp"
 #include "UT.hpp"
 #include <stdio.h>
@@ -11,8 +12,8 @@ namespace LX
 #define LX_ERROR_REPORT(LX_ERROR_E, LX_ERROR_MSG)                             \
   do                                                                          \
   {                                                                           \
-    this->m_events.push (                                                     \
-        LX::ErrorE{ __PRETTY_FUNCTION__, (LX_ERROR_MSG), (LX_ERROR_E) });     \
+    this->m_events.push (LX::ErrorE{                                          \
+        this->m_arena, __PRETTY_FUNCTION__, (LX_ERROR_MSG), (LX_ERROR_E) });  \
     return (LX_ERROR_E);                                                      \
   } while (false)
 
@@ -27,26 +28,25 @@ enum class E
 
 struct ErrorE : public ER::E
 {
-  ErrorE (const char *fn_name, const char *data, LX::E error)
+  ErrorE (AR::Arena &arena, const char *fn_name, const char *data, LX::E error)
       : E{
-          ER::Type::ERROR,     //
-          (void *)data,        //
-          ER::info_trace_fmt,  //
-          ER::info_trace_free, //
-          ER::info_trace_clone //
+          ER::Type::ERROR,    //
+          arena,              //
+          (void *)data,       //
+          ER::info_trace_fmt, //
         }
   {
     UT::SB sb{};
     sb.concatf ("%16c%s %s", '-', fn_name, data);
-    char *msg = (char *)sb.collect ();
-    *(LX::E *)msg = error;
-    this->m_data = (void *)msg;
+    UT::Vu<char> msg = UT::memcopy (*this->m_arena, sb.vu ().m_mem);
+    *(LX::E *)msg.m_mem = error;
+    this->m_data = (void *)msg.m_mem;
   }
 };
 
 enum class Type
 {
-  Unknown = 0,
+  Min = 0,
   Int,
   Plus,
   Minus,
@@ -54,6 +54,7 @@ enum class Type
   Modulus,
   Mult,
   Group,
+  Max,
 };
 
 struct Token;
@@ -66,8 +67,8 @@ struct Token
   size_t m_cursor;
   union
   {
-    ssize_t m_int = 0;
     Tokens m_tokens;
+    ssize_t m_int = 0;
   } as;
 
   Token () = default;
@@ -75,7 +76,7 @@ struct Token
   Token (Type t) : m_type{ t }, m_line{ 0 }, m_cursor{ 0 }, as{} {};
   Token (Tokens tokens) : m_type{ Type::Group }, m_line{ 0 }, m_cursor{ 0 }
   {
-    new (&as.m_tokens) Tokens (tokens); // NOTE: placement new
+    new (&as.m_tokens) Tokens{ tokens }; // NOTE: placement new
   };
 };
 
@@ -104,23 +105,19 @@ public:
   }
 
   Lexer (Lexer const &l)
-      : m_arena (l.m_arena),   //
-        m_events (l.m_events), //
-        m_input{ l.m_input },  //
-        m_tokens (l.m_tokens), //
-        m_lines (l.m_lines),   //
-        m_cursor (l.m_cursor), //
-        m_begin (l.m_begin),   //
-        m_end (l.m_end)        //
+      : m_arena (l.m_arena),               //
+        m_events (std::move (l.m_events)), //
+        m_input{ l.m_input },              //
+        m_tokens (l.m_tokens),             //
+        m_lines (l.m_lines),               //
+        m_cursor (l.m_cursor),             //
+        m_begin (l.m_begin),               //
+        m_end (l.m_end)                    //
   {
     for (size_t i = 0; i < l.m_events.m_len; ++i)
     {
       ER::E e = l.m_events[i];
-      char *e_new_m_data = (char *)e.clone (e.m_data);
-
-      ER::E new_e = e;
-      new_e.m_data = (void *)e_new_m_data;
-      this->m_events.push (new_e);
+      this->m_events.push (e);
     }
   };
 
@@ -136,14 +133,7 @@ public:
     new (&this->m_tokens) Tokens{ l.m_arena };
   }
 
-  ~Lexer ()
-  {
-    for (size_t i = 0; i < this->m_events.m_len; ++i)
-    {
-      ER::E e = this->m_events[i];
-      e.free (e.m_data);
-    }
-  }
+  ~Lexer () {}
 
   void generate_event_report ();
 
@@ -188,7 +178,7 @@ to_string (LX::Type t)
 {
   switch (t)
   {
-  case LX::Type::Unknown: return "Unknown";
+  case LX::Type::Min    : return "Min";
   case LX::Type::Int    : return "Int";
   case LX::Type::Plus   : return "Plus";
   case LX::Type::Minus  : return "Minus";
@@ -196,6 +186,7 @@ to_string (LX::Type t)
   case LX::Type::Div    : return "Div";
   case LX::Type::Modulus: return "Modulus";
   case LX::Type::Group  : return "Group";
+  case LX::Type::Max    : return "Max";
   }
 
   string s{ "ERROR: " };
@@ -210,7 +201,8 @@ to_string (LX::Token t)
 {
   switch (t.m_type)
   {
-  case LX::Type::Unknown: return "Unknown";
+  case LX::Type::Min:
+  case LX::Type::Max: return "Unknown";
   case LX::Type::Int:
     return string ("Int") + "(" + to_string (t.as.m_int) + ")";
   case LX::Type::Plus:

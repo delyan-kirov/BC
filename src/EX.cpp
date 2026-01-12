@@ -179,7 +179,13 @@ Parser::run ()
       }
     }
     break;
-    default: break;
+    case LX::Type::Min:
+    case LX::Type::Max:
+    default:
+    {
+      UT_FAIL_IF ("The case default should be unreachable");
+    }
+    break;
     }
   }
 
