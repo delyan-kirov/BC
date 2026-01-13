@@ -1,13 +1,15 @@
 #ifndef LX_HEADER
 #define LX_HEADER
 
-#include "AR.hpp"
 #include "ER.hpp"
 #include "UT.hpp"
 #include <stdio.h>
 
 namespace LX
 {
+
+constexpr size_t KEYWORD_MAX_LEN = 3;
+const UT::String KEYWORD_LET{ (char *)"let", 3 };
 
 #define LX_ERROR_REPORT(LX_ERROR_E, LX_ERROR_MSG)                             \
   do                                                                          \
@@ -54,6 +56,7 @@ enum class Type
   Modulus,
   Mult,
   Group,
+  Let,
   Max,
 };
 
@@ -147,6 +150,9 @@ public:
 
   void push_operator (char c);
 
+  UT::String get_word ();
+  bool match_keyword (UT::String keyword, UT::String word);
+
   E run ();
 };
 
@@ -186,6 +192,7 @@ to_string (LX::Type t)
   case LX::Type::Div    : return "Div";
   case LX::Type::Modulus: return "Modulus";
   case LX::Type::Group  : return "Group";
+  case LX::Type::Let    : return "Let";
   case LX::Type::Max    : return "Max";
   }
 
@@ -225,6 +232,7 @@ to_string (LX::Token t)
     return "Op("
            "%"
            ")";
+  case LX::Type::Let: return "Let [TODO]";
   case LX::Type::Group:
   {
     return to_string (t.as.m_tokens);

@@ -96,7 +96,6 @@ namespace
 bool
 run ()
 {
-
   for (auto tdata : TDATA::INPUTS)
   {
     AR::Arena arena{};

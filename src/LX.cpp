@@ -1,10 +1,37 @@
 #include "LX.hpp"
 #include "ER.hpp"
+#include "UT.hpp"
 #include <cassert>
+#include <cctype>
+#include <cstring>
 #include <string>
 
 namespace LX
 {
+
+bool
+Lexer::match_keyword (UT::String keyword, UT::String word)
+{
+  return UT::strcompare (keyword, word);
+}
+
+UT::String
+LX::Lexer::get_word ()
+{
+  UT::SB sb{};
+  char c = this->m_input[this->m_cursor - 1];
+  sb.add (c);
+  while ((c = this->next_char ()) //
+         && (c != ' ')            //
+         && !std::isdigit (c)
+         // And more, TODO
+  )
+  {
+    sb.add (c);
+  }
+  return sb.collect (this->m_arena);
+}
+
 LX::E
 LX::Lexer::find_matching_paren (size_t &paren_match_idx)
 {
@@ -168,8 +195,21 @@ Lexer::run ()
     break;
     default:
     {
-      LX::E result = this->push_int ();
-      if (LX::E::OK != result) { LX_ERROR_REPORT (result, ""); }
+      if (std::isdigit (c))
+      {
+        LX::E result = this->push_int ();
+        if (LX::E::OK != result) { LX_ERROR_REPORT (result, ""); }
+      }
+      else
+      {
+        UT::String word = this->get_word ();
+        if (this->match_keyword (LX::KEYWORD_LET, word))
+        {
+          UT::String var_name = this->get_word ();
+          (void)var_name;
+          // TODO
+        }
+      }
     }
     break;
     }
@@ -187,9 +227,8 @@ Lexer::generate_event_report ()
     ER::E e = events.m_mem[i];
     if (ER::Type::ERROR == e.m_type)
     {
-      LX::E event        = *(LX::E *)e.m_data;
-      const char *prefix = "\033[31mERROR\033[0m";
-      std::printf ("[%s] %s\n", prefix, std::to_string (event).c_str ());
+      LX::E event = *(LX::E *)e.m_data;
+      std::printf ("[%s] %s\n", UT::SERROR, std::to_string (event).c_str ());
 
       // Find the line with the error
       size_t line       = 1;
@@ -247,4 +286,5 @@ Lexer::subsume_sub_lexer (Lexer &l)
     this->m_events.push (e);
   }
 }
+
 } // namespace LX

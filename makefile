@@ -42,12 +42,15 @@ $(BIN)tst_mult: $(TST)tst_mult.cpp $(BC)
 	$(CC) $(BC) $(TST)tst_mult.cpp -o $@
 
 #-----------------------------CMND------------------------------
-COMMANDS = clean bear test init list format
+COMMANDS = clean bear test init list format valgrind
 .PHONY: COMMANDS
 
 list:
 	@true
 	$(foreach command, $(COMMANDS), $(info $(command)))
+
+valgrind:
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose ./bin/tst_mult
 
 format:
 	find . -regex '.*\.\(cpp\|hpp\|c\|h\)$\' -exec clang-format -i {} + 
