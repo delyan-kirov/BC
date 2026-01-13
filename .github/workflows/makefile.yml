@@ -6,11 +6,13 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Run
-      run: make init
+      - uses: cachix/install-nix-action@v27
+
+      - name: Run make in Nix dev shell
+        run: nix develop --command make init
+
