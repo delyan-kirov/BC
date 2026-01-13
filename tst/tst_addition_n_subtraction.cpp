@@ -51,10 +51,10 @@ run ()
   for (auto tdata : TDATA::INPUTS)
   {
     const char *input = tdata.first;
-    int expect = tdata.second;
+    int expect        = tdata.second;
 
     vector<LX::T> tokens = LX::run (input);
-    EX::T *expr = (EX::T *)arena.alloc<EX::T> ();
+    EX::T *expr          = (EX::T *)arena.alloc<EX::T> ();
     try
     {
       size_t result = parse (tokens, arena, 0, tokens.size (), expr);
@@ -76,7 +76,7 @@ run ()
       return false;
     }
 
-    int got = TL::eval (expr);
+    int got         = TL::eval (expr);
     bool new_result = (got == expect);
 
     if (!new_result)

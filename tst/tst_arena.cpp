@@ -12,7 +12,7 @@ bool
 tst_allocating_exprs ()
 {
   constexpr char input[] = "1 + 3 - (33 - 3 + 3) - 1 + 2";
-  auto ts = LX::run (std::string (input));
+  auto ts                = LX::run (std::string (input));
 
   AR::T arena{};
   EX::T *expr = (EX::T *)arena.alloc<EX::T> ();
@@ -48,7 +48,7 @@ tst_alloc_of_a_word (void)
   AR::T arena{};
 
   auto word = (size_t *)arena.alloc<size_t> ();
-  *word = 69;
+  *word     = 69;
   std::printf ("INFO: %ld(%p)", *word, word);
 
   return true;

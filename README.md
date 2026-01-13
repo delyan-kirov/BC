@@ -10,19 +10,16 @@ make
 
 ## TODO
 
-- Re-implement tokenizer
-  - Token-groups should be generated explicitly by the lexer
-  - Don't deal with offsets, use the groups themselves
-  - The tokenizer should handle negative integers itself
-  - The tokenizer should implement error reporting
-
-- Remove makefile
-  - instead of compile_commands.json, you can use compile_flags.txt
-  - using build.cpp instead of makefiles
+- Fix tracing
+- Fix error reporting
+- Use Vu<char*> instead of std::string, maybe even alias it
+- String builder should use arenas and Vu's for sure
+- Events should have type but also level
+- X macros for the enums might be a good idea
 
 - Implement
-  - bit operators | & ~ ^
   - logical operators || && !
+  - bit operators | & ~ ^
   - functions
   - structs
   - unions
@@ -30,10 +27,5 @@ make
   - if, for, when
   - compile-time functionality
 
-- Add tracing
-
-- Add error reporting
-
-- Types should support streams
 
 - Interface functions should have top level comments

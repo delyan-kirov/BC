@@ -1,66 +1,60 @@
-SRC = src
-INC = inc
-BIN = bin
-TST = tst
+#------------------------------DIRS-----------------------------
 
-CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g -O0
+SRC = src/
+INC = inc/
+BIN = bin/
+TST = tst/
+
+CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g -O1
+# CFLAGS += -DTRACE_ENABLED
 CC = clang++ $(CFLAGS) -I$(INC)
+CFSO = -fPIC -shared
 
-#-----------------------------OBJCS-----------------------------
-
-OBJS = \
-	$(BIN)/main.o \
-	$(BIN)/LX.o \
-	$(BIN)/EX.o \
-	$(BIN)/AR.o \
-	$(BIN)/TL.o 
-
-$(BIN)/main: $(OBJS)
-	$(CC) -o $@ $^
-
-$(BIN)/main.o: $(SRC)/main.cpp $(BIN)/EX.o
-	$(CC) -c $< -o $@
-
-$(BIN)/TL.o: $(SRC)/TL.cpp $(BIN)/EX.o
-	$(CC) -c $< -o $@
-
-$(BIN)/EX.o: $(SRC)/EX.cpp $(INC)/EX.hpp $(BIN)/LX.o
-	$(CC) -c $< -o $@
-
-$(BIN)/LX.o: $(SRC)/LX.cpp $(INC)/LX.hpp
-	$(CC) -c $< -o $@
-
-#-----------------------------SLIBS-----------------------------
+#------------------------------MAIN-----------------------------
 # 
-$(BIN)/AR.o: $(SRC)/AR.cpp $(INC)/AR.hpp
-	$(CC) -c $< -o $@
+test: $(BIN)tst_mult
+	@$(BIN)tst_mult
 
-#-----------------------------TESTS-----------------------------
-tests = \
-	tst_addition_n_subtraction \
-	tst_arena
+#------------------------------OBJC-----------------------------
+BCsrc = \
+	$(SRC)AR.cpp \
+	$(SRC)LX.cpp \
+	$(SRC)EX.cpp
 
-TOBJS = \
-	$(BIN)/LX.o \
-	$(BIN)/EX.o \
-	$(BIN)/AR.o \
-	$(BIN)/TL.o
+BCinc = \
+	$(INC)AR.hpp \
+	$(INC)LX.hpp \
+	$(INC)UT.hpp \
+	$(INC)ER.hpp \
+	$(INC)EX.hpp
 
-$(BIN)/tst_addition_n_subtraction: $(TST)/tst_addition_n_subtraction.cpp $(TOBJS)
-	$(CC) -o $@ $^
+BC = $(BIN)bc.so
 
-$(BIN)/tst_mult: $(TST)/tst_mult.cpp $(TOBJS)
-	$(CC) -o $@ $^
+# $(BIN)main: $(BC)
+# 	$(CC) $(SRC)main.cpp -o $@ $^
 
-$(BIN)/tst_arena: $(TST)/tst_arena.cpp $(TOBJS)
-	$(CC) -o $@ $^
+$(BC): $(BCinc) $(BCsrc)
+	$(CC) $(CFSO) $(BCsrc) -o $@
 
-test: $(BIN)/tst_addition_n_subtraction $(BIN)/tst_arena $(BIN)/tst_mult
-	# @$(BIN)/tst_addition_n_subtraction
-	# @$(BIN)/tst_arena
-	@$(BIN)/tst_mult
+#-----------------------------TEST------------------------------
 
-.PHONY: clean bear test init
+$(BIN)tst_mult: $(TST)tst_mult.cpp $(BC)
+	$(CC) $(BC) $(TST)tst_mult.cpp -o $@
+
+#-----------------------------CMND------------------------------
+COMMANDS = clean bear test init list format
+.PHONY: COMMANDS
+
+list:
+	@true
+	$(foreach command, $(COMMANDS), $(info $(command)))
+
+format:
+	find . -regex '.*\.\(cpp\|hpp\|c\|h\)$\' -exec clang-format -i {} + 
+
+all:
+	make
+	make test
 
 init:
 	mkdir -p $(BIN)
@@ -68,9 +62,9 @@ init:
 	make test
 
 clean:
-	rm -f $(BIN)/*
+	rm -f $(BIN)*
 
 bear:
 	mkdir -p $(BIN)
 	make clean
-	bear -- make $(BIN)/main test
+	bear -- make test
