@@ -10,7 +10,6 @@ make
 
 ## TODO
 
-- Use nix
 - Fix tracing
 - Fix error reporting
 - Use Vu<char*> instead of std::string, maybe even alias it
