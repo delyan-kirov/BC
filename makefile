@@ -65,7 +65,7 @@ init:
 	make test
 
 clean:
-	rm vgcore*
+	rm -f vgcore*
 	rm -f $(BIN)*
 
 bear:
