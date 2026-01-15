@@ -10,6 +10,7 @@ namespace LX
 
 constexpr size_t KEYWORD_MAX_LEN = 3;
 const UT::String KEYWORD_LET{ (char *)"let", 3 };
+const UT::String KEYWORD_IN{ (char *)"in", 2 };
 
 #define LX_ERROR_REPORT(LX_ERROR_E, LX_ERROR_MSG)                             \
   do                                                                          \
@@ -25,6 +26,7 @@ enum class E
   OK,
   PARENTHESIS_UNBALANCED,
   NUMBER_PARSING_FAILURE,
+  UNRECOGNIZED_STRING,
   MAX,
 };
 
@@ -56,12 +58,19 @@ enum class Type
   Modulus,
   Mult,
   Group,
-  Let,
+  LetIn,
   Max,
 };
 
 struct Token;
 using Tokens = UT::Vec<Token>;
+
+struct LetIn
+{
+  UT::String var_name;
+  Tokens let_tokens;
+  Tokens in_tokens;
+};
 
 struct Token
 {
@@ -71,6 +80,7 @@ struct Token
   union
   {
     Tokens m_tokens;
+    LetIn m_lenin;
     ssize_t m_int = 0;
   } as;
 
@@ -136,6 +146,18 @@ public:
     new (&this->m_tokens) Tokens{ l.m_arena };
   }
 
+  Lexer (Lexer const &l, size_t begin)
+      : m_arena{ l.m_arena }, m_events (l.m_arena)
+  {
+    this->m_begin  = l.m_begin;
+    this->m_end    = l.m_end;
+    this->m_cursor = l.m_cursor;
+    this->m_input  = l.m_input;
+    this->m_begin  = begin;
+    this->m_end    = l.m_end;
+    new (&this->m_tokens) Tokens{ l.m_arena };
+  }
+
   ~Lexer () {}
 
   void generate_event_report ();
@@ -149,6 +171,8 @@ public:
   E push_int ();
 
   void push_operator (char c);
+
+  E match_operator (char c);
 
   UT::String get_word ();
   bool match_keyword (UT::String keyword, UT::String word);
@@ -170,6 +194,7 @@ to_string (LX::E e)
   case LX::E::OK                    : return "OK";
   case LX::E::PARENTHESIS_UNBALANCED: return "PARENTHESIS_UNBALANCED";
   case LX::E::NUMBER_PARSING_FAILURE: return "NUMBER_PARSING_FAILURE";
+  case LX::E::UNRECOGNIZED_STRING   : return "UNRECOGNIZED_STRING";
   case LX::E::MAX                   : return "MAX";
   }
 
@@ -192,7 +217,7 @@ to_string (LX::Type t)
   case LX::Type::Div    : return "Div";
   case LX::Type::Modulus: return "Modulus";
   case LX::Type::Group  : return "Group";
-  case LX::Type::Let    : return "Let";
+  case LX::Type::LetIn  : return "LetIn";
   case LX::Type::Max    : return "Max";
   }
 
@@ -232,7 +257,13 @@ to_string (LX::Token t)
     return "Op("
            "%"
            ")";
-  case LX::Type::Let: return "Let [TODO]";
+  case LX::Type::LetIn:
+  {
+    std::string let_string = to_string (t.as.m_lenin.let_tokens);
+    std::string in_string  = to_string (t.as.m_lenin.in_tokens);
+    std::string var_name   = std::string{ t.as.m_lenin.var_name.m_mem };
+    return "let " + var_name + " = " + let_string + " in " + in_string;
+  }
   case LX::Type::Group:
   {
     return to_string (t.as.m_tokens);

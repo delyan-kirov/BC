@@ -3,6 +3,7 @@
 #include "UT.hpp"
 #include <cassert>
 #include <cctype>
+#include <cstdio>
 #include <cstring>
 #include <string>
 
@@ -29,7 +30,9 @@ LX::Lexer::get_word ()
   {
     sb.add (c);
   }
-  return sb.collect (this->m_arena);
+  UT::String string = sb.collect (this->m_arena);
+
+  return string;
 }
 
 LX::E
@@ -188,6 +191,11 @@ Lexer::run ()
       ; // Do nothing
     }
     break;
+    case '=':
+    {
+      /* Nothing to do */ return LX::E::OK;
+    }
+    break;
     case '\n':
     {
       ; // Do nothing
@@ -202,12 +210,45 @@ Lexer::run ()
       }
       else
       {
+        // TODO: This is complete garbage
+        // We should cut spaces and we should be operator aware
         UT::String word = this->get_word ();
         if (this->match_keyword (LX::KEYWORD_LET, word))
         {
+          // TODO: this should be gone
+          this->next_char ();
           UT::String var_name = this->get_word ();
-          (void)var_name;
-          // TODO
+          std::printf ("var name is %.*s\n", (int)var_name.m_len,
+                       var_name.m_mem);
+
+          this->match_operator ('=');
+
+          Lexer let_lexer{ *this, this->m_cursor };
+          let_lexer.run ();
+
+          Lexer in_lexer{ *this, let_lexer.m_cursor };
+          in_lexer.run ();
+
+          Token letin{};
+          letin.m_type                = Type::LetIn;
+          letin.m_line                = this->m_lines;
+          letin.m_cursor              = this->m_cursor;
+          letin.as.m_lenin.var_name   = var_name;
+          letin.as.m_lenin.let_tokens = let_lexer.m_tokens;
+          letin.as.m_lenin.in_tokens  = in_lexer.m_tokens;
+
+          this->m_tokens.push (letin);
+          // TODO: do not do that, there should be a new method that advances
+          // from the previous tokenizer
+          this->m_cursor = in_lexer.m_cursor;
+        }
+        else if (this->match_keyword (LX::KEYWORD_IN, word))
+        {
+          /* Nothing to do */ return LX::E::OK;
+        }
+        else
+        {
+          LX_ERROR_REPORT (LX::E::UNRECOGNIZED_STRING, "");
         }
       }
     }
@@ -275,9 +316,11 @@ Lexer::generate_event_report ()
 void
 Lexer::subsume_sub_lexer (Lexer &l)
 {
-  LX::Token token{ l.m_tokens };
-
-  this->m_tokens.push (token);
+  for (auto t : l.m_tokens)
+  {
+    LX::Token token{ t };
+    this->m_tokens.push (token);
+  }
   this->m_cursor = l.m_cursor;
 
   for (size_t i = 0; i < l.m_events.m_len; ++i)
@@ -287,4 +330,9 @@ Lexer::subsume_sub_lexer (Lexer &l)
   }
 }
 
+E
+Lexer::match_operator (char c)
+{
+  return c == this->next_char () ? E::OK : E::UNRECOGNIZED_STRING;
+};
 } // namespace LX

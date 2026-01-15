@@ -78,6 +78,7 @@ template <typename O> struct Vu
   size_t m_len;
   O *m_mem;
 
+  Vu () : m_len{ 0 }, m_mem{ nullptr } {};
   Vu (O *o, size_t len) : m_len{ len }, m_mem{ o } {};
 
   constexpr Vu (const char *s, size_t len) : m_mem{ s }, m_len{ len } {};
@@ -169,7 +170,8 @@ memcopy (AR::Arena &arena, const char *s, size_t len)
 inline bool
 strcompare (const String s1, const String s2)
 {
-  return std::strcmp (s1.m_mem, s2.m_mem);
+  return s1.m_len == s2.m_len
+         && 0 == std::memcmp (s1.m_mem, s2.m_mem, s1.m_len);
 }
 
 template <typename O> struct Vec
@@ -340,11 +342,11 @@ public:
   template <typename... Args> void append (Args &&...args);
 
   const String
-  collect (AR::Arena arena)
+  collect (AR::Arena &arena)
   {
-    auto mem = (char *)arena.alloc (this->m_len + 1);
-    std::memset (mem, 0, this->m_len + 1);
-    (void)std::memcmp (mem, this->m_mem, this->m_len);
+    char* mem = (char *)arena.alloc (sizeof(char)*this->m_len);
+    std::memset (mem, 0, this->m_len);
+    std::memcpy (mem, this->m_mem, this->m_len);
     return String{ mem, this->m_len };
   }
 

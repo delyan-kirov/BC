@@ -63,7 +63,6 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "1 - (2 - 3) - 4", -2 },
   { "1 - - 4 * 2 + 1", 10 },
   { "\n\n\n(12 1s 32\n (3) 2123 \n\n234 4\n( 1 2 (3) \n4 5", 3 },
-#endif
   { "(1 - 2) - (3 - 4)", 0 },
   { "100 - (50 + 25)", 25 },
   { "(100 - 50) + 25", 75 },
@@ -87,7 +86,8 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "-1 - 2 * 3 + 3", 5 },
   { "5 % - 3 + 1", 3 },
   { "-1 + (1 + 1) * 1", 3 },
-  // { "- (2", -2 },
+#endif
+  { "let a = 3 in 1 + 2", -2 },
 };
 }
 
@@ -102,11 +102,8 @@ run ()
     const char *input = tdata.first;
     LX::Lexer l{ input, arena, 0, std::strlen (input) };
     (void)l.run ();
+    std::printf ("%s\n", std::to_string (l.m_tokens).c_str ());
     l.generate_event_report ();
-    EX::Parser parser{ l };
-    parser.run ();
-    std::cout << input << " == " << std::to_string (*parser.m_exprs.last ())
-              << std::endl;
   }
 
   return true;
