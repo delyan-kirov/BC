@@ -461,6 +461,6 @@ to_string (UT::String s)
   delete[] var_mem;
   return result;
 }
-}
+} // namespace std
 
 #endif // UT_HEADER

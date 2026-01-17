@@ -6,7 +6,6 @@
 #include "UT.hpp"
 #include <cstdint>
 #include <string>
-#include <type_traits>
 
 namespace EX
 {
@@ -156,7 +155,7 @@ public:
   }
 };
 
-}
+} // namespace EX
 
 namespace std
 {
@@ -176,6 +175,9 @@ to_string (EX::Type expr_type)
   case EX::Type::Var    : return "EX::Type::Var";
   case EX::Type::Unknown: return "EX::Type::Unknown";
   }
+
+  UT_FAIL_IF ("UNREACHABLE");
+  return "";
 }
 
 inline string to_string (EX::Expr *expr);
@@ -258,6 +260,12 @@ to_string (EX::Expr expr)
   case EX::Type::Unknown:
   {
     s += "EX::T::Unknown";
+  }
+  break;
+  default:
+  {
+    // TODO: Don't use default case here, fail under switch
+    UT_FAIL_IF ("UNREACHABLE");
   }
   break;
   }

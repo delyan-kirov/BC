@@ -218,10 +218,8 @@ to_string (LX::E e)
   case LX::E::MAX                     : return "MAX";
   }
 
-  string s{ "ERROR: " };
-  s += (__FUNCTION__);
-  s += " UNREACHABLE PATH REACHED!";
-  return s;
+  UT_FAIL_IF ("UNREACHABLE");
+  return "";
 };
 
 inline string
@@ -242,10 +240,8 @@ to_string (LX::Type t)
   case LX::Type::Max    : return "Max";
   }
 
-  string s{ "ERROR: " };
-  s += (__FUNCTION__);
-  s += " UNREACHABLE PATH REACHED!";
-  return s;
+  UT_FAIL_IF ("UNREACHABLE");
+  return "";
 }
 
 inline string to_string (LX::Tokens ts);
