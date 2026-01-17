@@ -19,19 +19,24 @@
 
 // TODO: should report line and file
 #define UT_TODO(TODO_MSG)                                                     \
-  UT::IMPL::fail_if (__PRETTY_FUNCTION__, "TODO", #TODO_MSG)
+  UT::IMPL::fail_if (__FILE__, __PRETTY_FUNCTION__, __LINE__, UT::STODO,      \
+                     #TODO_MSG)
 
 #define UT_FAIL_IF(CONDITION)                                                 \
   do                                                                          \
   {                                                                           \
     if (CONDITION)                                                            \
     {                                                                         \
-      UT::IMPL::fail_if (__PRETTY_FUNCTION__, "ERROR", #CONDITION);           \
+      UT::IMPL::fail_if (__FILE__, __PRETTY_FUNCTION__, __LINE__, UT::SERROR, \
+                         #CONDITION);                                         \
     }                                                                         \
   } while (false)
 
 namespace UT
 {
+
+constexpr const char *STODO  = "TODO";
+constexpr const char *SERROR = "\033[31mERROR\033[0m";
 
 namespace IMPL
 {
@@ -50,11 +55,16 @@ abort ()
 };
 
 inline void
-fail_if (const char *fn_name, const char *prefix, const char *msg)
+fail_if (const char *file,    //
+         const char *fn_name, //
+         const int line,      //
+         const char *prefix,  //
+         const char *msg)
 {
   if (msg)
   {
-    std::printf ("[%s] %s: %s\n", prefix, fn_name, msg);
+    std::printf ("[%s] %s : %s\n", prefix, file, fn_name);
+    std::printf ("  %d | \033[1;37m%s\033[0m\n", line, msg);
     UT::IMPL::abort ();
   }
 }
@@ -68,9 +78,10 @@ template <typename O> struct Vu
   size_t m_len;
   O *m_mem;
 
+  Vu () : m_len{ 0 }, m_mem{ nullptr } {};
   Vu (O *o, size_t len) : m_len{ len }, m_mem{ o } {};
 
-  Vu (const char *s, size_t len) : m_mem{ s }, m_len{ len } {};
+  constexpr Vu (const char *s, size_t len) : m_mem{ s }, m_len{ len } {};
 
   Vu (const char *s) : m_mem{ s }
   {
@@ -135,22 +146,41 @@ template <typename O> struct Vu
   };
 };
 
-inline UT::Vu<char>
+using String = Vu<char>;
+
+inline String
 memcopy (AR::Arena &arena, const char *s)
 {
   size_t s_len = std::strlen (s);
   auto new_s   = (char *)arena.alloc (s_len + 1);
-  (void)std::memcmp (new_s, s, s_len);
+  (void)std::memcpy (new_s, s, s_len);
   Vu<char> result{ new_s, s_len };
   return result;
 }
 
-inline UT::Vu<char>
-memcopy (AR::Arena &arena, const char *s, size_t len)
+inline String
+strdup (AR::Arena &arena, const char *s, size_t len)
 {
   auto new_s = (char *)arena.alloc (len);
-  (void)std::memcmp (new_s, s, len);
+  (void)std::memcpy (new_s, s, len);
   Vu<char> result{ new_s, len };
+  return result;
+}
+
+inline bool
+strcompare (const String s1, const String s2)
+{
+  return s1.m_len == s2.m_len
+         && 0 == std::memcmp (s1.m_mem, s2.m_mem, s1.m_len);
+}
+
+inline String
+strdup (AR::Arena &arena, String s)
+{
+  auto new_s = (char *)arena.alloc (s.m_len + 1);
+  (void)std::memcpy (new_s, s.m_mem, s.m_len);
+  new_s[s.m_len] = 0;
+  Vu<char> result{ new_s, s.m_len };
   return result;
 }
 
@@ -271,14 +301,6 @@ public:
     std::memset (this->m_mem, 0, this->m_max_len);
   }
 
-  static const char *
-  strdup (const char *s)
-  {
-    SB sb{};
-    sb.concat (s);
-    return sb.collect ();
-  }
-
   SB (const SB &)            = delete; // copy constructor
   SB &operator= (const SB &) = delete; // copy assignment
   SB (SB &&)                 = delete; // move constructor
@@ -315,19 +337,30 @@ public:
     this->m_len += s_len;
   }
 
+  void
+  add (const char c)
+  {
+    size_t available_space = this->m_max_len - this->m_len;
+    size_t s_len           = 1;
+    if (available_space < s_len) { this->resize (s_len); }
+    this->m_mem[this->m_len] = c;
+    this->m_len += s_len;
+  }
+
   template <typename... Args> void concat (Args &&...args);
   template <typename... Args> void concatf (const char *fmt, Args &&...args);
   template <typename... Args> void append (Args &&...args);
 
-  const char *
-  collect ()
+  const String
+  collect (AR::Arena &arena)
   {
-    const char *mem = this->m_mem;
-    this->m_mem     = nullptr;
-    return mem;
+    char *mem = (char *)arena.alloc (sizeof (char) * this->m_len);
+    std::memset (mem, 0, this->m_len);
+    std::memcpy (mem, this->m_mem, this->m_len);
+    return String{ mem, this->m_len };
   }
 
-  const Vu<char>
+  const String
   vu ()
   {
     return Vu<char>{ this->m_mem, this->m_len };
@@ -414,6 +447,20 @@ public:
     return *this;
   }
 };
+} // namespace UT
+
+namespace std
+{
+inline string
+to_string (UT::String s)
+{
+  const char *var_mem = new char[s.m_len + 1];
+  memset ((void *)var_mem, 0, s.m_len + 1);
+  memcpy ((void *)var_mem, s.begin (), s.m_len);
+  string result{ var_mem };
+  delete[] var_mem;
+  return result;
+}
 }
 
 #endif // UT_HEADER

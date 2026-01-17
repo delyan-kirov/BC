@@ -16,6 +16,7 @@
           pkgs.gnumake
           pkgs.bear
           pkgs.git
+          pkgs.valgrind
         ];
 
         shellHook = ''

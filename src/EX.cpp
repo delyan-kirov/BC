@@ -2,6 +2,7 @@
 #include "LX.hpp"
 #include "UT.hpp"
 #include <cassert>
+#include <cstdio>
 
 namespace EX
 {
@@ -11,7 +12,8 @@ Parser::parse_min_precedence_arithmetic_op (EX::Type type, size_t &idx)
   UT_FAIL_IF (not(EX::Type::Add == type || EX::Type::Sub == type));
   E result = E::OK;
 
-  if (this->match_token_type (idx + 1, LX::Type::Int, LX::Type::Group))
+  if (this->match_token_type (idx + 1, LX::Type::Int, LX::Type::Group,
+                              LX::Type::Word))
   {
     if (this->match_token_type (idx + 2, LX::Type::Mult, LX::Type::Modulus))
     {
@@ -50,7 +52,8 @@ Parser::parse_max_precedence_arithmetic_op (EX::Type type, size_t &idx)
 {
   E result = E::OK;
 
-  if (this->match_token_type (idx + 1, LX::Type::Int, LX::Type::Group))
+  if (this->match_token_type (idx + 1, LX::Type::Int, LX::Type::Group,
+                              LX::Type::Word))
   {
     this->parse_binop (type, idx + 1, idx + 2);
     idx += 2;
@@ -68,30 +71,21 @@ Parser::parse_max_precedence_arithmetic_op (EX::Type type, size_t &idx)
   return result;
 }
 
-EX::Expr
-Parser::alloc_subexpr (size_t n)
-{
-  EX::Expr expr{};
-  if (n) { expr.exprs = EX::Exprs{ this->m_arena, n }; }
-
-  return expr;
-};
-
 E
 Parser::parse_binop (EX::Type type, size_t start, size_t end)
 {
   E result = E::OK;
 
-  EX::Expr root_expr = this->alloc_subexpr (2);
-  EX::Expr left      = *this->m_exprs.last ();
-  root_expr.m_type   = type;
+  EX::Expr root_expr{ type, this->m_arena };
+  EX::Expr left    = *this->m_exprs.last ();
+  root_expr.m_type = type;
 
   EX::Parser new_parser{ *this, start, end };
   result = new_parser.run ();
 
-  EX::Expr right     = *new_parser.m_exprs.last ();
-  root_expr.exprs[0] = left;
-  root_expr.exprs[1] = right;
+  EX::Expr right        = *new_parser.m_exprs.last ();
+  root_expr.as.exprs[0] = left;
+  root_expr.as.exprs[1] = right;
 
   *this->m_exprs.last () = root_expr;
 
@@ -111,9 +105,8 @@ Parser::run ()
     {
     case LX::Type::Int:
     {
-      EX::Expr expr = this->alloc_subexpr (0);
-      expr.m_type   = EX::Type::Int;
-      expr.m_int    = t.as.m_int;
+      EX::Expr expr{ EX::Type::Int };
+      expr.as.m_int = t.as.m_int;
       this->m_exprs.push (expr);
 
       i += 1;
@@ -125,6 +118,14 @@ Parser::run ()
       group_parser.run ();
       this->m_exprs.push (*group_parser.m_exprs.last ());
 
+      i += 1;
+    }
+    break;
+    case LX::Type::Word:
+    {
+      EX::Expr expr{ EX::Type::Var };
+      expr.as.m_var = t.as.m_string;
+      this->m_exprs.push (expr);
       i += 1;
     }
     break;
@@ -155,26 +156,50 @@ Parser::run ()
                                      LX::Type::Div,
                                      LX::Type::Modulus)) // The minus is unary
       {
-        UT_FAIL_IF (not this->match_token_type (i + 1, LX::Type::Group,
-                                                LX::Type::Int));
+        UT_FAIL_IF (not this->match_token_type (
+            i + 1, LX::Type::Group, LX::Type::Int, LX::Type::Word));
 
         EX::Parser new_parser{ *this, i + 1, i + 2 };
         new_parser.run ();
 
-        EX::Expr expr = this->alloc_subexpr (1);
-        expr.m_type   = EX::Type::Minus;
-        expr.exprs[0] = *new_parser.m_exprs.last ();
+        EX::Expr expr{ Type::Minus, this->m_arena };
+        expr.as.exprs[0] = *new_parser.m_exprs.last ();
 
         this->m_exprs.push (expr);
         i += 2;
       }
       else // Binary minus
       {
-        UT_FAIL_IF (not this->match_token_type (i + 1, LX::Type::Group,
-                                                LX::Type::Int));
+        UT_FAIL_IF (not this->match_token_type (
+            i + 1, LX::Type::Group, LX::Type::Int, LX::Type::Word));
 
         parse_min_precedence_arithmetic_op (EX::Type::Sub, i);
       }
+    }
+    break;
+    case LX::Type::LetIn:
+    {
+      // let var = body_expr in app_expr
+      UT::String param = t.as.m_let_in.var_name;
+
+      EX::Parser body_parser{ *this, t.as.m_let_in.in_tokens };
+      body_parser.run ();
+      EX::Expr body_expr = *body_parser.m_exprs.last ();
+
+      EX::Parser app_parser{ *this, t.as.m_let_in.let_tokens };
+      app_parser.run ();
+      EX::Expr app_expr = *app_parser.m_exprs.last ();
+
+      EX::Expr fn_expr{ EX::Type::FnDef };
+      fn_expr.as.m_fn.param = param;
+      fn_expr.as.m_fn.flags = EX::FnFlagEnum::FN_MUST_INLINE;
+      fn_expr.as.m_fn.body  = { this->m_arena };
+      fn_expr.as.m_fn.body.push (body_expr);
+
+      this->m_exprs.push (fn_expr);
+      this->m_exprs.push (app_expr);
+
+      i += 1;
     }
     break;
     case LX::Type::Min:

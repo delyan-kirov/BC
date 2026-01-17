@@ -1,13 +1,17 @@
 #ifndef LX_HEADER
 #define LX_HEADER
 
-#include "AR.hpp"
 #include "ER.hpp"
 #include "UT.hpp"
+#include <cstring>
 #include <stdio.h>
 
 namespace LX
 {
+
+constexpr size_t KEYWORD_MAX_LEN = 3;
+const UT::String KEYWORD_LET{ (char *)"let", 3 };
+const UT::String KEYWORD_IN{ (char *)"in", 2 };
 
 #define LX_ERROR_REPORT(LX_ERROR_E, LX_ERROR_MSG)                             \
   do                                                                          \
@@ -23,6 +27,9 @@ enum class E
   OK,
   PARENTHESIS_UNBALANCED,
   NUMBER_PARSING_FAILURE,
+  UNRECOGNIZED_STRING,
+  OPERATOR_MATCH_FAILURE,
+  UNREACHABLE_CASE_REACHED,
   MAX,
 };
 
@@ -54,11 +61,20 @@ enum class Type
   Modulus,
   Mult,
   Group,
+  LetIn,
+  Word,
   Max,
 };
 
 struct Token;
 using Tokens = UT::Vec<Token>;
+
+struct LetIn
+{
+  UT::String var_name;
+  Tokens let_tokens;
+  Tokens in_tokens;
+};
 
 struct Token
 {
@@ -68,11 +84,14 @@ struct Token
   union
   {
     Tokens m_tokens;
+    LetIn m_let_in;
+    UT::String m_string;
     ssize_t m_int = 0;
   } as;
 
   Token ()  = default;
   ~Token () = default;
+  // TODO: the line and cursor should be set
   Token (Type t) : m_type{ t }, m_line{ 0 }, m_cursor{ 0 }, as{} {};
   Token (Tokens tokens) : m_type{ Type::Group }, m_line{ 0 }, m_cursor{ 0 }
   {
@@ -98,7 +117,7 @@ public:
         m_input{ input },           //
         m_tokens{ Tokens (arena) }, //
         m_lines{ 0 },               //
-        m_cursor{ 0 },              //
+        m_cursor{ begin },          //
         m_begin{ begin },           //
         m_end{ end }                //
   {
@@ -133,6 +152,25 @@ public:
     new (&this->m_tokens) Tokens{ l.m_arena };
   }
 
+  Lexer (Lexer const &l, size_t begin)
+      : m_arena{ l.m_arena }, m_events (l.m_arena)
+  {
+    this->m_begin  = l.m_begin;
+    this->m_end    = l.m_end;
+    this->m_cursor = l.m_cursor;
+    this->m_input  = l.m_input;
+    this->m_begin  = begin;
+    this->m_end    = l.m_end;
+    new (&this->m_tokens) Tokens{ l.m_arena };
+  }
+
+  void
+  skip_to (Lexer const &l)
+  {
+    this->m_cursor = l.m_cursor;
+    this->m_lines  = l.m_lines;
+  }
+
   ~Lexer () {}
 
   void generate_event_report ();
@@ -147,6 +185,16 @@ public:
 
   void push_operator (char c);
 
+  void push_group (Lexer l);
+
+  E match_operator (char c);
+
+  UT::String get_word (size_t idx);
+
+  bool match_keyword (UT::String keyword, UT::String word);
+
+  void strip_white_space (size_t idx);
+
   E run ();
 };
 
@@ -160,11 +208,14 @@ to_string (LX::E e)
 {
   switch (e)
   {
-  case LX::E::MIN                   : return "MIN";
-  case LX::E::OK                    : return "OK";
-  case LX::E::PARENTHESIS_UNBALANCED: return "PARENTHESIS_UNBALANCED";
-  case LX::E::NUMBER_PARSING_FAILURE: return "NUMBER_PARSING_FAILURE";
-  case LX::E::MAX                   : return "MAX";
+  case LX::E::MIN                     : return "MIN";
+  case LX::E::OK                      : return "OK";
+  case LX::E::PARENTHESIS_UNBALANCED  : return "PARENTHESIS_UNBALANCED";
+  case LX::E::NUMBER_PARSING_FAILURE  : return "NUMBER_PARSING_FAILURE";
+  case LX::E::UNRECOGNIZED_STRING     : return "UNRECOGNIZED_STRING";
+  case LX::E::OPERATOR_MATCH_FAILURE  : return "OPERATOR_MATCH_FAILURE";
+  case LX::E::UNREACHABLE_CASE_REACHED: return "UNREACHABLE_CASE_REACHED";
+  case LX::E::MAX                     : return "MAX";
   }
 
   string s{ "ERROR: " };
@@ -186,6 +237,8 @@ to_string (LX::Type t)
   case LX::Type::Div    : return "Div";
   case LX::Type::Modulus: return "Modulus";
   case LX::Type::Group  : return "Group";
+  case LX::Type::LetIn  : return "LetIn";
+  case LX::Type::Word   : return "Word";
   case LX::Type::Max    : return "Max";
   }
 
@@ -225,15 +278,22 @@ to_string (LX::Token t)
     return "Op("
            "%"
            ")";
+  case LX::Type::LetIn:
+  {
+    UT_FAIL_IF ("UNREACHABLE");
+    break;
+  }
+  case LX::Type::Word:
+  {
+    return to_string (t.as.m_string);
+  }
   case LX::Type::Group:
   {
     return to_string (t.as.m_tokens);
   }
   }
-  string s{ "ERROR: " };
-  s += (__FUNCTION__);
-  s += " UNREACHABLE PATCH REACHED!";
-  return s;
+  UT_FAIL_IF ("UNREACHABLE");
+  return "";
 }
 
 inline string
@@ -243,14 +303,29 @@ to_string (LX::Tokens ts)
   for (size_t i = 0; i < ts.m_len; ++i)
   {
     LX::Token t = ts[i];
-    if (LX::Type::Group == t.m_type)
+    switch (t.m_type)
     {
-      s += to_string ((LX::Tokens)t.as.m_tokens); //
-    }
-    else
+    case LX::Type::Group: s += to_string ((LX::Tokens)t.as.m_tokens); break;
+    case LX::Type::LetIn:
     {
-      s += to_string (t); //
+      std::string let_string = to_string (t.as.m_let_in.let_tokens);
+      std::string in_string  = to_string (t.as.m_let_in.in_tokens);
+      std::string var_name   = to_string (t.as.m_let_in.var_name);
+      s += "let " + var_name + " = " + let_string + " in " + in_string;
     }
+    break;
+    case LX::Type::Div:
+    case LX::Type::Int:
+    case LX::Type::Minus:
+    case LX::Type::Modulus:
+    case LX::Type::Mult:
+    case LX::Type::Plus:
+    case LX::Type::Min:
+    case LX::Type::Max    : s += to_string (t); break;
+    case LX::Type::Word   : s += "Word(" + to_string (t.as.m_string) + ")"; break;
+    default               : UT_FAIL_IF ("Unreachable");
+    }
+
     s += (i != ts.m_len - 1) ? " , " : "";
   }
   s += " ]";

@@ -1,10 +1,37 @@
 #include "LX.hpp"
 #include "ER.hpp"
-#include <cassert>
+#include "UT.hpp"
+#include <cstdio>
 #include <string>
 
 namespace LX
 {
+
+bool
+Lexer::match_keyword (UT::String keyword, UT::String word)
+{
+  return UT::strcompare (keyword, word);
+}
+
+UT::String
+LX::Lexer::get_word (size_t idx)
+{
+  UT::SB sb{};
+  this->strip_white_space (idx);
+  idx = this->m_cursor;
+
+  for (char c = this->m_input[idx++];        //
+       c && (c != ' ') && !std::isdigit (c); // And more, TODO
+       c = this->m_input[idx++])
+  {
+    sb.add (c);
+  }
+  UT::String string = sb.collect (this->m_arena);
+  this->m_cursor    = idx;
+
+  return string;
+}
+
 LX::E
 LX::Lexer::find_matching_paren (size_t &paren_match_idx)
 {
@@ -102,7 +129,7 @@ Lexer::push_operator (char c)
   case '*': t_type = LX::Type::Mult; break;
   case '/': t_type = LX::Type::Div; break;
   case '%': t_type = LX::Type::Modulus; break;
-  default : /* UNREACHABLE */ assert (false && "push_operator");
+  default : /* UNREACHABLE */ UT_FAIL_IF ("UNERACHABLE");
   }
   this->m_tokens.push (LX::Token{ t_type });
 }
@@ -144,7 +171,7 @@ Lexer::run ()
       LX::Lexer new_l = LX::Lexer (*this, group_begin, group_end);
       result          = new_l.run ();
 
-      if (LX::E::OK == result) { this->subsume_sub_lexer (new_l); }
+      if (LX::E::OK == result) { this->push_group (new_l); }
       else
       {
         LX_ERROR_REPORT (result, "new_l failed");
@@ -153,12 +180,19 @@ Lexer::run ()
     break;
     case ')':
     {
-      assert (0 && "case ')'");
+      LX_ERROR_REPORT (LX::E::UNREACHABLE_CASE_REACHED,
+                       "')' should never match in this branch");
     }
     break;
     case ' ':
     {
       ; // Do nothing
+    }
+    break;
+    case '=':
+    {
+      LX_ERROR_REPORT (LX::E::UNREACHABLE_CASE_REACHED,
+                       "Operator = should never match in this branch");
     }
     break;
     case '\n':
@@ -168,8 +202,63 @@ Lexer::run ()
     break;
     default:
     {
-      LX::E result = this->push_int ();
-      if (LX::E::OK != result) { LX_ERROR_REPORT (result, ""); }
+      if (std::isdigit (c))
+      {
+        LX::E result = this->push_int ();
+        if (LX::E::OK != result) { LX_ERROR_REPORT (result, ""); }
+      }
+      else
+      {
+        UT::String word = this->get_word (this->m_cursor - 1);
+        if (this->match_keyword (LX::KEYWORD_LET, word))
+        {
+          UT::String var_name = this->get_word (this->m_cursor);
+
+          // TODO: More and better error reporting macros
+          if (LX::E::OK != this->match_operator ('='))
+          {
+            LX_ERROR_REPORT (E::OPERATOR_MATCH_FAILURE,
+                             "Operator '=' did not match");
+          }
+
+          Lexer let_lexer{ this->m_input, this->m_arena, this->m_cursor,
+                           this->m_end };
+          let_lexer.run ();
+
+          Lexer in_lexer{ let_lexer.m_input, let_lexer.m_arena,
+                          let_lexer.m_cursor, this->m_end };
+          in_lexer.run ();
+
+          // TODO: Token should have an end
+          Token letin{};
+          letin.m_type                 = Type::LetIn;
+          letin.m_line                 = this->m_lines;
+          letin.m_cursor               = this->m_cursor;
+          letin.as.m_let_in.var_name   = var_name;
+          letin.as.m_let_in.let_tokens = let_lexer.m_tokens;
+          letin.as.m_let_in.in_tokens  = in_lexer.m_tokens;
+
+          this->m_tokens.push (letin);
+          this->skip_to (in_lexer);
+        }
+        else if (this->match_keyword (LX::KEYWORD_IN, word))
+        {
+          /* Nothing to do */ return LX::E::OK;
+        }
+        else
+        {
+          if (word.m_len > 0)
+          {
+            LX::Token t{ LX::Type::Word };
+            t.as.m_string = word;
+            this->m_tokens.push (t);
+          }
+          else
+          {
+            LX_ERROR_REPORT (LX::E::UNRECOGNIZED_STRING, "");
+          }
+        }
+      }
     }
     break;
     }
@@ -187,9 +276,8 @@ Lexer::generate_event_report ()
     ER::E e = events.m_mem[i];
     if (ER::Type::ERROR == e.m_type)
     {
-      LX::E event        = *(LX::E *)e.m_data;
-      const char *prefix = "\033[31mERROR\033[0m";
-      std::printf ("[%s] %s\n", prefix, std::to_string (event).c_str ());
+      LX::E event = *(LX::E *)e.m_data;
+      std::printf ("[%s] %s\n", UT::SERROR, std::to_string (event).c_str ());
 
       // Find the line with the error
       size_t line       = 1;
@@ -236,9 +324,11 @@ Lexer::generate_event_report ()
 void
 Lexer::subsume_sub_lexer (Lexer &l)
 {
-  LX::Token token{ l.m_tokens };
-
-  this->m_tokens.push (token);
+  for (auto t : l.m_tokens)
+  {
+    LX::Token token{ t };
+    this->m_tokens.push (token);
+  }
   this->m_cursor = l.m_cursor;
 
   for (size_t i = 0; i < l.m_events.m_len; ++i)
@@ -246,5 +336,37 @@ Lexer::subsume_sub_lexer (Lexer &l)
     ER::E e = l.m_events[i];
     this->m_events.push (e);
   }
+}
+
+E
+Lexer::match_operator (char c)
+{
+  this->strip_white_space (this->m_cursor);
+  return c == this->next_char () ? E::OK : E::UNRECOGNIZED_STRING;
+};
+
+void
+Lexer::strip_white_space (size_t idx)
+{
+  char c           = this->m_input[idx];
+  size_t new_lines = 0;
+
+  while (' ' == c || '\n' == c)
+  {
+    if ('\n' == c) new_lines += 1;
+    idx += 1;
+    c = this->m_input[idx];
+  }
+
+  this->m_lines += new_lines;
+  this->m_cursor = idx;
+};
+
+void
+Lexer::push_group (Lexer l)
+{
+  Token t{ l.m_tokens };
+  this->m_tokens.push (t);
+  this->m_cursor = l.m_cursor;
 }
 } // namespace LX

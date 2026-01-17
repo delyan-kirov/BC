@@ -4,6 +4,7 @@
 #include "AR.hpp"
 #include "LX.hpp"
 #include "UT.hpp"
+#include <cstdint>
 #include <string>
 #include <type_traits>
 
@@ -27,15 +28,56 @@ enum class Type
   Mult,
   Div,
   Modulus,
+  FnDef,
+  Var,
 };
 
 struct Expr;
 using Exprs = UT::Vec<Expr>;
+
+enum class FnFlagEnum : std::uint64_t
+{
+  MIN            = 0,
+  NONE           = 0,
+  FN_MUST_INLINE = 1 << 0,
+  MAX            = FN_MUST_INLINE,
+};
+using FnFlags = FnFlagEnum;
+
+struct FnDef
+{
+  FnFlags flags;
+  UT::String param;
+  Exprs body;
+};
+
 struct Expr
 {
-  Exprs exprs;
-  ssize_t m_int;
   Type m_type;
+  union
+  {
+    FnDef m_fn;
+    UT::String m_var;
+    Exprs exprs;
+    ssize_t m_int = 0;
+  } as;
+
+  Expr () = default;
+  Expr (Type type) : m_type{ type } {};
+  Expr (Type type, AR::Arena &arena) : m_type{ type }
+  {
+    switch (type)
+    {
+    case Type::FnDef      : this->as.m_fn.body = { arena }; break;
+    case Type::Div        :
+    case EX::Type::Sub    :
+    case EX::Type::Modulus:
+    case EX::Type::Mult   :
+    case EX::Type::Add    : this->as.exprs = { arena, 2 }; break;
+    case EX::Type::Minus  : this->as.exprs = { arena, 1 }; break;
+    default               : UT_FAIL_IF ("Invalid type for this constructor");
+    }
+  };
 };
 
 class Parser
@@ -83,8 +125,6 @@ public:
 
   E run ();
 
-  EX::Expr alloc_subexpr (size_t n);
-
   E parse_binop (EX::Type type, size_t start, size_t end);
 
   E parse_max_precedence_arithmetic_op (EX::Type, size_t &idx);
@@ -93,6 +133,7 @@ public:
   bool
   match_token_type (size_t start, const LX::Type type)
   {
+    // NOTE: here, we NEED to check that start index is in bounds
     LX::Type m_type = this->m_tokens[start].m_type;
     if (this->m_tokens.m_len <= start)
     {
@@ -131,6 +172,8 @@ to_string (EX::Type expr_type)
   case EX::Type::Mult   : return "EX::Type::Mult";
   case EX::Type::Div    : return "EX::Type::Div";
   case EX::Type::Modulus: return "EX::Type::Modulus";
+  case EX::Type::FnDef  : return "EX::Type::Modulus";
+  case EX::Type::Var    : return "EX::Type::Var";
   case EX::Type::Unknown: return "EX::Type::Unknown";
   }
 }
@@ -146,59 +189,70 @@ to_string (EX::Expr expr)
   {
   case EX::Type::Int:
   {
-    s = std::to_string (expr.m_int);
+    s = std::to_string (expr.as.m_int);
   }
   break;
   case EX::Type::Add:
   {
     s += "(";
-    s += to_string (expr.exprs[0]);
+    s += to_string (expr.as.exprs[0]);
     s += " + ";
-    s += to_string (expr.exprs[1]);
+    s += to_string (expr.as.exprs[1]);
     s += ")";
   }
   break;
   case EX::Type::Minus:
   {
     s += "-(";
-    s += to_string (expr.exprs[0]);
+    s += to_string (expr.as.exprs[0]);
     s += ")";
   }
   break;
   case EX::Type::Sub:
   {
     s += "(";
-    s += to_string (expr.exprs[0]);
+    s += to_string (expr.as.exprs[0]);
     s += " - ";
-    s += to_string (expr.exprs[1]);
+    s += to_string (expr.as.exprs[1]);
     s += ")";
   }
   break;
   case EX::Type::Mult:
   {
     s += "(";
-    s += to_string (expr.exprs[0]);
+    s += to_string (expr.as.exprs[0]);
     s += " * ";
-    s += to_string (expr.exprs[1]);
+    s += to_string (expr.as.exprs[1]);
     s += ")";
   }
   break;
   case EX::Type::Div:
   {
     s += "(";
-    s += to_string (expr.exprs[0]);
+    s += to_string (expr.as.exprs[0]);
     s += " / ";
-    s += to_string (expr.exprs[1]);
+    s += to_string (expr.as.exprs[1]);
     s += ")";
   }
   break;
   case EX::Type::Modulus:
   {
     s += "(";
-    s += to_string (expr.exprs[0]);
+    s += to_string (expr.as.exprs[0]);
     s += " % ";
-    s += to_string (expr.exprs[1]);
+    s += to_string (expr.as.exprs[1]);
     s += ")";
+  }
+  break;
+  case EX::Type::FnDef:
+  {
+    s += "( \\" + to_string (expr.as.m_fn.param) + " = "
+         + to_string (*expr.as.m_fn.body.last ()) + " )";
+  }
+  break;
+  case EX::Type::Var:
+  {
+    s += "Var (" + std::to_string (expr.as.m_var) + ")";
   }
   break;
   case EX::Type::Unknown:

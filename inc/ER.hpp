@@ -1,7 +1,6 @@
 #ifndef ER_HEADER
 #define ER_HEADER
 
-#include "AR.hpp"
 #include "UT.hpp"
 #include <cstdio>
 #include <cstring>
@@ -131,15 +130,12 @@ public:
       UT::SB sb{};
       sb.concatf ("%s :> begin", fn_name);
 
-      auto s    = sb.collect ();
-      auto data = UT::memcopy (*this->m_arena, s, sb.m_len);
-      ER::TraceE e{ data.m_mem, arena };
+      auto s = sb.collect (*this->m_arena);
+      ER::TraceE e{ s.m_mem, arena };
       this->m_event_log.push (e);
 
       this->push (this->m_fn_name);
       this->push (":> ");
-
-      std::free ((void *)s);
     }
   };
 
@@ -150,7 +146,8 @@ public:
       UT::SB sb{};
       sb.concatf ("%s :> end", this->m_fn_name);
 
-      ER::TraceE e{ (void *)sb.collect (), *this->m_arena };
+      ER::TraceE e{ (void *)sb.collect (*this->m_arena).m_mem,
+                    *this->m_arena };
       this->m_event_log.push (e);
     }
   }
@@ -170,7 +167,7 @@ public:
   {
     if (TRACE_ENABLE)
     {
-      ER::TraceE e{ (void *)UT::SB::strdup (this->m_mem), *this->m_arena };
+      ER::TraceE e{ (void *)this->m_mem, *this->m_arena };
       this->m_event_log.push (e);
 
       std::memset (this->m_mem, 0, this->m_len);
