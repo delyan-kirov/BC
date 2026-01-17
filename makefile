@@ -69,6 +69,7 @@ init:
 	make valgrind
 
 clean:
+	rm -f tmp.*
 	rm -f vgcore*
 	rm -f $(BIN)*
 
