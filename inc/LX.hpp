@@ -62,8 +62,8 @@ enum class Type
   Mult,
   Group,
   LetIn,
-  Max,
   Word,
+  Max,
 };
 
 struct Token;
@@ -91,6 +91,7 @@ struct Token
 
   Token ()  = default;
   ~Token () = default;
+  // TODO: the line and cursor should be set
   Token (Type t) : m_type{ t }, m_line{ 0 }, m_cursor{ 0 }, as{} {};
   Token (Tokens tokens) : m_type{ Type::Group }, m_line{ 0 }, m_cursor{ 0 }
   {
@@ -183,6 +184,8 @@ public:
   E push_int ();
 
   void push_operator (char c);
+
+  void push_group (Lexer l);
 
   E match_operator (char c);
 

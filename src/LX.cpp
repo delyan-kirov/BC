@@ -171,7 +171,7 @@ Lexer::run ()
       LX::Lexer new_l = LX::Lexer (*this, group_begin, group_end);
       result          = new_l.run ();
 
-      if (LX::E::OK == result) { this->subsume_sub_lexer (new_l); }
+      if (LX::E::OK == result) { this->push_group (new_l); }
       else
       {
         LX_ERROR_REPORT (result, "new_l failed");
@@ -362,4 +362,11 @@ Lexer::strip_white_space (size_t idx)
   this->m_cursor = idx;
 };
 
+void
+Lexer::push_group (Lexer l)
+{
+  Token t{ l.m_tokens };
+  this->m_tokens.push (t);
+  this->m_cursor = l.m_cursor;
+}
 } // namespace LX

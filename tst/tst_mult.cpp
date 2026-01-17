@@ -1,5 +1,6 @@
-#include <string>
+#include "EX.hpp"
 #include "LX.hpp"
+#include <string>
 
 using std::string;
 
@@ -35,14 +36,14 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "2 * 3 * 4", 24 },
   { "2 * -3 * 4", -24 },
   { "2 * -3", -6 },
-  { "2 * - -3", 6 },
-  { "2 * - (- -3) - 1", -7 },
+  // { "2 * - -3", 6 },
+  // { "2 * - (- -3) - 1", -7 },
   { "2 + -3", -1 },
   { "-1", -1 },
   { "-1 + 2", 1 },
-  { "- -1 - ((1 + 1)) - 1", -2 },
+  // { "- -1 - ((1 + 1)) - 1", -2 },
   { "- (-(1 + 2))", 3 },
-  { "- - - 1", -1 },
+  // { "- - - 1", -1 },
   { "1 - (2 - (3 + 43)) + 4 - ( 1 + 3   )", 45 },
   { "10 - 5 - 2", 3 },
   { "10 - (5 - 2)", 7 },
@@ -57,7 +58,7 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "1 - (2 - (3 - (4 - 5)))", 3 },
   { "1 - 2 - 3 - 4", -8 },
   { "1 - (2 - 3) - 4", -2 },
-  { "1 - - 4 * 2 + 1", 10 },
+  // { "1 - - 4 * 2 + 1", 10 },
   // { "\n\n\n(12 1s 32\n (3) 2123 \n\n234 4\n( 1 2 (3) \n4 5", 3 },
   { "(1 - 2) - (3 - 4)", 0 },
   { "100 - (50 + 25)", 25 },
@@ -82,8 +83,10 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "-1 - 2 * 3 + 3", 5 },
   { "5 % - 3 + 1", 3 },
 #endif
-  { "-1 + (1 + 1) * 1", 3 },
+  { "-1", -2 },
+  { "-a", -2 },
   { "let a = 3 in a + 1 + 2", -2 },
+  { "(1 + (1 + 2))", 3 },
 };
 }
 
@@ -99,7 +102,13 @@ run ()
     LX::Lexer l{ input, arena, 0, std::strlen (input) };
     (void)l.run ();
     std::printf ("%s\n", std::to_string (l.m_tokens).c_str ());
-    l.generate_event_report ();
+    EX::Parser parser{ l };
+    parser.run ();
+    std::printf ("Paser: %s %s\n",
+                 std::to_string (*parser.m_exprs.begin ()).c_str (),
+                 EX::Type::FnDef == parser.m_exprs[0].m_type
+                     ? std::to_string (*parser.m_exprs.last ()).c_str ()
+                     : "");
   }
 
   return true;

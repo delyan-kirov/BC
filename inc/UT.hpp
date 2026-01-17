@@ -159,7 +159,7 @@ memcopy (AR::Arena &arena, const char *s)
 }
 
 inline String
-memcopy (AR::Arena &arena, const char *s, size_t len)
+strdup (AR::Arena &arena, const char *s, size_t len)
 {
   auto new_s = (char *)arena.alloc (len);
   (void)std::memcpy (new_s, s, len);
@@ -172,6 +172,16 @@ strcompare (const String s1, const String s2)
 {
   return s1.m_len == s2.m_len
          && 0 == std::memcmp (s1.m_mem, s2.m_mem, s1.m_len);
+}
+
+inline String
+strdup (AR::Arena &arena, String s)
+{
+  auto new_s = (char *)arena.alloc (s.m_len + 1);
+  (void)std::memcpy (new_s, s.m_mem, s.m_len);
+  new_s[s.m_len] = 0;
+  Vu<char> result{ new_s, s.m_len };
+  return result;
 }
 
 template <typename O> struct Vec
