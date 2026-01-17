@@ -3,6 +3,7 @@
 
 #include "ER.hpp"
 #include "UT.hpp"
+#include <cstring>
 #include <stdio.h>
 
 namespace LX
@@ -27,6 +28,8 @@ enum class E
   PARENTHESIS_UNBALANCED,
   NUMBER_PARSING_FAILURE,
   UNRECOGNIZED_STRING,
+  OPERATOR_MATCH_FAILURE,
+  UNREACHABLE_CASE_REACHED,
   MAX,
 };
 
@@ -60,6 +63,7 @@ enum class Type
   Group,
   LetIn,
   Max,
+  Word,
 };
 
 struct Token;
@@ -80,7 +84,8 @@ struct Token
   union
   {
     Tokens m_tokens;
-    LetIn m_lenin;
+    LetIn m_let_in;
+    UT::String m_string;
     ssize_t m_int = 0;
   } as;
 
@@ -111,7 +116,7 @@ public:
         m_input{ input },           //
         m_tokens{ Tokens (arena) }, //
         m_lines{ 0 },               //
-        m_cursor{ 0 },              //
+        m_cursor{ begin },          //
         m_begin{ begin },           //
         m_end{ end }                //
   {
@@ -158,6 +163,13 @@ public:
     new (&this->m_tokens) Tokens{ l.m_arena };
   }
 
+  void
+  skip_to (Lexer const &l)
+  {
+    this->m_cursor = l.m_cursor;
+    this->m_lines  = l.m_lines;
+  }
+
   ~Lexer () {}
 
   void generate_event_report ();
@@ -174,8 +186,11 @@ public:
 
   E match_operator (char c);
 
-  UT::String get_word ();
+  UT::String get_word (size_t idx);
+
   bool match_keyword (UT::String keyword, UT::String word);
+
+  void strip_white_space (size_t idx);
 
   E run ();
 };
@@ -190,12 +205,14 @@ to_string (LX::E e)
 {
   switch (e)
   {
-  case LX::E::MIN                   : return "MIN";
-  case LX::E::OK                    : return "OK";
-  case LX::E::PARENTHESIS_UNBALANCED: return "PARENTHESIS_UNBALANCED";
-  case LX::E::NUMBER_PARSING_FAILURE: return "NUMBER_PARSING_FAILURE";
-  case LX::E::UNRECOGNIZED_STRING   : return "UNRECOGNIZED_STRING";
-  case LX::E::MAX                   : return "MAX";
+  case LX::E::MIN                     : return "MIN";
+  case LX::E::OK                      : return "OK";
+  case LX::E::PARENTHESIS_UNBALANCED  : return "PARENTHESIS_UNBALANCED";
+  case LX::E::NUMBER_PARSING_FAILURE  : return "NUMBER_PARSING_FAILURE";
+  case LX::E::UNRECOGNIZED_STRING     : return "UNRECOGNIZED_STRING";
+  case LX::E::OPERATOR_MATCH_FAILURE  : return "OPERATOR_MATCH_FAILURE";
+  case LX::E::UNREACHABLE_CASE_REACHED: return "UNREACHABLE_CASE_REACHED";
+  case LX::E::MAX                     : return "MAX";
   }
 
   string s{ "ERROR: " };
@@ -218,6 +235,7 @@ to_string (LX::Type t)
   case LX::Type::Modulus: return "Modulus";
   case LX::Type::Group  : return "Group";
   case LX::Type::LetIn  : return "LetIn";
+  case LX::Type::Word   : return "Word";
   case LX::Type::Max    : return "Max";
   }
 
@@ -259,20 +277,20 @@ to_string (LX::Token t)
            ")";
   case LX::Type::LetIn:
   {
-    std::string let_string = to_string (t.as.m_lenin.let_tokens);
-    std::string in_string  = to_string (t.as.m_lenin.in_tokens);
-    std::string var_name   = std::string{ t.as.m_lenin.var_name.m_mem };
-    return "let " + var_name + " = " + let_string + " in " + in_string;
+    UT_FAIL_IF ("UNREACHABLE");
+    break;
+  }
+  case LX::Type::Word:
+  {
+    return to_string (t.as.m_string);
   }
   case LX::Type::Group:
   {
     return to_string (t.as.m_tokens);
   }
   }
-  string s{ "ERROR: " };
-  s += (__FUNCTION__);
-  s += " UNREACHABLE PATCH REACHED!";
-  return s;
+  UT_FAIL_IF ("UNREACHABLE");
+  return "";
 }
 
 inline string
@@ -282,14 +300,29 @@ to_string (LX::Tokens ts)
   for (size_t i = 0; i < ts.m_len; ++i)
   {
     LX::Token t = ts[i];
-    if (LX::Type::Group == t.m_type)
+    switch (t.m_type)
     {
-      s += to_string ((LX::Tokens)t.as.m_tokens); //
-    }
-    else
+    case LX::Type::Group: s += to_string ((LX::Tokens)t.as.m_tokens); break;
+    case LX::Type::LetIn:
     {
-      s += to_string (t); //
+      std::string let_string = to_string (t.as.m_let_in.let_tokens);
+      std::string in_string  = to_string (t.as.m_let_in.in_tokens);
+      std::string var_name   = to_string (t.as.m_let_in.var_name);
+      s += "let " + var_name + " = " + let_string + " in " + in_string;
     }
+    break;
+    case LX::Type::Div:
+    case LX::Type::Int:
+    case LX::Type::Minus:
+    case LX::Type::Modulus:
+    case LX::Type::Mult:
+    case LX::Type::Plus:
+    case LX::Type::Min:
+    case LX::Type::Max    : s += to_string (t); break;
+    case LX::Type::Word   : s += "Word(" + to_string (t.as.m_string) + ")"; break;
+    default               : UT_FAIL_IF ("Unreachable");
+    }
+
     s += (i != ts.m_len - 1) ? " , " : "";
   }
   s += " ]";

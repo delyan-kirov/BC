@@ -42,8 +42,11 @@ $(BIN)tst_mult: $(TST)tst_mult.cpp $(BC)
 	$(CC) $(BC) $(TST)tst_mult.cpp -o $@
 
 #-----------------------------CMND------------------------------
-COMMANDS = clean bear test init list format valgrind
+COMMANDS = clean bear test init list format valgrind gf2
 .PHONY: COMMANDS
+
+debug:
+	gf2 $(BIN)tst_mult &
 
 list:
 	@true
@@ -63,6 +66,7 @@ init:
 	mkdir -p $(BIN)
 	make clean
 	make test
+	make valgrind
 
 clean:
 	rm -f vgcore*

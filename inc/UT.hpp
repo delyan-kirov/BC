@@ -344,7 +344,7 @@ public:
   const String
   collect (AR::Arena &arena)
   {
-    char* mem = (char *)arena.alloc (sizeof(char)*this->m_len);
+    char *mem = (char *)arena.alloc (sizeof (char) * this->m_len);
     std::memset (mem, 0, this->m_len);
     std::memcpy (mem, this->m_mem, this->m_len);
     return String{ mem, this->m_len };
@@ -437,6 +437,20 @@ public:
     return *this;
   }
 };
+} // namespace UT
+
+namespace std
+{
+inline string
+to_string (UT::String s)
+{
+  const char *var_mem = new char[s.m_len + 1];
+  memset ((void *)var_mem, 0, s.m_len + 1);
+  memcpy ((void *)var_mem, s.begin (), s.m_len);
+  string result{ var_mem };
+  delete[] var_mem;
+  return result;
+}
 }
 
 #endif // UT_HEADER

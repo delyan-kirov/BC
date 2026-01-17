@@ -4,3 +4,4 @@ compile_commands.json
 BL*
 *.txt
 vgcore*
+tmp.*

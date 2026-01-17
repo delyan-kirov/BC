@@ -92,6 +92,7 @@ public:
   bool
   match_token_type (size_t start, const LX::Type type)
   {
+    // NOTE: here, we NEED to check that start index is in bounds
     LX::Type m_type = this->m_tokens[start].m_type;
     if (this->m_tokens.m_len <= start)
     {

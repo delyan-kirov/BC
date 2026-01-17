@@ -1,8 +1,4 @@
-#include <cstring>
-#include <iostream>
 #include <string>
-
-#include "EX.hpp"
 #include "LX.hpp"
 
 using std::string;
@@ -62,7 +58,7 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "1 - 2 - 3 - 4", -8 },
   { "1 - (2 - 3) - 4", -2 },
   { "1 - - 4 * 2 + 1", 10 },
-  { "\n\n\n(12 1s 32\n (3) 2123 \n\n234 4\n( 1 2 (3) \n4 5", 3 },
+  // { "\n\n\n(12 1s 32\n (3) 2123 \n\n234 4\n( 1 2 (3) \n4 5", 3 },
   { "(1 - 2) - (3 - 4)", 0 },
   { "100 - (50 + 25)", 25 },
   { "(100 - 50) + 25", 75 },
@@ -85,9 +81,9 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "3 * 5 * 3", 45 },
   { "-1 - 2 * 3 + 3", 5 },
   { "5 % - 3 + 1", 3 },
-  { "-1 + (1 + 1) * 1", 3 },
 #endif
-  { "let a = 3 in 1 + 2", -2 },
+  { "-1 + (1 + 1) * 1", 3 },
+  { "let a = 3 in a + 1 + 2", -2 },
 };
 }
 

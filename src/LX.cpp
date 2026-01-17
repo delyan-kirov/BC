@@ -1,10 +1,7 @@
 #include "LX.hpp"
 #include "ER.hpp"
 #include "UT.hpp"
-#include <cassert>
-#include <cctype>
 #include <cstdio>
-#include <cstring>
 #include <string>
 
 namespace LX
@@ -17,20 +14,20 @@ Lexer::match_keyword (UT::String keyword, UT::String word)
 }
 
 UT::String
-LX::Lexer::get_word ()
+LX::Lexer::get_word (size_t idx)
 {
   UT::SB sb{};
-  char c = this->m_input[this->m_cursor - 1];
-  sb.add (c);
-  while ((c = this->next_char ()) //
-         && (c != ' ')            //
-         && !std::isdigit (c)
-         // And more, TODO
-  )
+  this->strip_white_space (idx);
+  idx = this->m_cursor;
+
+  for (char c = this->m_input[idx++];        //
+       c && (c != ' ') && !std::isdigit (c); // And more, TODO
+       c = this->m_input[idx++])
   {
     sb.add (c);
   }
   UT::String string = sb.collect (this->m_arena);
+  this->m_cursor    = idx;
 
   return string;
 }
@@ -132,7 +129,7 @@ Lexer::push_operator (char c)
   case '*': t_type = LX::Type::Mult; break;
   case '/': t_type = LX::Type::Div; break;
   case '%': t_type = LX::Type::Modulus; break;
-  default : /* UNREACHABLE */ assert (false && "push_operator");
+  default : /* UNREACHABLE */ UT_FAIL_IF ("UNERACHABLE");
   }
   this->m_tokens.push (LX::Token{ t_type });
 }
@@ -183,7 +180,8 @@ Lexer::run ()
     break;
     case ')':
     {
-      assert (0 && "case ')'");
+      LX_ERROR_REPORT (LX::E::UNREACHABLE_CASE_REACHED,
+                       "')' should never match in this branch");
     }
     break;
     case ' ':
@@ -193,7 +191,8 @@ Lexer::run ()
     break;
     case '=':
     {
-      /* Nothing to do */ return LX::E::OK;
+      LX_ERROR_REPORT (LX::E::UNREACHABLE_CASE_REACHED,
+                       "Operator = should never match in this branch");
     }
     break;
     case '\n':
@@ -210,37 +209,37 @@ Lexer::run ()
       }
       else
       {
-        // TODO: This is complete garbage
-        // We should cut spaces and we should be operator aware
-        UT::String word = this->get_word ();
+        UT::String word = this->get_word (this->m_cursor - 1);
         if (this->match_keyword (LX::KEYWORD_LET, word))
         {
-          // TODO: this should be gone
-          this->next_char ();
-          UT::String var_name = this->get_word ();
-          std::printf ("var name is %.*s\n", (int)var_name.m_len,
-                       var_name.m_mem);
+          UT::String var_name = this->get_word (this->m_cursor);
 
-          this->match_operator ('=');
+          // TODO: More and better error reporting macros
+          if (LX::E::OK != this->match_operator ('='))
+          {
+            LX_ERROR_REPORT (E::OPERATOR_MATCH_FAILURE,
+                             "Operator '=' did not match");
+          }
 
-          Lexer let_lexer{ *this, this->m_cursor };
+          Lexer let_lexer{ this->m_input, this->m_arena, this->m_cursor,
+                           this->m_end };
           let_lexer.run ();
 
-          Lexer in_lexer{ *this, let_lexer.m_cursor };
+          Lexer in_lexer{ let_lexer.m_input, let_lexer.m_arena,
+                          let_lexer.m_cursor, this->m_end };
           in_lexer.run ();
 
+          // TODO: Token should have an end
           Token letin{};
-          letin.m_type                = Type::LetIn;
-          letin.m_line                = this->m_lines;
-          letin.m_cursor              = this->m_cursor;
-          letin.as.m_lenin.var_name   = var_name;
-          letin.as.m_lenin.let_tokens = let_lexer.m_tokens;
-          letin.as.m_lenin.in_tokens  = in_lexer.m_tokens;
+          letin.m_type                 = Type::LetIn;
+          letin.m_line                 = this->m_lines;
+          letin.m_cursor               = this->m_cursor;
+          letin.as.m_let_in.var_name   = var_name;
+          letin.as.m_let_in.let_tokens = let_lexer.m_tokens;
+          letin.as.m_let_in.in_tokens  = in_lexer.m_tokens;
 
           this->m_tokens.push (letin);
-          // TODO: do not do that, there should be a new method that advances
-          // from the previous tokenizer
-          this->m_cursor = in_lexer.m_cursor;
+          this->skip_to (in_lexer);
         }
         else if (this->match_keyword (LX::KEYWORD_IN, word))
         {
@@ -248,7 +247,16 @@ Lexer::run ()
         }
         else
         {
-          LX_ERROR_REPORT (LX::E::UNRECOGNIZED_STRING, "");
+          if (word.m_len > 0)
+          {
+            LX::Token t{ LX::Type::Word };
+            t.as.m_string = word;
+            this->m_tokens.push (t);
+          }
+          else
+          {
+            LX_ERROR_REPORT (LX::E::UNRECOGNIZED_STRING, "");
+          }
         }
       }
     }
@@ -333,6 +341,25 @@ Lexer::subsume_sub_lexer (Lexer &l)
 E
 Lexer::match_operator (char c)
 {
+  this->strip_white_space (this->m_cursor);
   return c == this->next_char () ? E::OK : E::UNRECOGNIZED_STRING;
 };
+
+void
+Lexer::strip_white_space (size_t idx)
+{
+  char c           = this->m_input[idx];
+  size_t new_lines = 0;
+
+  while (' ' == c || '\n' == c)
+  {
+    if ('\n' == c) new_lines += 1;
+    idx += 1;
+    c = this->m_input[idx];
+  }
+
+  this->m_lines += new_lines;
+  this->m_cursor = idx;
+};
+
 } // namespace LX
