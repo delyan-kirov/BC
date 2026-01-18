@@ -14,5 +14,10 @@ jobs:
       - uses: cachix/install-nix-action@v27
 
       - name: Run make in Nix dev shell
-        run: nix develop --command make init
+          run: |
+            nix develop --command bash -c '
+              make init
+              make test
+              make lint
+            '
 
