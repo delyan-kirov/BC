@@ -10,12 +10,11 @@ make
 
 ## TODO
 
+- It is really annoying to have to use std::string and printf there should be utility funcitons that use UT::String
+- X macros for the enums might be a good idea
 - Fix tracing
 - Fix error reporting
-- Use Vu<char*> instead of std::string, maybe even alias it
-- String builder should use arenas and Vu's for sure
 - Events should have type but also level
-- X macros for the enums might be a good idea
 
 - Implement
   - logical operators || && !

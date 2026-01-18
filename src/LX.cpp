@@ -200,6 +200,32 @@ Lexer::run ()
       ; // Do nothing
     }
     break;
+    case '\\': // \<var> = <expr>
+    {
+      this->strip_white_space (this->m_cursor);
+      UT::String var_name = this->get_word (this->m_cursor);
+      if (LX::E::OK != this->match_operator ('='))
+      {
+        LX_ERROR_REPORT (E::OPERATOR_MATCH_FAILURE,
+                         "Operator '=' did not match");
+      }
+      Lexer body_lexer{ this->m_input, this->m_arena, this->m_cursor,
+                        this->m_end };
+      body_lexer.run ();
+
+      Token fn{};
+      fn.m_type           = Type::Fn;
+      fn.m_line           = this->m_lines;
+      fn.m_cursor         = this->m_cursor;
+      fn.as.m_fn.var_name = var_name;
+      fn.as.m_fn.body     = body_lexer.m_tokens;
+
+      this->m_tokens.push (fn);
+      this->skip_to (body_lexer);
+
+      return LX::E::OK;
+    }
+    break;
     default:
     {
       if (std::isdigit (c))
@@ -231,7 +257,7 @@ Lexer::run ()
 
           // TODO: Token should have an end
           Token letin{};
-          letin.m_type                 = Type::LetIn;
+          letin.m_type                 = Type::Let;
           letin.m_line                 = this->m_lines;
           letin.m_cursor               = this->m_cursor;
           letin.as.m_let_in.var_name   = var_name;

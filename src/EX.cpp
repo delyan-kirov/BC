@@ -123,6 +123,8 @@ Parser::run ()
     break;
     case LX::Type::Word:
     {
+      // TODO: There should be a function application EX type and we should
+      // check for it here
       EX::Expr expr{ EX::Type::Var };
       expr.as.m_var = t.as.m_string;
       this->m_exprs.push (expr);
@@ -177,8 +179,9 @@ Parser::run ()
       }
     }
     break;
-    case LX::Type::LetIn:
+    case LX::Type::Let:
     {
+      // TODO: We should have a function application explicitly!
       // let var = body_expr in app_expr
       UT::String param = t.as.m_let_in.var_name;
 
@@ -198,6 +201,26 @@ Parser::run ()
 
       this->m_exprs.push (fn_expr);
       this->m_exprs.push (app_expr);
+
+      i += 1;
+    }
+    break;
+    case LX::Type::Fn:
+    {
+      // \<var> = <expr>
+      UT::String param = t.as.m_fn.var_name;
+
+      EX::Parser body_parser{ *this, t.as.m_fn.body };
+      body_parser.run ();
+      EX::Expr body_expr = *body_parser.m_exprs.last ();
+
+      EX::Expr fn_expr{ EX::Type::FnDef };
+      fn_expr.as.m_fn.param = param;
+      fn_expr.as.m_fn.flags = EX::FnFlagEnum::FN_MUST_INLINE;
+      fn_expr.as.m_fn.body  = { this->m_arena };
+      fn_expr.as.m_fn.body.push (body_expr);
+
+      this->m_exprs.push (fn_expr);
 
       i += 1;
     }

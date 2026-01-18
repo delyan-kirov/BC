@@ -171,7 +171,7 @@ to_string (EX::Type expr_type)
   case EX::Type::Mult   : return "EX::Type::Mult";
   case EX::Type::Div    : return "EX::Type::Div";
   case EX::Type::Modulus: return "EX::Type::Modulus";
-  case EX::Type::FnDef  : return "EX::Type::Modulus";
+  case EX::Type::FnDef  : return "EX::Type::FnDef";
   case EX::Type::Var    : return "EX::Type::Var";
   case EX::Type::Unknown: return "EX::Type::Unknown";
   }

@@ -75,13 +75,13 @@ constexpr size_t V_DEFAULT_MAX_LEN = 1 << 6;
 
 template <typename O> struct Vu
 {
-  size_t m_len;
   O *m_mem;
+  size_t m_len;
 
   Vu () : m_len{ 0 }, m_mem{ nullptr } {};
-  Vu (O *o, size_t len) : m_len{ len }, m_mem{ o } {};
-
-  constexpr Vu (const char *s, size_t len) : m_mem{ s }, m_len{ len } {};
+  constexpr Vu (O *o, size_t len) : m_mem{ o }, m_len{ len } {};
+  constexpr Vu (const char *s, size_t len)
+      : m_mem{ (char *)s }, m_len{ len } {};
 
   Vu (const char *s) : m_mem{ s }
   {
@@ -146,7 +146,22 @@ template <typename O> struct Vu
   };
 };
 
-using String = Vu<char>;
+struct String : public Vu<char>
+{
+  template <size_t N>
+  constexpr String (const char (&mem)[N]) : Vu<char>{ mem, N - 1 }
+  {
+  }
+  // Construct from pointer + length
+  String (const char *mem, size_t len) : Vu<char>{ (char *)mem, len } {}
+  String (char *mem, size_t len) : Vu<char>{ mem, len } {}
+
+  String ()                          = default;
+  String (const String &)            = default;
+  String (String &&)                 = default;
+  String &operator= (const String &) = default;
+  String &operator= (String &&)      = default;
+};
 
 inline String
 memcopy (AR::Arena &arena, const char *s)
@@ -154,7 +169,7 @@ memcopy (AR::Arena &arena, const char *s)
   size_t s_len = std::strlen (s);
   auto new_s   = (char *)arena.alloc (s_len + 1);
   (void)std::memcpy (new_s, s, s_len);
-  Vu<char> result{ new_s, s_len };
+  String result{ new_s, s_len };
   return result;
 }
 
@@ -163,7 +178,7 @@ strdup (AR::Arena &arena, const char *s, size_t len)
 {
   auto new_s = (char *)arena.alloc (len);
   (void)std::memcpy (new_s, s, len);
-  Vu<char> result{ new_s, len };
+  String result{ new_s, len };
   return result;
 }
 
@@ -180,15 +195,15 @@ strdup (AR::Arena &arena, String s)
   auto new_s = (char *)arena.alloc (s.m_len + 1);
   (void)std::memcpy (new_s, s.m_mem, s.m_len);
   new_s[s.m_len] = 0;
-  Vu<char> result{ new_s, s.m_len };
+  String result{ new_s, s.m_len };
   return result;
 }
 
 template <typename O> struct Vec
 {
+  O *m_mem;
   size_t m_len;
   size_t m_max_len;
-  O *m_mem;
   AR::Arena *m_arena;
 
   Vec ()                       = default;
@@ -363,7 +378,7 @@ public:
   const String
   vu ()
   {
-    return Vu<char>{ this->m_mem, this->m_len };
+    return String{ this->m_mem, this->m_len };
   }
 };
 
