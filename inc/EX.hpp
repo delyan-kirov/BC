@@ -28,26 +28,45 @@ enum class Type
   Div,
   Modulus,
   FnDef,
+  FnApp,
   Var,
 };
 
 struct Expr;
 using Exprs = UT::Vec<Expr>;
 
-enum class FnFlagEnum : std::uint64_t
+enum class FnFlags : std::uint64_t
 {
   MIN            = 0,
   NONE           = 0,
   FN_MUST_INLINE = 1 << 0,
   MAX            = FN_MUST_INLINE,
 };
-using FnFlags = FnFlagEnum;
 
 struct FnDef
 {
   FnFlags flags;
   UT::String param;
   Exprs body;
+
+  FnDef () = default;
+  FnDef (
+      FnFlags flags, UT::String param, AR::Arena &arena)
+      : flags{ flags }, param{ param }
+  {
+    this->body = { arena };
+  }
+};
+
+struct FnApp
+{
+  FnFlags m_type;
+  union
+  {
+    FnDef m_body;
+    UT::String m_name = {};
+  } fn;
+  Exprs m_param;
 };
 
 struct Expr
@@ -56,6 +75,7 @@ struct Expr
   union
   {
     FnDef m_fn;
+    FnApp m_fnapp;
     UT::String m_var;
     Exprs exprs;
     ssize_t m_int = 0;
@@ -63,11 +83,14 @@ struct Expr
 
   Expr () = default;
   Expr (Type type) : m_type{ type } {};
-  Expr (Type type, AR::Arena &arena) : m_type{ type }
+  Expr (
+      Type type, AR::Arena &arena)
+      : m_type{ type }
   {
     switch (type)
     {
     case Type::FnDef      : this->as.m_fn.body = { arena }; break;
+    case Type::FnApp      : this->as.m_fnapp.m_param = { arena }; break;
     case Type::Div        :
     case EX::Type::Sub    :
     case EX::Type::Modulus:
@@ -90,7 +113,8 @@ public:
   size_t m_end;
   Exprs m_exprs;
 
-  Parser (LX::Lexer l)
+  Parser (
+      LX::Lexer l)
       : m_arena{ l.m_arena },               //
         m_events{ std::move (l.m_events) }, //
         m_input{ l.m_input },               //
@@ -130,7 +154,8 @@ public:
   E parse_min_precedence_arithmetic_op (EX::Type, size_t &idx);
 
   bool
-  match_token_type (size_t start, const LX::Type type)
+  match_token_type (
+      size_t start, const LX::Type type)
   {
     // NOTE: here, we NEED to check that start index is in bounds
     LX::Type m_type = this->m_tokens[start].m_type;
@@ -147,10 +172,12 @@ public:
 
   template <typename... Args>
   bool
-  match_token_type (size_t start, Args &&...args)
+  match_token_type (
+      size_t start, Args &&...args)
   {
-    static_assert ((std::is_same_v<std::decay_t<Args>, LX::Type> && ...),
-                   "[TYPE-ERROR] All extra arguments must be LX::Type");
+    static_assert (
+        (std::is_same_v<std::decay_t<Args>, LX::Type> && ...),
+        "[TYPE-ERROR] All extra arguments must be LX::Type");
     return (... || this->match_token_type (start, args));
   }
 };
@@ -160,7 +187,8 @@ public:
 namespace std
 {
 inline string
-to_string (EX::Type expr_type)
+to_string (
+    EX::Type expr_type)
 {
   switch (expr_type)
   {
@@ -173,6 +201,7 @@ to_string (EX::Type expr_type)
   case EX::Type::Modulus: return "EX::Type::Modulus";
   case EX::Type::FnDef  : return "EX::Type::FnDef";
   case EX::Type::Var    : return "EX::Type::Var";
+  case EX::Type::FnApp  : return "EX::Type::FnApp";
   case EX::Type::Unknown: return "EX::Type::Unknown";
   }
 
@@ -180,10 +209,11 @@ to_string (EX::Type expr_type)
   return "";
 }
 
-inline string to_string (EX::Expr *expr);
+inline string to_string (EX::FnDef fndef);
 
 inline string
-to_string (EX::Expr expr)
+to_string (
+    EX::Expr expr)
 {
   string s{ "" };
 
@@ -252,6 +282,15 @@ to_string (EX::Expr expr)
          + to_string (*expr.as.m_fn.body.last ()) + " )";
   }
   break;
+  case EX::Type::FnApp:
+  {
+    string fn_body = (EX::FnFlags::FN_MUST_INLINE == expr.as.m_fnapp.m_type)
+                         ? to_string (expr.as.m_fnapp.fn.m_body)
+                         : to_string (expr.as.m_fnapp.fn.m_name);
+    s += fn_body + " (" + " " + to_string (*expr.as.m_fnapp.m_param.last ())
+         + " )";
+  }
+  break;
   case EX::Type::Var:
   {
     s += "Var (" + std::to_string (expr.as.m_var) + ")";
@@ -271,6 +310,13 @@ to_string (EX::Expr expr)
   }
 
   return s;
+}
+inline string
+to_string (
+    EX::FnDef fndef)
+{
+  return "(\\" + to_string (fndef.param) + " = "
+         + to_string (*fndef.body.last ()) + ")";
 }
 }
 

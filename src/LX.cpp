@@ -8,13 +8,15 @@ namespace LX
 {
 
 bool
-Lexer::match_keyword (UT::String keyword, UT::String word)
+Lexer::match_keyword (
+    UT::String keyword, UT::String word)
 {
   return UT::strcompare (keyword, word);
 }
 
 UT::String
-LX::Lexer::get_word (size_t idx)
+LX::Lexer::get_word (
+    size_t idx)
 {
   UT::SB sb{};
   this->strip_white_space (idx);
@@ -33,9 +35,10 @@ LX::Lexer::get_word (size_t idx)
 }
 
 LX::E
-LX::Lexer::find_matching_paren (size_t &paren_match_idx)
+LX::Lexer::find_matching_paren (
+    size_t &paren_match_idx)
 {
-  auto trace = ER::Trace (this->m_arena, __PRETTY_FUNCTION__, this->m_events);
+  auto trace   = ER::Trace (this->m_arena, __PRETTY_FUNCTION__, this->m_events);
   size_t stack = 1;
 
   for (size_t idx = this->m_cursor; this->m_input[idx]; ++idx)
@@ -77,9 +80,9 @@ Lexer::push_int ()
   size_t lines  = this->m_lines;
 
   std::string s{
-    this->m_input[this->m_cursor
-                  - 1 /* since we entered this function, the point
-                         where we need to start parsing is offset by 1 */
+    this->m_input
+        [this->m_cursor - 1 /* since we entered this function, the point
+                               where we need to start parsing is offset by 1 */
   ]
   };
   for (char c = this->next_char (); c; c = this->next_char ())
@@ -87,9 +90,7 @@ Lexer::push_int ()
     if (!c) { break; }
     if (std::isdigit (c)) { s += c; }
     else
-    {
       break;
-    }
   }
 
   try
@@ -117,7 +118,8 @@ Lexer::push_int ()
 }
 
 void
-Lexer::push_operator (char c)
+Lexer::push_operator (
+    char c)
 {
   auto trace = ER::Trace (this->m_arena, __PRETTY_FUNCTION__, this->m_events);
 
@@ -180,8 +182,9 @@ Lexer::run ()
     break;
     case ')':
     {
-      LX_ERROR_REPORT (LX::E::UNREACHABLE_CASE_REACHED,
-                       "')' should never match in this branch");
+      LX_ERROR_REPORT (
+          LX::E::UNREACHABLE_CASE_REACHED,
+          "')' should never match in this branch");
     }
     break;
     case ' ':
@@ -191,8 +194,9 @@ Lexer::run ()
     break;
     case '=':
     {
-      LX_ERROR_REPORT (LX::E::UNREACHABLE_CASE_REACHED,
-                       "Operator = should never match in this branch");
+      LX_ERROR_REPORT (
+          LX::E::UNREACHABLE_CASE_REACHED,
+          "Operator = should never match in this branch");
     }
     break;
     case '\n':
@@ -206,11 +210,12 @@ Lexer::run ()
       UT::String var_name = this->get_word (this->m_cursor);
       if (LX::E::OK != this->match_operator ('='))
       {
-        LX_ERROR_REPORT (E::OPERATOR_MATCH_FAILURE,
-                         "Operator '=' did not match");
+        LX_ERROR_REPORT (
+            E::OPERATOR_MATCH_FAILURE, "Operator '=' did not match");
       }
-      Lexer body_lexer{ this->m_input, this->m_arena, this->m_cursor,
-                        this->m_end };
+      Lexer body_lexer{
+        this->m_input, this->m_arena, this->m_cursor, this->m_end
+      };
       body_lexer.run ();
 
       Token fn{};
@@ -243,16 +248,19 @@ Lexer::run ()
           // TODO: More and better error reporting macros
           if (LX::E::OK != this->match_operator ('='))
           {
-            LX_ERROR_REPORT (E::OPERATOR_MATCH_FAILURE,
-                             "Operator '=' did not match");
+            LX_ERROR_REPORT (
+                E::OPERATOR_MATCH_FAILURE, "Operator '=' did not match");
           }
 
-          Lexer let_lexer{ this->m_input, this->m_arena, this->m_cursor,
-                           this->m_end };
+          Lexer let_lexer{
+            this->m_input, this->m_arena, this->m_cursor, this->m_end
+          };
           let_lexer.run ();
 
-          Lexer in_lexer{ let_lexer.m_input, let_lexer.m_arena,
-                          let_lexer.m_cursor, this->m_end };
+          Lexer in_lexer{ let_lexer.m_input,
+                          let_lexer.m_arena,
+                          let_lexer.m_cursor,
+                          this->m_end };
           in_lexer.run ();
 
           // TODO: Token should have an end
@@ -348,7 +356,8 @@ Lexer::generate_event_report ()
   }
 }
 void
-Lexer::subsume_sub_lexer (Lexer &l)
+Lexer::subsume_sub_lexer (
+    Lexer &l)
 {
   for (auto t : l.m_tokens)
   {
@@ -365,14 +374,16 @@ Lexer::subsume_sub_lexer (Lexer &l)
 }
 
 E
-Lexer::match_operator (char c)
+Lexer::match_operator (
+    char c)
 {
   this->strip_white_space (this->m_cursor);
   return c == this->next_char () ? E::OK : E::UNRECOGNIZED_STRING;
 };
 
 void
-Lexer::strip_white_space (size_t idx)
+Lexer::strip_white_space (
+    size_t idx)
 {
   char c           = this->m_input[idx];
   size_t new_lines = 0;
@@ -389,7 +400,8 @@ Lexer::strip_white_space (size_t idx)
 };
 
 void
-Lexer::push_group (Lexer l)
+Lexer::push_group (
+    Lexer l)
 {
   Token t{ l.m_tokens };
   this->m_tokens.push (t);

@@ -12,12 +12,15 @@ namespace LX
 constexpr UT::String KEYWORD_LET{ "let" };
 constexpr UT::String KEYWORD_IN{ "in" };
 
-#define LX_ERROR_REPORT(LX_ERROR_E, LX_ERROR_MSG)                             \
-  do                                                                          \
-  {                                                                           \
-    this->m_events.push (LX::ErrorE{ this->m_arena, __PRETTY_FUNCTION__,      \
-                                     (LX_ERROR_MSG), (LX_ERROR_E) });         \
-    return (LX_ERROR_E);                                                      \
+#define LX_ERROR_REPORT(LX_ERROR_E, LX_ERROR_MSG)                              \
+  do                                                                           \
+  {                                                                            \
+    this->m_events.push (                                                      \
+        LX::ErrorE{ this->m_arena,                                             \
+                    __PRETTY_FUNCTION__,                                       \
+                    (LX_ERROR_MSG),                                            \
+                    (LX_ERROR_E) });                                           \
+    return (LX_ERROR_E);                                                       \
   } while (false)
 
 enum class E
@@ -34,7 +37,8 @@ enum class E
 
 struct ErrorE : public ER::E
 {
-  ErrorE (AR::Arena &arena, const char *fn_name, const char *data, LX::E error)
+  ErrorE (
+      AR::Arena &arena, const char *fn_name, const char *data, LX::E error)
       : E{
           ER::Type::ERROR,    //
           arena,              //
@@ -100,7 +104,9 @@ struct Token
   ~Token () = default;
   // TODO: the line and cursor should be set
   Token (Type t) : m_type{ t }, m_line{ 0 }, m_cursor{ 0 }, as{} {};
-  Token (Tokens tokens) : m_type{ Type::Group }, m_line{ 0 }, m_cursor{ 0 }
+  Token (
+      Tokens tokens)
+      : m_type{ Type::Group }, m_line{ 0 }, m_cursor{ 0 }
   {
     new (&as.m_tokens) Tokens{ tokens }; // NOTE: placement new
   };
@@ -118,7 +124,8 @@ public:
   size_t m_begin;
   size_t m_end;
 
-  Lexer (const char *const input, AR::Arena &arena, size_t begin, size_t end)
+  Lexer (
+      const char *const input, AR::Arena &arena, size_t begin, size_t end)
       : m_arena{ arena },           //
         m_events{ arena },          //
         m_input{ input },           //
@@ -130,7 +137,8 @@ public:
   {
   }
 
-  Lexer (Lexer const &l)
+  Lexer (
+      Lexer const &l)
       : m_arena (l.m_arena),               //
         m_events (std::move (l.m_events)), //
         m_input{ l.m_input },              //
@@ -147,7 +155,8 @@ public:
     }
   };
 
-  Lexer (Lexer const &l, size_t begin, size_t end)
+  Lexer (
+      Lexer const &l, size_t begin, size_t end)
       : m_arena{ l.m_arena }, m_events (l.m_arena)
   {
     this->m_begin  = l.m_begin;
@@ -159,7 +168,8 @@ public:
     new (&this->m_tokens) Tokens{ l.m_arena };
   }
 
-  Lexer (Lexer const &l, size_t begin)
+  Lexer (
+      Lexer const &l, size_t begin)
       : m_arena{ l.m_arena }, m_events (l.m_arena)
   {
     this->m_begin  = l.m_begin;
@@ -172,7 +182,8 @@ public:
   }
 
   void
-  skip_to (Lexer const &l)
+  skip_to (
+      Lexer const &l)
   {
     this->m_cursor = l.m_cursor;
     this->m_lines  = l.m_lines;
@@ -211,7 +222,8 @@ namespace std
 {
 
 inline string
-to_string (LX::E e)
+to_string (
+    LX::E e)
 {
   switch (e)
   {
@@ -230,7 +242,8 @@ to_string (LX::E e)
 };
 
 inline string
-to_string (LX::Type t)
+to_string (
+    LX::Type t)
 {
   switch (t)
   {
@@ -254,7 +267,8 @@ to_string (LX::Type t)
 
 inline string to_string (LX::Tokens ts);
 inline string
-to_string (LX::Token t)
+to_string (
+    LX::Token t)
 {
   switch (t.m_type)
   {
@@ -311,7 +325,8 @@ to_string (LX::Token t)
 }
 
 inline string
-to_string (LX::Tokens ts)
+to_string (
+    LX::Tokens ts)
 {
   string s{ "[ " };
   for (size_t i = 0; i < ts.m_len; ++i)

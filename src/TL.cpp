@@ -4,7 +4,8 @@ namespace TL
 {
 
 int
-eval (EX::T *expr)
+eval (
+    EX::T *expr)
 {
   int result = 0;
 
