@@ -91,7 +91,7 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   //    => (\foo = foo 2) (\x = x  + 1)
   //    => (\x = x + 1) 2
   //    => 2 + 1
-  { "let foo = \\x = foo x + 1 in (foo 2)", -2 },
+  { "let foo = \\x = foo x + 1 in foo 2", -2 },
 };
 }
 

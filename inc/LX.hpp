@@ -73,17 +73,17 @@ enum class Type
 struct Token;
 using Tokens = UT::Vec<Token>;
 
-struct LetIn
+struct Let
 {
-  UT::String var_name;
-  Tokens let_tokens;
-  Tokens in_tokens;
+  UT::String m_var_name;
+  Tokens m_let_tokens;
+  Tokens m_in_tokens;
 };
 
 struct Fn
 {
-  UT::String var_name;
-  Tokens body;
+  UT::String m_var_name;
+  Tokens m_body;
 };
 
 struct Token
@@ -94,7 +94,7 @@ struct Token
   union
   {
     Tokens m_tokens;
-    LetIn m_let_in;
+    Let m_let_in;
     Fn m_fn;
     UT::String m_string;
     ssize_t m_int = 0;
@@ -298,16 +298,16 @@ to_string (
            ")";
   case LX::Type::Let:
   {
-    std::string let_string = to_string (t.as.m_let_in.let_tokens);
-    std::string in_string  = to_string (t.as.m_let_in.in_tokens);
-    std::string var_name   = to_string (t.as.m_let_in.var_name);
+    std::string let_string = to_string (t.as.m_let_in.m_let_tokens);
+    std::string in_string  = to_string (t.as.m_let_in.m_in_tokens);
+    std::string var_name   = to_string (t.as.m_let_in.m_var_name);
     return "let " + var_name + " = " + let_string + " in " + in_string;
   }
   break;
   case LX::Type::Fn:
   {
-    std::string var_name    = to_string (t.as.m_fn.var_name);
-    std::string body_string = to_string (t.as.m_fn.body);
+    std::string var_name    = to_string (t.as.m_fn.m_var_name);
+    std::string body_string = to_string (t.as.m_fn.m_body);
     return "(\\" + var_name + " = " + body_string + ")";
   }
   break;

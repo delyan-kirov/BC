@@ -222,8 +222,8 @@ Lexer::run ()
       fn.m_type           = Type::Fn;
       fn.m_line           = this->m_lines;
       fn.m_cursor         = this->m_cursor;
-      fn.as.m_fn.var_name = var_name;
-      fn.as.m_fn.body     = body_lexer.m_tokens;
+      fn.as.m_fn.m_var_name = var_name;
+      fn.as.m_fn.m_body     = body_lexer.m_tokens;
 
       this->m_tokens.push (fn);
       this->skip_to (body_lexer);
@@ -268,9 +268,9 @@ Lexer::run ()
           letin.m_type                 = Type::Let;
           letin.m_line                 = this->m_lines;
           letin.m_cursor               = this->m_cursor;
-          letin.as.m_let_in.var_name   = var_name;
-          letin.as.m_let_in.let_tokens = let_lexer.m_tokens;
-          letin.as.m_let_in.in_tokens  = in_lexer.m_tokens;
+          letin.as.m_let_in.m_var_name   = var_name;
+          letin.as.m_let_in.m_let_tokens = let_lexer.m_tokens;
+          letin.as.m_let_in.m_in_tokens  = in_lexer.m_tokens;
 
           this->m_tokens.push (letin);
           this->skip_to (in_lexer);

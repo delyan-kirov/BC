@@ -29,6 +29,7 @@ enum class Type
   Modulus,
   FnDef,
   FnApp,
+  VarApp,
   Var,
 };
 
@@ -43,29 +44,45 @@ enum class FnFlags : std::uint64_t
   MAX            = FN_MUST_INLINE,
 };
 
+inline std::uint64_t operator&(FnFlags l, FnFlags r)
+{
+  return (std::uint64_t)l & (std::uint64_t)r;
+}
+
+inline std::uint64_t operator|(FnFlags l, FnFlags r)
+{
+  return (std::uint64_t)l | (std::uint64_t)r;
+}
+
+inline std::uint64_t operator^(FnFlags l, FnFlags r)
+{
+  return (std::uint64_t)l ^ (std::uint64_t)r;
+}
+
 struct FnDef
 {
-  FnFlags flags;
-  UT::String param;
-  Exprs body;
+  FnFlags m_flags;
+  UT::String m_param;
+  Exprs m_body;
 
   FnDef () = default;
   FnDef (
       FnFlags flags, UT::String param, AR::Arena &arena)
-      : flags{ flags }, param{ param }
+      : m_flags{ flags }, m_param{ param }
   {
-    this->body = { arena };
+    this->m_body = { arena };
   }
 };
 
 struct FnApp
 {
-  FnFlags m_type;
-  union
-  {
-    FnDef m_body;
-    UT::String m_name = {};
-  } fn;
+  FnDef m_body;
+  Exprs m_param;
+};
+
+struct VarApp
+{
+  UT::String m_fn_name;
   Exprs m_param;
 };
 
@@ -76,6 +93,7 @@ struct Expr
   {
     FnDef m_fn;
     FnApp m_fnapp;
+    VarApp m_varapp;
     UT::String m_var;
     Exprs exprs;
     ssize_t m_int = 0;
@@ -89,8 +107,9 @@ struct Expr
   {
     switch (type)
     {
-    case Type::FnDef      : this->as.m_fn.body = { arena }; break;
+    case Type::FnDef      : this->as.m_fn.m_body = { arena }; break;
     case Type::FnApp      : this->as.m_fnapp.m_param = { arena }; break;
+    case Type::VarApp     : this->as.m_varapp.m_param = { arena }; break;
     case Type::Div        :
     case EX::Type::Sub    :
     case EX::Type::Modulus:
@@ -202,6 +221,7 @@ to_string (
   case EX::Type::FnDef  : return "EX::Type::FnDef";
   case EX::Type::Var    : return "EX::Type::Var";
   case EX::Type::FnApp  : return "EX::Type::FnApp";
+  case EX::Type::VarApp : return "EX::Type::VarApp";
   case EX::Type::Unknown: return "EX::Type::Unknown";
   }
 
@@ -278,16 +298,21 @@ to_string (
   break;
   case EX::Type::FnDef:
   {
-    s += "( \\" + to_string (expr.as.m_fn.param) + " = "
-         + to_string (*expr.as.m_fn.body.last ()) + " )";
+    s += "( \\" + to_string (expr.as.m_fn.m_param) + " = "
+         + to_string (*expr.as.m_fn.m_body.last ()) + " )";
   }
   break;
   case EX::Type::FnApp:
   {
-    string fn_body = (EX::FnFlags::FN_MUST_INLINE == expr.as.m_fnapp.m_type)
-                         ? to_string (expr.as.m_fnapp.fn.m_body)
-                         : to_string (expr.as.m_fnapp.fn.m_name);
-    s += fn_body + " (" + " " + to_string (*expr.as.m_fnapp.m_param.last ())
+    s += to_string(expr.as.m_fnapp.m_body)
+         + " (" + " " + to_string (*expr.as.m_fnapp.m_param.last ())
+         + " )";
+  }
+  break;
+  case EX::Type::VarApp:
+  {
+    s += to_string(expr.as.m_varapp.m_fn_name)
+         + " (" + " " + to_string (*expr.as.m_varapp.m_param.last())
          + " )";
   }
   break;
@@ -315,8 +340,8 @@ inline string
 to_string (
     EX::FnDef fndef)
 {
-  return "(\\" + to_string (fndef.param) + " = "
-         + to_string (*fndef.body.last ()) + ")";
+  return "(\\" + to_string (fndef.m_param) + " = "
+         + to_string (*fndef.m_body.last ()) + ")";
 }
 }
 

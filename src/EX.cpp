@@ -137,20 +137,17 @@ Parser::run ()
         param_parser.run ();
         EX::Exprs param_expr = param_parser.m_exprs;
 
-        EX::Expr fn_app{ EX::Type::FnApp, this->m_arena };
-        fn_app.as.m_fnapp.m_type = FnFlags::NONE;
-        fn_app.as.m_fnapp.m_param.push (*param_expr.last ());
-        fn_app.as.m_fnapp.fn.m_name = t.as.m_string;
+        EX::Expr var_app{ EX::Type::VarApp, this->m_arena };
+        var_app.as.m_varapp.m_fn_name = t.as.m_string;
+        var_app.as.m_varapp.m_param = param_expr;
 
-        this->m_exprs.push (fn_app);
+        this->m_exprs.push (var_app);
         i += 1;
       }
       else
       {
         EX::Expr var{ EX::Type::Var };
         var.as.m_var = t.as.m_string;
-        this->m_exprs.push (var);
-
         this->m_exprs.push (var);
       }
     }
@@ -210,26 +207,25 @@ Parser::run ()
     {
       // TODO: We should have a function application explicitly!
       // let var = body_expr in app_expr
-      UT::String param = t.as.m_let_in.var_name;
+      UT::String param = t.as.m_let_in.m_var_name;
 
-      EX::Parser body_parser{ *this, t.as.m_let_in.in_tokens };
+      EX::Parser body_parser{ *this, t.as.m_let_in.m_in_tokens };
       body_parser.run ();
       EX::Expr body_expr = *body_parser.m_exprs.last ();
 
-      EX::Parser app_parser{ *this, t.as.m_let_in.let_tokens };
+      EX::Parser app_parser{ *this, t.as.m_let_in.m_let_tokens };
       app_parser.run ();
       EX::Expr app_expr = *app_parser.m_exprs.last ();
 
       EX::FnDef fn_def{};
-      fn_def.flags = EX::FnFlags::FN_MUST_INLINE;
-      fn_def.param = param;
-      fn_def.body  = { this->m_arena };
-      fn_def.body.push (body_expr);
+      fn_def.m_flags = EX::FnFlags::FN_MUST_INLINE;
+      fn_def.m_param = param;
+      fn_def.m_body  = { this->m_arena };
+      fn_def.m_body.push (body_expr);
 
       EX::Expr fn_app{ EX::Type::FnApp, this->m_arena };
-      fn_app.as.m_fnapp.m_type = FnFlags::FN_MUST_INLINE;
       fn_app.as.m_fnapp.m_param.push (app_expr);
-      fn_app.as.m_fnapp.fn.m_body = fn_def;
+      fn_app.as.m_fnapp.m_body = fn_def;
 
       this->m_exprs.push (fn_app);
 
@@ -239,14 +235,14 @@ Parser::run ()
     case LX::Type::Fn:
     {
       // \<var> = <expr>
-      UT::String param = t.as.m_fn.var_name;
+      UT::String param = t.as.m_fn.m_var_name;
 
-      EX::Parser body_parser{ *this, t.as.m_fn.body };
+      EX::Parser body_parser{ *this, t.as.m_fn.m_body };
       body_parser.run ();
       EX::Expr body_expr = *body_parser.m_exprs.last ();
 
       EX::FnDef fn_def{ EX::FnFlags::FN_MUST_INLINE, param, this->m_arena };
-      fn_def.body.push (body_expr);
+      fn_def.m_body.push (body_expr);
 
       i += 1;
       if (this->match_token_type (
@@ -262,18 +258,17 @@ Parser::run ()
         EX::Exprs param_expr = param_parser.m_exprs;
 
         EX::Expr fn_app{ EX::Type::FnApp, this->m_arena };
-        fn_app.as.m_fnapp.m_type = FnFlags::FN_MUST_INLINE;
         fn_app.as.m_fnapp.m_param.push (*param_expr.last ());
-        fn_app.as.m_fnapp.fn.m_body = fn_def;
+        fn_app.as.m_fnapp.m_body = fn_def;
 
         this->m_exprs.push (fn_app);
       }
       else
       {
         EX::Expr fn_def{ EX::Type::FnDef, this->m_arena };
-        fn_def.as.m_fn.flags = FnFlags::FN_MUST_INLINE;
-        fn_def.as.m_fn.param = param;
-        fn_def.as.m_fn.body.push (body_expr);
+        fn_def.as.m_fn.m_flags = FnFlags::FN_MUST_INLINE;
+        fn_def.as.m_fn.m_param = param;
+        fn_def.as.m_fn.m_body.push (body_expr);
 
         this->m_exprs.push (fn_def);
       }
