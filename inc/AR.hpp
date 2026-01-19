@@ -42,14 +42,16 @@ public:
 
   template <typename Type>
   void *
-  alloc (size_t size)
+  alloc (
+      size_t size)
   {
     return alloc (size * sizeof (Type));
   }
 
   template <typename Type>
   void *
-  alloc (Type *t)
+  alloc (
+      Type *t)
   {
     return alloc (sizeof (t));
   }

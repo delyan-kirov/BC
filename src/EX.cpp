@@ -7,13 +7,14 @@
 namespace EX
 {
 E
-Parser::parse_min_precedence_arithmetic_op (EX::Type type, size_t &idx)
+Parser::parse_min_precedence_arithmetic_op (
+    EX::Type type, size_t &idx)
 {
   UT_FAIL_IF (not(EX::Type::Add == type || EX::Type::Sub == type));
   E result = E::OK;
 
-  if (this->match_token_type (idx + 1, LX::Type::Int, LX::Type::Group,
-                              LX::Type::Word))
+  if (this->match_token_type (
+          idx + 1, LX::Type::Int, LX::Type::Group, LX::Type::Word))
   {
     if (this->match_token_type (idx + 2, LX::Type::Mult, LX::Type::Modulus))
     {
@@ -48,12 +49,13 @@ Parser::parse_min_precedence_arithmetic_op (EX::Type type, size_t &idx)
 }
 
 E
-Parser::parse_max_precedence_arithmetic_op (EX::Type type, size_t &idx)
+Parser::parse_max_precedence_arithmetic_op (
+    EX::Type type, size_t &idx)
 {
   E result = E::OK;
 
-  if (this->match_token_type (idx + 1, LX::Type::Int, LX::Type::Group,
-                              LX::Type::Word))
+  if (this->match_token_type (
+          idx + 1, LX::Type::Int, LX::Type::Group, LX::Type::Word))
   {
     this->parse_binop (type, idx + 1, idx + 2);
     idx += 2;
@@ -72,7 +74,8 @@ Parser::parse_max_precedence_arithmetic_op (EX::Type type, size_t &idx)
 }
 
 E
-Parser::parse_binop (EX::Type type, size_t start, size_t end)
+Parser::parse_binop (
+    EX::Type type, size_t start, size_t end)
 {
   E result = E::OK;
 
@@ -123,10 +126,30 @@ Parser::run ()
     break;
     case LX::Type::Word:
     {
-      EX::Expr expr{ EX::Type::Var };
-      expr.as.m_var = t.as.m_string;
-      this->m_exprs.push (expr);
       i += 1;
+      if (this->match_token_type (
+              i, LX::Type::Group, LX::Type::Int, LX::Type::Fn, LX::Type::Word))
+      {
+        LX::Tokens next_token = { this->m_arena };
+        next_token.push (this->m_tokens[i]);
+
+        EX::Parser param_parser{ *this, next_token };
+        param_parser.run ();
+        EX::Exprs param_expr = param_parser.m_exprs;
+
+        EX::Expr var_app{ EX::Type::VarApp, this->m_arena };
+        var_app.as.m_varapp.m_fn_name = t.as.m_string;
+        var_app.as.m_varapp.m_param = param_expr;
+
+        this->m_exprs.push (var_app);
+        i += 1;
+      }
+      else
+      {
+        EX::Expr var{ EX::Type::Var };
+        var.as.m_var = t.as.m_string;
+        this->m_exprs.push (var);
+      }
     }
     break;
     case LX::Type::Plus:
@@ -152,9 +175,12 @@ Parser::run ()
     case LX::Type::Minus:
     {
       if (this->m_exprs.is_empty ()
-          || this->match_token_type (i - 1, LX::Type::Mult, LX::Type::Plus,
-                                     LX::Type::Div,
-                                     LX::Type::Modulus)) // The minus is unary
+          || this->match_token_type (
+              i - 1,
+              LX::Type::Mult,
+              LX::Type::Plus,
+              LX::Type::Div,
+              LX::Type::Modulus)) // The minus is unary
       {
         UT_FAIL_IF (not this->match_token_type (
             i + 1, LX::Type::Group, LX::Type::Int, LX::Type::Word));
@@ -177,27 +203,75 @@ Parser::run ()
       }
     }
     break;
-    case LX::Type::LetIn:
+    case LX::Type::Let:
     {
+      // TODO: We should have a function application explicitly!
       // let var = body_expr in app_expr
-      UT::String param = t.as.m_let_in.var_name;
+      UT::String param = t.as.m_let_in.m_var_name;
 
-      EX::Parser body_parser{ *this, t.as.m_let_in.in_tokens };
+      EX::Parser body_parser{ *this, t.as.m_let_in.m_in_tokens };
       body_parser.run ();
       EX::Expr body_expr = *body_parser.m_exprs.last ();
 
-      EX::Parser app_parser{ *this, t.as.m_let_in.let_tokens };
+      EX::Parser app_parser{ *this, t.as.m_let_in.m_let_tokens };
       app_parser.run ();
       EX::Expr app_expr = *app_parser.m_exprs.last ();
 
-      EX::Expr fn_expr{ EX::Type::FnDef };
-      fn_expr.as.m_fn.param = param;
-      fn_expr.as.m_fn.flags = EX::FnFlagEnum::FN_MUST_INLINE;
-      fn_expr.as.m_fn.body  = { this->m_arena };
-      fn_expr.as.m_fn.body.push (body_expr);
+      EX::FnDef fn_def{};
+      fn_def.m_flags = EX::FnFlags::FN_MUST_INLINE;
+      fn_def.m_param = param;
+      fn_def.m_body  = { this->m_arena };
+      fn_def.m_body.push (body_expr);
 
-      this->m_exprs.push (fn_expr);
-      this->m_exprs.push (app_expr);
+      EX::Expr fn_app{ EX::Type::FnApp, this->m_arena };
+      fn_app.as.m_fnapp.m_param.push (app_expr);
+      fn_app.as.m_fnapp.m_body = fn_def;
+
+      this->m_exprs.push (fn_app);
+
+      i += 1;
+    }
+    break;
+    case LX::Type::Fn:
+    {
+      // \<var> = <expr>
+      UT::String param = t.as.m_fn.m_var_name;
+
+      EX::Parser body_parser{ *this, t.as.m_fn.m_body };
+      body_parser.run ();
+      EX::Expr body_expr = *body_parser.m_exprs.last ();
+
+      EX::FnDef fn_def{ EX::FnFlags::FN_MUST_INLINE, param, this->m_arena };
+      fn_def.m_body.push (body_expr);
+
+      i += 1;
+      if (this->match_token_type (
+              i, LX::Type::Group, LX::Type::Int, LX::Type::Fn))
+      {
+        UT_TODO ("This branch should be explored");
+
+        LX::Tokens next_token = { this->m_arena };
+        next_token.push (this->m_tokens[i]);
+
+        EX::Parser param_parser{ *this, next_token };
+        param_parser.run ();
+        EX::Exprs param_expr = param_parser.m_exprs;
+
+        EX::Expr fn_app{ EX::Type::FnApp, this->m_arena };
+        fn_app.as.m_fnapp.m_param.push (*param_expr.last ());
+        fn_app.as.m_fnapp.m_body = fn_def;
+
+        this->m_exprs.push (fn_app);
+      }
+      else
+      {
+        EX::Expr fn_def{ EX::Type::FnDef, this->m_arena };
+        fn_def.as.m_fn.m_flags = FnFlags::FN_MUST_INLINE;
+        fn_def.as.m_fn.m_param = param;
+        fn_def.as.m_fn.m_body.push (body_expr);
+
+        this->m_exprs.push (fn_def);
+      }
 
       i += 1;
     }
@@ -206,6 +280,7 @@ Parser::run ()
     case LX::Type::Max:
     default:
     {
+      std::printf ("%s\n", std::to_string (t.m_type).c_str ());
       UT_FAIL_IF ("The case default should be unreachable");
     }
     break;

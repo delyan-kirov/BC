@@ -34,7 +34,8 @@ AR::Arena::~Arena ()
 }
 
 void *
-AR::Arena::alloc (size_t size)
+AR::Arena::alloc (
+    size_t size)
 {
   if (!size) { return nullptr; }
 now_allocate:
@@ -70,8 +71,8 @@ now_allocate:
     else // The aray is full, we need to resize it
     {
       size_t block_new_len = this->len * 2;
-      auto new_mem         = (Block **)std::realloc (this->mem,
-                                                     block_new_len * sizeof (Block *));
+      auto new_mem         = (Block **)std::realloc (
+          this->mem, block_new_len * sizeof (Block *));
 
       this->mem     = new_mem;
       this->max_len = block_new_len;

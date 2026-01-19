@@ -24,10 +24,11 @@ tst_allocating_exprs ()
 }
 
 bool
-tst_multiple_big_allocation (void)
+tst_multiple_big_allocation (
+    void)
 {
   AR::T arena{};
-  std::string msg = "INFO: " + std::string (__func__) + " ";
+  std::string msg                     = "INFO: " + std::string (__func__) + " ";
   constexpr size_t num_of_allocations = 100;
 
   char *new_msg = nullptr;
@@ -43,7 +44,8 @@ tst_multiple_big_allocation (void)
 }
 
 bool
-tst_alloc_of_a_word (void)
+tst_alloc_of_a_word (
+    void)
 {
   AR::T arena{};
 

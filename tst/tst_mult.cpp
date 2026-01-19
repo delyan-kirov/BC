@@ -82,11 +82,16 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "3 * 5 * 3", 45 },
   { "-1 - 2 * 3 + 3", 5 },
   { "5 % - 3 + 1", 3 },
-#endif
-  { "-1", -2 },
   { "-a", -2 },
-  { "let a = 3 in a + 1 + 2", -2 },
   { "(1 + (1 + 2))", 3 },
+#endif
+  { "let a = 3 in a + 1 + 2", -2 },
+  //    => (\a = a + 1 + 1) 3
+  { "let foo = \\x = x + 1 in (foo 2)", -2 },
+  //    => (\foo = foo 2) (\x = x  + 1)
+  //    => (\x = x + 1) 2
+  //    => 2 + 1
+  { "let foo = \\x = foo x + 1 in foo 2", -2 },
 };
 }
 
@@ -104,11 +109,12 @@ run ()
     std::printf ("%s\n", std::to_string (l.m_tokens).c_str ());
     EX::Parser parser{ l };
     parser.run ();
-    std::printf ("Paser: %s %s\n",
-                 std::to_string (*parser.m_exprs.begin ()).c_str (),
-                 EX::Type::FnDef == parser.m_exprs[0].m_type
-                     ? std::to_string (*parser.m_exprs.last ()).c_str ()
-                     : "");
+    std::printf (
+        "Parser: %s %s\n",
+        std::to_string (*parser.m_exprs.begin ()).c_str (),
+        1 != parser.m_exprs.m_len
+            ? std::to_string (*parser.m_exprs.last ()).c_str ()
+            : "");
   }
 
   return true;

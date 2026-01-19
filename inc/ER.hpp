@@ -35,8 +35,11 @@ struct E
   char *(*fmt) (void *m_data) = nullptr;
 
   E ();
-  E (Type type, AR::Arena &arena, void *data = nullptr,
-     char *(*fmt_fn) (void *) = nullptr)
+  E (
+      Type type,
+      AR::Arena &arena,
+      void *data               = nullptr,
+      char *(*fmt_fn) (void *) = nullptr)
       : m_type{ type },    //
         m_arena{ &arena }, //
         m_data{ data },    //
@@ -48,7 +51,8 @@ struct E
 namespace
 {
 char *
-info_trace_fmt (void *m_data)
+info_trace_fmt (
+    void *m_data)
 {
   char *info_event = (char *)m_data;
   return info_event;
@@ -58,7 +62,8 @@ info_trace_fmt (void *m_data)
 
 struct TraceE : public E
 {
-  TraceE (void *data, AR::Arena &arena)
+  TraceE (
+      void *data, AR::Arena &arena)
       : E{
           Type::UNFO, //
           arena,
@@ -72,11 +77,16 @@ struct TraceE : public E
 class Events : public UT::Vec<E>
 {
 public:
-  Events (AR::Arena &arena) : UT::Vec<E>{ arena } {}
+  Events (
+      AR::Arena &arena)
+      : UT::Vec<E>{ arena }
+  {
+  }
   Events ()                    = delete;
   ~Events ()                   = default;
   Events (const Events &other) = default;
-  Events (Events &&other)
+  Events (
+      Events &&other)
   {
     this->m_arena   = other.m_arena;
     this->m_len     = other.m_len;
@@ -119,7 +129,8 @@ public:
   const char *m_fn_name;
   Events &m_event_log;
 
-  Trace (AR::Arena &arena, const char *fn_name, Events &event_log)
+  Trace (
+      AR::Arena &arena, const char *fn_name, Events &event_log)
       : UT::Block{ arena,
                    std::strlen (fn_name) + 2 * UT::V_DEFAULT_MAX_LEN }, //
         m_fn_name{ fn_name },                                           //
@@ -146,14 +157,14 @@ public:
       UT::SB sb{};
       sb.concatf ("%s :> end", this->m_fn_name);
 
-      ER::TraceE e{ (void *)sb.collect (*this->m_arena).m_mem,
-                    *this->m_arena };
+      ER::TraceE e{ (void *)sb.collect (*this->m_arena).m_mem, *this->m_arena };
       this->m_event_log.push (e);
     }
   }
 
   Block &
-  operator<< (const char *s)
+  operator<< (
+      const char *s)
   {
     if (TRACE_ENABLE)
     {
@@ -185,7 +196,8 @@ public:
 namespace std
 {
 inline string
-to_string (ER::Type type)
+to_string (
+    ER::Type type)
 {
   switch (type)
   {

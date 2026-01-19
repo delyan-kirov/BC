@@ -9,16 +9,18 @@
 namespace LX
 {
 
-constexpr size_t KEYWORD_MAX_LEN = 3;
-const UT::String KEYWORD_LET{ (char *)"let", 3 };
-const UT::String KEYWORD_IN{ (char *)"in", 2 };
+constexpr UT::String KEYWORD_LET{ "let" };
+constexpr UT::String KEYWORD_IN{ "in" };
 
-#define LX_ERROR_REPORT(LX_ERROR_E, LX_ERROR_MSG)                             \
-  do                                                                          \
-  {                                                                           \
-    this->m_events.push (LX::ErrorE{ this->m_arena, __PRETTY_FUNCTION__,      \
-                                     (LX_ERROR_MSG), (LX_ERROR_E) });         \
-    return (LX_ERROR_E);                                                      \
+#define LX_ERROR_REPORT(LX_ERROR_E, LX_ERROR_MSG)                              \
+  do                                                                           \
+  {                                                                            \
+    this->m_events.push (                                                      \
+        LX::ErrorE{ this->m_arena,                                             \
+                    __PRETTY_FUNCTION__,                                       \
+                    (LX_ERROR_MSG),                                            \
+                    (LX_ERROR_E) });                                           \
+    return (LX_ERROR_E);                                                       \
   } while (false)
 
 enum class E
@@ -35,7 +37,8 @@ enum class E
 
 struct ErrorE : public ER::E
 {
-  ErrorE (AR::Arena &arena, const char *fn_name, const char *data, LX::E error)
+  ErrorE (
+      AR::Arena &arena, const char *fn_name, const char *data, LX::E error)
       : E{
           ER::Type::ERROR,    //
           arena,              //
@@ -61,7 +64,8 @@ enum class Type
   Modulus,
   Mult,
   Group,
-  LetIn,
+  Let,
+  Fn,
   Word,
   Max,
 };
@@ -69,11 +73,17 @@ enum class Type
 struct Token;
 using Tokens = UT::Vec<Token>;
 
-struct LetIn
+struct Let
 {
-  UT::String var_name;
-  Tokens let_tokens;
-  Tokens in_tokens;
+  UT::String m_var_name;
+  Tokens m_let_tokens;
+  Tokens m_in_tokens;
+};
+
+struct Fn
+{
+  UT::String m_var_name;
+  Tokens m_body;
 };
 
 struct Token
@@ -84,7 +94,8 @@ struct Token
   union
   {
     Tokens m_tokens;
-    LetIn m_let_in;
+    Let m_let_in;
+    Fn m_fn;
     UT::String m_string;
     ssize_t m_int = 0;
   } as;
@@ -93,7 +104,9 @@ struct Token
   ~Token () = default;
   // TODO: the line and cursor should be set
   Token (Type t) : m_type{ t }, m_line{ 0 }, m_cursor{ 0 }, as{} {};
-  Token (Tokens tokens) : m_type{ Type::Group }, m_line{ 0 }, m_cursor{ 0 }
+  Token (
+      Tokens tokens)
+      : m_type{ Type::Group }, m_line{ 0 }, m_cursor{ 0 }
   {
     new (&as.m_tokens) Tokens{ tokens }; // NOTE: placement new
   };
@@ -111,7 +124,8 @@ public:
   size_t m_begin;
   size_t m_end;
 
-  Lexer (const char *const input, AR::Arena &arena, size_t begin, size_t end)
+  Lexer (
+      const char *const input, AR::Arena &arena, size_t begin, size_t end)
       : m_arena{ arena },           //
         m_events{ arena },          //
         m_input{ input },           //
@@ -123,7 +137,8 @@ public:
   {
   }
 
-  Lexer (Lexer const &l)
+  Lexer (
+      Lexer const &l)
       : m_arena (l.m_arena),               //
         m_events (std::move (l.m_events)), //
         m_input{ l.m_input },              //
@@ -140,7 +155,8 @@ public:
     }
   };
 
-  Lexer (Lexer const &l, size_t begin, size_t end)
+  Lexer (
+      Lexer const &l, size_t begin, size_t end)
       : m_arena{ l.m_arena }, m_events (l.m_arena)
   {
     this->m_begin  = l.m_begin;
@@ -152,7 +168,8 @@ public:
     new (&this->m_tokens) Tokens{ l.m_arena };
   }
 
-  Lexer (Lexer const &l, size_t begin)
+  Lexer (
+      Lexer const &l, size_t begin)
       : m_arena{ l.m_arena }, m_events (l.m_arena)
   {
     this->m_begin  = l.m_begin;
@@ -165,7 +182,8 @@ public:
   }
 
   void
-  skip_to (Lexer const &l)
+  skip_to (
+      Lexer const &l)
   {
     this->m_cursor = l.m_cursor;
     this->m_lines  = l.m_lines;
@@ -204,7 +222,8 @@ namespace std
 {
 
 inline string
-to_string (LX::E e)
+to_string (
+    LX::E e)
 {
   switch (e)
   {
@@ -218,14 +237,13 @@ to_string (LX::E e)
   case LX::E::MAX                     : return "MAX";
   }
 
-  string s{ "ERROR: " };
-  s += (__FUNCTION__);
-  s += " UNREACHABLE PATH REACHED!";
-  return s;
+  UT_FAIL_IF ("UNREACHABLE");
+  return "";
 };
 
 inline string
-to_string (LX::Type t)
+to_string (
+    LX::Type t)
 {
   switch (t)
   {
@@ -237,20 +255,20 @@ to_string (LX::Type t)
   case LX::Type::Div    : return "Div";
   case LX::Type::Modulus: return "Modulus";
   case LX::Type::Group  : return "Group";
-  case LX::Type::LetIn  : return "LetIn";
+  case LX::Type::Let    : return "LetIn";
   case LX::Type::Word   : return "Word";
+  case LX::Type::Fn     : return "Fn";
   case LX::Type::Max    : return "Max";
   }
 
-  string s{ "ERROR: " };
-  s += (__FUNCTION__);
-  s += " UNREACHABLE PATH REACHED!";
-  return s;
+  UT_FAIL_IF ("UNREACHABLE");
+  return "";
 }
 
 inline string to_string (LX::Tokens ts);
 inline string
-to_string (LX::Token t)
+to_string (
+    LX::Token t)
 {
   switch (t.m_type)
   {
@@ -278,11 +296,21 @@ to_string (LX::Token t)
     return "Op("
            "%"
            ")";
-  case LX::Type::LetIn:
+  case LX::Type::Let:
   {
-    UT_FAIL_IF ("UNREACHABLE");
-    break;
+    std::string let_string = to_string (t.as.m_let_in.m_let_tokens);
+    std::string in_string  = to_string (t.as.m_let_in.m_in_tokens);
+    std::string var_name   = to_string (t.as.m_let_in.m_var_name);
+    return "let " + var_name + " = " + let_string + " in " + in_string;
   }
+  break;
+  case LX::Type::Fn:
+  {
+    std::string var_name    = to_string (t.as.m_fn.m_var_name);
+    std::string body_string = to_string (t.as.m_fn.m_body);
+    return "(\\" + var_name + " = " + body_string + ")";
+  }
+  break;
   case LX::Type::Word:
   {
     return to_string (t.as.m_string);
@@ -297,7 +325,8 @@ to_string (LX::Token t)
 }
 
 inline string
-to_string (LX::Tokens ts)
+to_string (
+    LX::Tokens ts)
 {
   string s{ "[ " };
   for (size_t i = 0; i < ts.m_len; ++i)
@@ -305,22 +334,16 @@ to_string (LX::Tokens ts)
     LX::Token t = ts[i];
     switch (t.m_type)
     {
-    case LX::Type::Group: s += to_string ((LX::Tokens)t.as.m_tokens); break;
-    case LX::Type::LetIn:
-    {
-      std::string let_string = to_string (t.as.m_let_in.let_tokens);
-      std::string in_string  = to_string (t.as.m_let_in.in_tokens);
-      std::string var_name   = to_string (t.as.m_let_in.var_name);
-      s += "let " + var_name + " = " + let_string + " in " + in_string;
-    }
-    break;
-    case LX::Type::Div:
-    case LX::Type::Int:
-    case LX::Type::Minus:
+    case LX::Type::Group  : s += to_string ((LX::Tokens)t.as.m_tokens); break;
+    case LX::Type::Let    :
+    case LX::Type::Fn     :
+    case LX::Type::Div    :
+    case LX::Type::Int    :
+    case LX::Type::Minus  :
     case LX::Type::Modulus:
-    case LX::Type::Mult:
-    case LX::Type::Plus:
-    case LX::Type::Min:
+    case LX::Type::Mult   :
+    case LX::Type::Plus   :
+    case LX::Type::Min    :
     case LX::Type::Max    : s += to_string (t); break;
     case LX::Type::Word   : s += "Word(" + to_string (t.as.m_string) + ")"; break;
     default               : UT_FAIL_IF ("Unreachable");
