@@ -189,6 +189,16 @@ struct String : public Vu<char>
   String(String &&)                 = default;
   String &operator=(const String &) = default;
   String &operator=(String &&)      = default;
+
+  const char *
+  to_cstr(
+    AR::Arena &arena)
+  {
+    char *mem = (char *)arena.alloc((this->m_len + 1) * sizeof(char));
+    std::memset(mem, 0, this->m_len + 1);
+    std::strcpy(mem, this->m_mem);
+    return mem;
+  }
 };
 
 inline String
@@ -354,9 +364,9 @@ template <typename O> struct Vec
 class SB
 {
 public:
+  char  *m_mem;
   size_t m_len;
   size_t m_max_len;
-  char  *m_mem;
 
   SB()
       : m_len{ 0 }
@@ -426,19 +436,64 @@ public:
   template <typename... Args> void append(Args &&...args);
 
   const String
-  collect(
+  to_String(
     AR::Arena &arena)
   {
-    char *mem = (char *)arena.alloc(sizeof(char) * this->m_len);
-    std::memset(mem, 0, this->m_len);
+    char *mem = (char *)arena.alloc(sizeof(char) * this->m_len + 1);
+    std::memset(mem, 0, this->m_len + 1);
     std::memcpy(mem, this->m_mem, this->m_len);
     return String{ mem, this->m_len };
+  }
+
+  const char *
+  to_cstr(
+    AR::Arena &arena)
+  {
+    char *mem = (char *)arena.alloc(sizeof(char) * this->m_len + 1);
+    std::memset(mem, 0, this->m_len + 1);
+    std::memcpy(mem, this->m_mem, this->m_len);
+    return mem;
   }
 
   const String
   vu()
   {
     return String{ this->m_mem, this->m_len };
+  }
+
+  SB &
+  operator>>(
+    const char *s)
+  {
+    this->add(s);
+    return *this;
+  }
+
+  SB &
+  operator>>(
+    String str)
+  {
+    this->add(str.m_mem);
+    return *this;
+  }
+
+  SB &
+  operator>>(
+    SB &sb)
+  {
+    String vu = sb.vu();
+    this->add(vu.m_mem);
+    return *this;
+  }
+
+  template <typename T>
+  SB &
+  operator>>(
+    T &t)
+  {
+    std::string s = std::to_string(t);
+    this->add(s.c_str());
+    return *this;
   }
 };
 

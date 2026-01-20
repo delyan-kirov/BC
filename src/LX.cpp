@@ -28,7 +28,7 @@ LX::Lexer::get_word(
   {
     sb.add(c);
   }
-  UT::String string = sb.collect(this->m_arena);
+  UT::String string = sb.to_String(this->m_arena);
   this->m_cursor    = idx;
 
   return string;

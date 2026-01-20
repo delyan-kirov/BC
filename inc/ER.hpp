@@ -140,7 +140,7 @@ public:
       UT::SB sb{};
       sb.concatf("%s :> begin", fn_name);
 
-      auto       s = sb.collect(*this->m_arena);
+      auto       s = sb.to_String(*this->m_arena);
       ER::TraceE e{ s.m_mem, arena };
       this->m_event_log.push(e);
 
@@ -156,7 +156,7 @@ public:
       UT::SB sb{};
       sb.concatf("%s :> end", this->m_fn_name);
 
-      ER::TraceE e{ (void *)sb.collect(*this->m_arena).m_mem, *this->m_arena };
+      ER::TraceE e{ (void *)sb.to_String(*this->m_arena).m_mem, *this->m_arena };
       this->m_event_log.push(e);
     }
   }
