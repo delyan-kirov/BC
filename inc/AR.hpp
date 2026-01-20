@@ -14,54 +14,54 @@ class Block
   friend class Arena;
 
 private:
-  size_t len;
-  size_t max_len;
+  size_t  len;
+  size_t  max_len;
   uint8_t mem[];
 
-  Block ()  = delete;
-  ~Block () = delete;
+  Block()  = delete;
+  ~Block() = delete;
 
-  Block (const Block &)            = delete;
-  Block &operator= (const Block &) = delete;
+  Block(const Block &)            = delete;
+  Block &operator=(const Block &) = delete;
 
-  Block (Block &&)            = delete;
-  Block &operator= (Block &&) = delete;
+  Block(Block &&)            = delete;
+  Block &operator=(Block &&) = delete;
 };
 
 class Arena
 {
 public:
-  void *alloc (size_t size);
+  void *alloc(size_t size);
 
   template <typename Type>
   void *
-  alloc ()
+  alloc()
   {
-    return alloc (sizeof (Type));
+    return alloc(sizeof(Type));
   }
 
   template <typename Type>
   void *
-  alloc (
-      size_t size)
+  alloc(
+    size_t size)
   {
-    return alloc (size * sizeof (Type));
+    return alloc(size * sizeof(Type));
   }
 
   template <typename Type>
   void *
-  alloc (
-      Type *t)
+  alloc(
+    Type *t)
   {
-    return alloc (sizeof (t));
+    return alloc(sizeof(t));
   }
 
-  Arena ();
-  ~Arena ();
+  Arena();
+  ~Arena();
 
 private:
-  size_t len;
-  size_t max_len;
+  size_t  len;
+  size_t  max_len;
   Block **mem;
 };
 

@@ -44,24 +44,24 @@ namespace
 {
 
 bool
-run ()
+run()
 {
-  bool result = true;
+  bool  result = true;
   AR::T arena{};
   for (auto tdata : TDATA::INPUTS)
   {
-    const char *input = tdata.first;
-    int expect        = tdata.second;
+    const char *input  = tdata.first;
+    int         expect = tdata.second;
 
-    vector<LX::T> tokens = LX::run (input);
-    EX::T *expr          = (EX::T *)arena.alloc<EX::T> ();
+    vector<LX::T> tokens = LX::run(input);
+    EX::T        *expr   = (EX::T *)arena.alloc<EX::T>();
     try
     {
-      size_t result = parse (tokens, arena, 0, tokens.size (), expr);
+      size_t result = parse(tokens, arena, 0, tokens.size(), expr);
       if (0 == result || EX::PARSER_FAILED == result)
       {
         std::cerr << "ERROR: Parser failed: " << result << std::endl;
-        std::cerr << "       " << std::to_string (expr) << "\n";
+        std::cerr << "       " << std::to_string(expr) << "\n";
         return -1;
       }
     }
@@ -76,7 +76,7 @@ run ()
       return false;
     }
 
-    int got         = TL::eval (expr);
+    int  got        = TL::eval(expr);
     bool new_result = (got == expect);
 
     if (!new_result)
@@ -84,22 +84,25 @@ run ()
       std::cerr << "ERROR: expected: " << expect << " but got: " << got
                 << std::endl;
       std::cerr << "       input: " << input << " | "
-                << "parsed: " << std::to_string (expr) << std::endl;
+                << "parsed: " << std::to_string(expr) << std::endl;
     }
     else
     {
       std::cout << "\033[32m" << "OK: " << "\033[0m" << input << " -> " << got
-                << " | (" << std::to_string (expr) << ")" << std::endl;
+                << " | (" << std::to_string(expr) << ")" << std::endl;
     }
 
     result |= new_result;
   }
   return result;
 }
-}
+} // namespace
 
 int
-main ()
+main()
 {
-  if (!run ()) { return 1; }
+  if (!run())
+  {
+    return 1;
+  }
 }

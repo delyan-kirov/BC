@@ -93,36 +93,38 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   //    => 2 + 1
   { "let foo = \\x = foo x + 1 in foo 2", -2 },
 };
-}
+} // namespace TDATA
 
 namespace
 {
 bool
-run ()
+run()
 {
   for (auto tdata : TDATA::INPUTS)
   {
-    AR::Arena arena{};
+    AR::Arena   arena{};
     const char *input = tdata.first;
-    LX::Lexer l{ input, arena, 0, std::strlen (input) };
-    (void)l.run ();
-    std::printf ("%s\n", std::to_string (l.m_tokens).c_str ());
+    LX::Lexer   l{ input, arena, 0, std::strlen(input) };
+    (void)l.run();
+    std::printf("%s\n", std::to_string(l.m_tokens).c_str());
     EX::Parser parser{ l };
-    parser.run ();
-    std::printf (
-        "Parser: %s %s\n",
-        std::to_string (*parser.m_exprs.begin ()).c_str (),
-        1 != parser.m_exprs.m_len
-            ? std::to_string (*parser.m_exprs.last ()).c_str ()
-            : "");
+    parser.run();
+    std::printf("Parser: %s %s\n",
+                std::to_string(*parser.m_exprs.begin()).c_str(),
+                1 != parser.m_exprs.m_len
+                  ? std::to_string(*parser.m_exprs.last()).c_str()
+                  : "");
   }
 
   return true;
 }
-}
+} // namespace
 
 int
-main ()
+main()
 {
-  if (!run ()) { return 1; }
+  if (!run())
+  {
+    return 1;
+  }
 }
