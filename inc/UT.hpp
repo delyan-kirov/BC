@@ -32,6 +32,8 @@
     }                                                                          \
   } while (false)
 
+#define UT_TCS(o) (std::to_string(o).c_str())
+
 namespace UT
 {
 
