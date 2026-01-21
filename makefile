@@ -23,7 +23,6 @@ BCsrc = \
 BCinc = \
 	$(INC)LX.hpp \
 	$(INC)UT.hpp \
-	$(INC)ER.hpp \
 	$(INC)EX.hpp
 
 BC = $(BIN)bc.so

@@ -1,7 +1,6 @@
 #ifndef LX_HEADER
 #define LX_HEADER
 
-#include "ER.hpp"
 #include "UT.hpp"
 #include <cstring>
 #include <stdio.h>
