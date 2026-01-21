@@ -1,7 +1,6 @@
 #ifndef EX_HEADER
 #define EX_HEADER
 
-#include "AR.hpp"
 #include "LX.hpp"
 #include "UT.hpp"
 #include <cstdint>

@@ -17,12 +17,10 @@ test: $(BIN)tst_mult
 
 #------------------------------OBJC-----------------------------
 BCsrc = \
-	$(SRC)AR.cpp \
 	$(SRC)LX.cpp \
 	$(SRC)EX.cpp
 
 BCinc = \
-	$(INC)AR.hpp \
 	$(INC)LX.hpp \
 	$(INC)UT.hpp \
 	$(INC)ER.hpp \
