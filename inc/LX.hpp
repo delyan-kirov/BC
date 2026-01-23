@@ -19,6 +19,31 @@ constexpr UT::String KEYWORD_IN{ "in" };
     return (LX_ERROR_E);                                                       \
   } while (false)
 
+#define LX_FN_TRY(LX_FN)                                                       \
+  do                                                                           \
+  {                                                                            \
+    LX::E result = (LX_FN);                                                    \
+    if (LX::E::OK != result)                                                   \
+    {                                                                          \
+      this->m_events.push(LX::ErrorE{ this->m_arena,                           \
+                                      __PRETTY_FUNCTION__,                     \
+                                      ("The function: " #LX_FN " failed!"),    \
+                                      result });                               \
+      return result;                                                           \
+    }                                                                          \
+  } while (false)
+
+#define LX_ASSERT(LX_BOOL_EXPR, LX_ERROR_E)                                    \
+  do                                                                           \
+  {                                                                            \
+    if (!(LX_BOOL_EXPR))                                                       \
+    {                                                                          \
+      this->m_events.push(LX::ErrorE{                                          \
+        this->m_arena, __PRETTY_FUNCTION__, (#LX_BOOL_EXPR), (LX_ERROR_E) });  \
+      return (LX_ERROR_E);                                                     \
+    }                                                                          \
+  } while (false)
+
 enum class E
 {
   MIN = (ssize_t)-1,

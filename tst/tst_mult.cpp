@@ -105,6 +105,7 @@ run()
     LX::Lexer   l{ input, arena, 0, std::strlen(input) };
     (void)l.run();
     std::printf("%s\n", UT_TCS(l.m_tokens));
+    l.generate_event_report();
     EX::Parser parser{ l };
     parser.run();
     std::printf("Parser: %s\n", UT_TCS(*parser.m_exprs.begin()));

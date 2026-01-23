@@ -173,28 +173,15 @@ Lexer::run()
     break;
     case '(':
     {
-      auto result = LX::E::OK;
-
       size_t group_begin = this->m_cursor + 1;
       size_t group_end   = this->m_cursor + 1;
 
-      result = this->find_matching_paren(group_end);
-      if (LX::E::OK != result)
-      {
-        LX_ERROR_REPORT(result, "Function run failed");
-      }
+      LX_FN_TRY(this->find_matching_paren(group_end));
 
       LX::Lexer new_l = LX::Lexer(*this, group_begin, group_end);
-      result          = new_l.run();
+      LX_FN_TRY(new_l.run());
 
-      if (LX::E::OK == result)
-      {
-        this->push_group(new_l);
-      }
-      else
-      {
-        LX_ERROR_REPORT(result, "new_l failed");
-      }
+      this->push_group(new_l);
     }
     break;
     case ')':
@@ -223,11 +210,9 @@ Lexer::run()
     {
       this->strip_white_space(this->m_cursor);
       UT::String var_name = this->get_word(this->m_cursor);
-      if (LX::E::OK != this->match_operator('='))
-      {
-        LX_ERROR_REPORT(E::OPERATOR_MATCH_FAILURE,
-                        "Operator '=' did not match");
-      }
+
+      LX_FN_TRY(this->match_operator('='));
+
       Lexer body_lexer{
         this->m_input, this->m_arena, this->m_cursor, this->m_end
       };
@@ -263,12 +248,7 @@ Lexer::run()
         {
           UT::String var_name = this->get_word(this->m_cursor);
 
-          // TODO: More and better error reporting macros
-          if (LX::E::OK != this->match_operator('='))
-          {
-            LX_ERROR_REPORT(E::OPERATOR_MATCH_FAILURE,
-                            "Operator '=' did not match");
-          }
+          LX_FN_TRY(this->match_operator('='));
 
           Lexer let_lexer{
             this->m_input, this->m_arena, this->m_cursor, this->m_end
@@ -299,16 +279,10 @@ Lexer::run()
         }
         else
         {
-          if (word.m_len > 0)
-          {
-            LX::Token t{ LX::Type::Word };
-            t.as.m_string = word;
-            this->m_tokens.push(t);
-          }
-          else
-          {
-            LX_ERROR_REPORT(LX::E::UNRECOGNIZED_STRING, "");
-          }
+          LX_ASSERT(word.m_len > 0, LX::E::UNRECOGNIZED_STRING);
+          LX::Token t{ LX::Type::Word };
+          t.as.m_string = word;
+          this->m_tokens.push(t);
         }
       }
     }
@@ -399,7 +373,8 @@ Lexer::match_operator(
   char c)
 {
   this->strip_white_space(this->m_cursor);
-  return c == this->next_char() ? E::OK : E::UNRECOGNIZED_STRING;
+  LX_ASSERT(c == this->next_char(), E::UNRECOGNIZED_STRING);
+  return E::OK;
 };
 
 void

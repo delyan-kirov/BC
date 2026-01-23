@@ -280,6 +280,7 @@ Parser::run()
     default:
     {
       std::printf("%s\n", std::to_string(t.m_type).c_str());
+      // TODO: instead of UT_FAIL_IF, implement error reporting macros
       UT_FAIL_IF("The case default should be unreachable");
     }
     break;
