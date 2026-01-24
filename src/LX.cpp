@@ -95,16 +95,8 @@ Lexer::push_int()
   };
   for (char c = this->next_char(); c; c = this->next_char())
   {
-    if (!c)
-    {
-      break;
-    }
-    if (std::isdigit(c))
-    {
-      s += c;
-    }
-    else
-      break;
+    if (!c || !std::isdigit(c)) break;
+    s += c;
   }
 
   try
@@ -197,8 +189,8 @@ Lexer::run()
     break;
     case '=':
     {
-      LX_ERROR_REPORT(LX::E::UNREACHABLE_CASE_REACHED,
-                      "Operator = should never match in this branch");
+      LX_ASSERT('>' == this->next_char(), LX::E::OPERATOR_MATCH_FAILURE);
+      return E::FAT_ARROW;
     }
     break;
     case '\n':
@@ -262,20 +254,53 @@ Lexer::run()
           in_lexer.run();
 
           // TODO: Token should have an end
-          Token letin{};
-          letin.m_type                   = Type::Let;
-          letin.m_line                   = this->m_lines;
-          letin.m_cursor                 = this->m_cursor;
-          letin.as.m_let_in.m_var_name   = var_name;
-          letin.as.m_let_in.m_let_tokens = let_lexer.m_tokens;
-          letin.as.m_let_in.m_in_tokens  = in_lexer.m_tokens;
+          Token token{};
+          token.m_type                          = Type::Let;
+          token.m_line                          = this->m_lines;
+          token.m_cursor                        = this->m_cursor;
+          token.as.m_let_in_tokens.m_var_name   = var_name;
+          token.as.m_let_in_tokens.m_let_tokens = let_lexer.m_tokens;
+          token.as.m_let_in_tokens.m_in_tokens  = in_lexer.m_tokens;
 
-          this->m_tokens.push(letin);
+          this->m_tokens.push(token);
           this->skip_to(in_lexer);
         }
         else if (this->match_keyword(LX::KEYWORD_IN, word))
         {
           /* Nothing to do */ return LX::E::OK;
+        }
+        else if (this->match_keyword(LX::KEYWORD_IF, word))
+        {
+          Lexer if_condition_lexer{
+            this->m_input, this->m_arena, this->m_cursor, this->m_end
+          };
+          LX_ASSERT(E::FAT_ARROW == if_condition_lexer.run(),
+                    E::OPERATOR_MATCH_FAILURE);
+
+          Lexer true_branch_lexer{ if_condition_lexer.m_input,
+                                   if_condition_lexer.m_arena,
+                                   if_condition_lexer.m_cursor,
+                                   this->m_end };
+          LX_ASSERT(E::ELSE_KEYWORD == true_branch_lexer.run(),
+                    E::CONTROL_STRUCTURE_ERROR);
+
+          Lexer else_branch_lexer{ true_branch_lexer.m_input,
+                                   true_branch_lexer.m_arena,
+                                   true_branch_lexer.m_cursor,
+                                   this->m_end };
+          LX_FN_TRY(else_branch_lexer.run());
+
+          Token token{ Type::If };
+          token.as.m_if_tokens.m_condition   = if_condition_lexer.m_tokens;
+          token.as.m_if_tokens.m_true_branch = true_branch_lexer.m_tokens;
+          token.as.m_if_tokens.m_else_branch = else_branch_lexer.m_tokens;
+
+          this->m_tokens.push(token);
+          this->skip_to(else_branch_lexer);
+        }
+        else if (this->match_keyword(LX::KEYWORD_ELSE, word))
+        {
+          return LX::E::ELSE_KEYWORD;
         }
         else
         {

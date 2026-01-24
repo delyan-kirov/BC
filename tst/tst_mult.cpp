@@ -1,5 +1,6 @@
 #include "EX.hpp"
 #include "LX.hpp"
+#include "TL.hpp"
 #include "UT.hpp"
 
 #define TSTxCTL 0
@@ -10,10 +11,12 @@ constexpr std::pair<const char *, int> INPUTS[] = {
 #if 0
   { "1 / 2", 0 },
   { "3 * 2 + 2 / 2", 7 },
-  { "((3*(244 - 57 + 4)*(244 - 57 + 4) - (74 - 777)) / (5 - (44 + 77 - "
-    "47)*(44 + 77 - 47)*(44 + 77 - 47)) + ((4 + 27)*(3 - 7)))",
-    -124 },
+  // { "((3*(244 - 57 + 4)*(244 - 57 + 4) - (74 - 777)) / (5 - (44 + 77 - "
+  //   "47)*(44 + 77 - 47)*(44 + 77 - 47)) + ((4 + 27)*(3 - 7)))",
+  //   -124 },
+  { "2 * 2", 4 },
   { "1 - 1 - 2", -2 },
+  { "1 + 2 * 2", 5 },
   // { "2 + - (- 2 * 2) + - - (- ((1 + 1))) * 1 + (1 * 1)", 5 },
   { "-2", -2 },
   { "2 + - 2 * 2", -2 },
@@ -21,8 +24,6 @@ constexpr std::pair<const char *, int> INPUTS[] = {
     "+ 3)))) + (((12 * (8 - (3 * (2 + 1)))) - (5 * (6 - (2 * (1 + (2 * "
     "2)))))) * (3 + (4 * (2 + (1 * 5)))))",
     178 },
-  { "2 * 2", 4 },
-  { "1 + 2 * 2", 5 },
   { "(1 + 2) * 2", 6 },
   { "1", 1 },
   { "(1)", 1 },
@@ -82,7 +83,6 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "5 % - 3 + 1", 3 },
   { "-a", -2 },
   { "(1 + (1 + 2))", 3 },
-#endif
   { "let a = 3 in a + 1 + 2", -2 },
   //    => (\a = a + 1 + 1) 3
   { "let foo = \\x = x + 1 in (foo 2)", -2 },
@@ -90,6 +90,12 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   //    => (\x = x + 1) 2
   //    => 2 + 1
   { "let foo = \\x = foo x + 1 in foo 2", -2 },
+  { "if 1 => 2 else 3", -2 },
+#endif
+  { "if 1 => 2 + 3 else let x = 4 in x + 5", 5 },
+  { "if 1 - 1 => 2 + 3 else let x = 4 in x + 5", 9 },
+  { "let xtreme = 34 in if xtreme => xtreme + 35 else 3", 69 },
+
 };
 } // namespace TDATA
 
@@ -109,6 +115,9 @@ run()
     EX::Parser parser{ l };
     parser.run();
     std::printf("Parser: %s\n", UT_TCS(*parser.m_exprs.begin()));
+    ssize_t result = TL::eval(*parser.m_exprs.begin());
+    std::printf("Evaluated to %zd\n", result);
+    UT_FAIL_IF(tdata.second != result);
   }
 
   return true;

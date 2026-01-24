@@ -32,6 +32,14 @@
     }                                                                          \
   } while (false)
 
+#define UT_FAIL_MSG(MSG_FORMAT, ...)                                           \
+  do                                                                           \
+  {                                                                            \
+    char *s = nullptr;                                                         \
+    asprintf(&s, MSG_FORMAT, __VA_ARGS__);                                     \
+    UT::IMPL::fail_if(__FILE__, __PRETTY_FUNCTION__, __LINE__, UT::SERROR, s); \
+  } while (false)
+
 #define UT_TCS(o) (std::to_string(o).c_str())
 
 namespace AR
@@ -179,7 +187,6 @@ now_allocate:
 }
 
 } // namespace AR
-
 
 namespace UT
 {
@@ -347,6 +354,14 @@ struct String : public Vu<char>
     std::memset(mem, 0, this->m_len + 1);
     std::strcpy(mem, this->m_mem);
     return mem;
+  }
+
+  bool
+  operator==(
+    String &other)
+  {
+    return (this->m_len == other.m_len)
+           && (0 == std::memcmp(this->m_mem, other.m_mem, this->m_len));
   }
 };
 
@@ -903,7 +918,8 @@ public:
       UT::SB sb{};
       sb.concatf("%s :> end", this->m_fn_name);
 
-      ER::TraceE e{ (void *)sb.to_String(*this->m_arena).m_mem, *this->m_arena };
+      ER::TraceE e{ (void *)sb.to_String(*this->m_arena).m_mem,
+                    *this->m_arena };
       this->m_event_log.push(e);
     }
   }
@@ -957,6 +973,5 @@ to_string(
   return "UNREACHABLE";
 }
 } // namespace std
-
 
 #endif // UT_HEADER
