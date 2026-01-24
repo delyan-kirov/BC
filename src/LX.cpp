@@ -95,16 +95,8 @@ Lexer::push_int()
   };
   for (char c = this->next_char(); c; c = this->next_char())
   {
-    if (!c)
-    {
-      break;
-    }
-    if (std::isdigit(c))
-    {
-      s += c;
-    }
-    else
-      break;
+    if (!c || !std::isdigit(c)) break;
+    s += c;
   }
 
   try

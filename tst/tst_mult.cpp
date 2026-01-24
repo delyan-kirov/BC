@@ -92,7 +92,7 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "if 1 => 2 else 3", -2 },
 #endif
   { "if 1 => 2 + 3 else let x = 4 in x + 5", -2 },
-  { "let x = 3 in if x => x + 1 else 0", -2 },
+  { "let xtreme = 100000012 in if xtreme => xtreme + 321 else 0", -2 },
 
 };
 } // namespace TDATA
