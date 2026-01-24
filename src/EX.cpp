@@ -86,9 +86,9 @@ Parser::parse_binop(
   EX::Parser new_parser{ *this, start, end };
   result = new_parser.run();
 
-  EX::Expr right        = *new_parser.m_exprs.last();
-  root_expr.as.exprs[0] = left;
-  root_expr.as.exprs[1] = right;
+  EX::Expr right = *new_parser.m_exprs.last();
+  root_expr.as.exprs.push(left);
+  root_expr.as.exprs.push(right);
 
   *this->m_exprs.last() = root_expr;
 

@@ -5,7 +5,7 @@
 
 namespace TL
 {
-int eval(EX::T *expr);
+ssize_t eval(EX::Expr expr);
 }
 
 #endif // TL_HEADER

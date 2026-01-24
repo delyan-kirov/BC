@@ -355,6 +355,14 @@ struct String : public Vu<char>
     std::strcpy(mem, this->m_mem);
     return mem;
   }
+
+  bool
+  operator==(
+    String &other)
+  {
+    return (this->m_len == other.m_len)
+           && (0 == std::memcmp(this->m_mem, other.m_mem, this->m_len));
+  }
 };
 
 inline String

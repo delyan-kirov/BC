@@ -18,12 +18,14 @@ test: $(BIN)tst_mult
 #------------------------------OBJC-----------------------------
 BCsrc = \
 	$(SRC)LX.cpp \
-	$(SRC)EX.cpp
+	$(SRC)EX.cpp \
+	$(SRC)TL.cpp
 
 BCinc = \
 	$(INC)LX.hpp \
 	$(INC)UT.hpp \
-	$(INC)EX.hpp
+	$(INC)EX.hpp \
+	$(INC)TL.hpp
 
 BC = $(BIN)bc.so
 
