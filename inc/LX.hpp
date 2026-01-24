@@ -10,6 +10,8 @@ namespace LX
 
 constexpr UT::String KEYWORD_LET{ "let" };
 constexpr UT::String KEYWORD_IN{ "in" };
+constexpr UT::String KEYWORD_IF{ "if" };
+constexpr UT::String KEYWORD_ELSE{ "else" };
 
 #define LX_ERROR_REPORT(LX_ERROR_E, LX_ERROR_MSG)                              \
   do                                                                           \
@@ -53,6 +55,9 @@ enum class E
   UNRECOGNIZED_STRING,
   OPERATOR_MATCH_FAILURE,
   UNREACHABLE_CASE_REACHED,
+  FAT_ARROW,
+  ELSE_KEYWORD,
+  CONTROL_STRUCTURE_ERROR,
   MAX,
 };
 
@@ -88,11 +93,21 @@ enum class Type
   Let,
   Fn,
   Word,
+  If,
   Max,
 };
 
 struct Token;
 using Tokens = UT::Vec<Token>;
+
+struct If
+// if expr => expr else expr
+// [TODO] if expr is pattern => is ... else =>
+{
+  Tokens m_condition;
+  Tokens m_true_branch;
+  Tokens m_else_branch;
+};
 
 struct Let
 {
@@ -115,7 +130,8 @@ struct Token
   union
   {
     Tokens     m_tokens;
-    Let        m_let_in;
+    Let        m_let_in_tokens;
+    If         m_if_tokens;
     Fn         m_fn;
     UT::String m_string;
     ssize_t    m_int = 0;
@@ -263,6 +279,9 @@ to_string(
   case LX::E::UNRECOGNIZED_STRING     : return "UNRECOGNIZED_STRING";
   case LX::E::OPERATOR_MATCH_FAILURE  : return "OPERATOR_MATCH_FAILURE";
   case LX::E::UNREACHABLE_CASE_REACHED: return "UNREACHABLE_CASE_REACHED";
+  case LX::E::FAT_ARROW               : return "FAT_ARROW";
+  case LX::E::CONTROL_STRUCTURE_ERROR : return "CONTROL_STRUCTURE_ERROR";
+  case LX::E::ELSE_KEYWORD            : return "ELSE_KEYWORD";
   case LX::E::MAX                     : return "MAX";
   }
 
@@ -287,6 +306,7 @@ to_string(
   case LX::Type::Let    : return "LetIn";
   case LX::Type::Word   : return "Word";
   case LX::Type::Fn     : return "Fn";
+  case LX::Type::If     : return "If";
   case LX::Type::Max    : return "Max";
   }
 
@@ -326,9 +346,9 @@ to_string(
            ")";
   case LX::Type::Let:
   {
-    std::string let_string = to_string(t.as.m_let_in.m_let_tokens);
-    std::string in_string  = to_string(t.as.m_let_in.m_in_tokens);
-    std::string var_name   = to_string(t.as.m_let_in.m_var_name);
+    std::string let_string = to_string(t.as.m_let_in_tokens.m_let_tokens);
+    std::string in_string  = to_string(t.as.m_let_in_tokens.m_in_tokens);
+    std::string var_name   = to_string(t.as.m_let_in_tokens.m_var_name);
     return "let " + var_name + " = " + let_string + " in " + in_string;
   }
   break;
@@ -342,6 +362,12 @@ to_string(
   case LX::Type::Word:
   {
     return to_string(t.as.m_string);
+  }
+  case LX::Type::If:
+  {
+    return "if " + to_string(t.as.m_if_tokens.m_condition) +    //
+           " => " + to_string(t.as.m_if_tokens.m_true_branch) + //
+           " else " + to_string(t.as.m_if_tokens.m_else_branch);
   }
   case LX::Type::Group:
   {
@@ -374,6 +400,7 @@ to_string(
     case LX::Type::Min    :
     case LX::Type::Max    : s += to_string(t); break;
     case LX::Type::Word   : s += "Word(" + to_string(t.as.m_string) + ")"; break;
+    case LX::Type::If     : s += to_string(t); break;
     default               : UT_FAIL_IF("Unreachable");
     }
 

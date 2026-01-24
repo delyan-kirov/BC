@@ -206,13 +206,13 @@ Parser::run()
     {
       // TODO: We should have a function application explicitly!
       // let var = body_expr in app_expr
-      UT::String param = t.as.m_let_in.m_var_name;
+      UT::String param = t.as.m_let_in_tokens.m_var_name;
 
-      EX::Parser body_parser{ *this, t.as.m_let_in.m_in_tokens };
+      EX::Parser body_parser{ *this, t.as.m_let_in_tokens.m_in_tokens };
       body_parser.run();
       EX::Expr body_expr = *body_parser.m_exprs.last();
 
-      EX::Parser app_parser{ *this, t.as.m_let_in.m_let_tokens };
+      EX::Parser app_parser{ *this, t.as.m_let_in_tokens.m_let_tokens };
       app_parser.run();
       EX::Expr app_expr = *app_parser.m_exprs.last();
 
@@ -275,13 +275,35 @@ Parser::run()
       i += 1;
     }
     break;
+    case LX::Type::If:
+    {
+      EX::Parser condition_parser{ *this, t.as.m_if_tokens.m_condition };
+      condition_parser.run();
+      EX::Expr condition = *condition_parser.m_exprs.last();
+
+      EX::Parser true_branch_parser{ *this, t.as.m_if_tokens.m_true_branch };
+      true_branch_parser.run();
+      EX::Expr true_branch_expr = *true_branch_parser.m_exprs.last();
+
+      EX::Parser else_branch_parser{ *this, t.as.m_if_tokens.m_else_branch };
+      else_branch_parser.run();
+      EX::Expr else_branch_expr = *else_branch_parser.m_exprs.last();
+
+      EX::Expr if_expr{ EX::Type::If, this->m_arena };
+      if_expr.as.m_if.m_condition.push(condition);
+      if_expr.as.m_if.m_else_branch.push(else_branch_expr);
+      if_expr.as.m_if.m_true_branch.push(true_branch_expr);
+
+      this->m_exprs.push(if_expr);
+      i += 1;
+    }
+    break;
     case LX::Type::Min:
     case LX::Type::Max:
     default:
     {
-      std::printf("%s\n", std::to_string(t.m_type).c_str());
       // TODO: instead of UT_FAIL_IF, implement error reporting macros
-      UT_FAIL_IF("The case default should be unreachable");
+      UT_FAIL_MSG("The token type <%s> is unhandled", UT_TCS(t.m_type));
     }
     break;
     }

@@ -82,7 +82,6 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "5 % - 3 + 1", 3 },
   { "-a", -2 },
   { "(1 + (1 + 2))", 3 },
-#endif
   { "let a = 3 in a + 1 + 2", -2 },
   //    => (\a = a + 1 + 1) 3
   { "let foo = \\x = x + 1 in (foo 2)", -2 },
@@ -90,6 +89,11 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   //    => (\x = x + 1) 2
   //    => 2 + 1
   { "let foo = \\x = foo x + 1 in foo 2", -2 },
+  { "if 1 => 2 else 3", -2 },
+#endif
+  { "if 1 => 2 + 3 else let x = 4 in x + 5", -2 },
+  { "let x = 3 in if x => x + 1 else 0", -2 },
+
 };
 } // namespace TDATA
 
