@@ -298,6 +298,11 @@ Parser::run()
       i += 1;
     }
     break;
+    case LX::Type::IsEq:
+    {
+      this->parse_max_precedence_arithmetic_op(EX::Type::IsEq, i);
+    }
+    break;
     case LX::Type::Min:
     case LX::Type::Max:
     default:

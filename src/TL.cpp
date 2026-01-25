@@ -43,6 +43,11 @@ eval(
     return result = eval(*expr.as.exprs.begin()) % eval(*expr.as.exprs.last());
   }
   break;
+  case EX::Type::IsEq:
+  {
+    return result = eval(*expr.as.exprs.begin()) == eval(*expr.as.exprs.last());
+  }
+  break;
   case EX::Type::Int:
   {
     return result = expr.as.m_int;

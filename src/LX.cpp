@@ -186,6 +186,13 @@ Lexer::run()
       this->push_group(new_l);
     }
     break;
+    case '?':
+    {
+      LX_ASSERT('=' == this->next_char(), LX::E::OPERATOR_MATCH_FAILURE);
+      Token token{ Type::IsEq };
+      this->m_tokens.push(token);
+    }
+    break;
     case ')':
     {
       LX_ERROR_REPORT(LX::E::UNREACHABLE_CASE_REACHED,

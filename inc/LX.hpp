@@ -89,6 +89,7 @@ enum class Type
   Div,
   Modulus,
   Mult,
+  IsEq,
   Group,
   Let,
   Fn,
@@ -301,6 +302,7 @@ to_string(
   case LX::Type::Minus  : return "Minus";
   case LX::Type::Mult   : return "Mult";
   case LX::Type::Div    : return "Div";
+  case LX::Type::IsEq     : return "Eq";
   case LX::Type::Modulus: return "Modulus";
   case LX::Type::Group  : return "Group";
   case LX::Type::Let    : return "LetIn";
@@ -339,6 +341,10 @@ to_string(
   case LX::Type::Div:
     return "Op("
            "/"
+           ")";
+  case LX::Type::IsEq:
+    return "Op("
+           "?="
            ")";
   case LX::Type::Modulus:
     return "Op("
@@ -397,6 +403,7 @@ to_string(
     case LX::Type::Modulus:
     case LX::Type::Mult   :
     case LX::Type::Plus   :
+    case LX::Type::IsEq   :
     case LX::Type::Min    :
     case LX::Type::Max    : s += to_string(t); break;
     case LX::Type::Word   : s += "Word(" + to_string(t.as.m_string) + ")"; break;

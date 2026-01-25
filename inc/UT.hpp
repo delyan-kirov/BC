@@ -11,7 +11,7 @@
 #include <utility>
 
 #if defined(__GNUC__) || defined(__clang__)
-#define UT_PRINTF_LIKe(fmt_idx, arg_idx)                                       \
+#define UT_PRINTF_LIKE(fmt_idx, arg_idx)                                       \
   __attribute__((format(printf, fmt_idx, arg_idx)))
 #else
 #define UT_PRINTF_LIKE(fmt_idx, arg_idx)
