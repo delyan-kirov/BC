@@ -6,7 +6,7 @@ BIN = bin/
 TST = tst/
 
 CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g -O1
-CFLAGS += -DTRACE_ENABLED
+# CFLAGS += -DTRACE_ENABLED
 CC = clang++ $(CFLAGS) -I$(INC)
 CFSO = -fPIC -shared
 
@@ -39,8 +39,12 @@ $(BIN)tst_mult: $(TST)tst_mult.cpp $(BC)
 	$(CC) $(BC) $(TST)tst_mult.cpp -o $@
 
 #-----------------------------CMND------------------------------
-COMMANDS = clean bear test init list format valgrind gf2
+COMMANDS = clean bear test init list format valgrind gf2 trace
 .PHONY: COMMANDS
+
+trace: CFLAGS += -DTRACE_ENABLED
+trace: clean $(BC)
+	make
 
 debug:
 	gf2 $(BIN)tst_mult &

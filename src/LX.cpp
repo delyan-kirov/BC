@@ -10,13 +10,21 @@ bool
 Lexer::match_keyword(
   UT::String keyword, UT::String word)
 {
-  return UT::strcompare(keyword, word);
+  UT_BEGIN_TRACE(this->m_arena,
+                 this->m_events,
+                 "keyword = %s, word = %s",
+                 UT_TCS(keyword),
+                 UT_TCS(word));
+  bool result = UT::strcompare(keyword, word);
+  return result;
 }
 
 UT::String
 LX::Lexer::get_word(
   size_t idx)
 {
+  UT_BEGIN_TRACE(this->m_arena, this->m_events, "idx = %d", idx);
+
   UT::SB sb{};
   this->strip_white_space(idx);
   idx = this->m_cursor;
@@ -360,6 +368,8 @@ void
 Lexer::subsume_sub_lexer(
   Lexer &l)
 {
+  UT_BEGIN_TRACE(this->m_arena, this->m_events, "{}", 0);
+
   for (auto t : l.m_tokens)
   {
     LX::Token token{ t };
@@ -378,8 +388,12 @@ E
 Lexer::match_operator(
   char c)
 {
+  UT_BEGIN_TRACE(this->m_arena, this->m_events, "{}", 0);
+
   this->strip_white_space(this->m_cursor);
   LX_ASSERT(c == this->next_char(), E::UNRECOGNIZED_STRING);
+
+  UT_TRACE("Successfully matched operator %c", c);
   return E::OK;
 };
 
@@ -387,6 +401,8 @@ void
 Lexer::strip_white_space(
   size_t idx)
 {
+  UT_BEGIN_TRACE(this->m_arena, this->m_events, "idx = %d", idx);
+
   char   c         = this->m_input[idx];
   size_t new_lines = 0;
 
@@ -405,6 +421,8 @@ void
 Lexer::push_group(
   Lexer l)
 {
+  UT_BEGIN_TRACE(this->m_arena, this->m_events, "{}", 0);
+
   Token t{ l.m_tokens };
   this->m_tokens.push(t);
   this->m_cursor = l.m_cursor;

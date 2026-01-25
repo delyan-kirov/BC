@@ -831,6 +831,8 @@ public:
   using UT::Vec<E>::operator[];
 };
 
+#ifdef TRACE_ENABLED
+
 #define UT_BEGIN_TRACE(UT_ARENA, UT_EVENTS, UT_FORMAT, ...)                    \
   ER::Trace trace{ __PRETTY_FUNCTION__, __FILE__, UT_ARENA, UT_EVENTS };       \
   do                                                                           \
@@ -840,8 +842,15 @@ public:
 
 #define UT_TRACE(UT_FORMAT, ...) trace.logf(__LINE__, UT_FORMAT, __VA_ARGS__)
 
-#define UT_TRACE_ENTRY_ARROW " \033[36m>>>\033[0m "
-#define UT_TRACE_EXIT_ARROW " \033[36m<<<\033[0m "
+#else
+
+#define UT_BEGIN_TRACE(UT_ARENA, UT_EVENTS, UT_FORMAT, ...)
+#define UT_TRACE(UT_FORMAT, ...)
+
+#endif
+
+#define UT_TRACE_ENTRY_ARROW " >>> "
+#define UT_TRACE_EXIT_ARROW " <<< "
 class Trace
 {
 public:
