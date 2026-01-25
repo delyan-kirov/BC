@@ -32,6 +32,14 @@
     }                                                                          \
   } while (false)
 
+#define UT_FAIL_MSG(MSG_FORMAT, ...)                                           \
+  do                                                                           \
+  {                                                                            \
+    char *s = nullptr;                                                         \
+    asprintf(&s, MSG_FORMAT, __VA_ARGS__);                                     \
+    UT::IMPL::fail_if(__FILE__, __PRETTY_FUNCTION__, __LINE__, UT::SERROR, s); \
+  } while (false)
+
 #define UT_TCS(o) (std::to_string(o).c_str())
 
 namespace AR
@@ -346,6 +354,14 @@ struct String : public Vu<char>
     std::memset(mem, 0, this->m_len + 1);
     std::strcpy(mem, this->m_mem);
     return mem;
+  }
+
+  bool
+  operator==(
+    String &other)
+  {
+    return (this->m_len == other.m_len)
+           && (0 == std::memcmp(this->m_mem, other.m_mem, this->m_len));
   }
 };
 

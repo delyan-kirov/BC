@@ -4,6 +4,7 @@
 #include "LX.hpp"
 #include "UT.hpp"
 #include <cstdint>
+#include <cstdio>
 #include <string>
 
 namespace EX
@@ -30,6 +31,7 @@ enum class Type
   FnApp,
   VarApp,
   Var,
+  If,
 };
 
 struct Expr;
@@ -59,6 +61,13 @@ struct FnDef
   }
 };
 
+struct If
+{
+  Exprs m_condition;
+  Exprs m_true_branch;
+  Exprs m_else_branch;
+};
+
 struct FnApp
 {
   FnDef m_body;
@@ -82,6 +91,7 @@ struct Expr
     UT::String m_var;
     Exprs      exprs;
     ssize_t    m_int = 0;
+    If         m_if;
   } as;
 
   Expr() = default;
@@ -93,13 +103,20 @@ struct Expr
   {
     switch (type)
     {
-    case Type::FnDef  : this->as.m_fn.m_body = { arena }; break;
-    case Type::FnApp  : this->as.m_fnapp.m_param = { arena }; break;
-    case Type::VarApp : this->as.m_varapp.m_param = { arena }; break;
-    case Type::Div    :
-    case Type::Sub    :
+    case Type::FnDef : this->as.m_fn.m_body = { arena }; break;
+    case Type::FnApp : this->as.m_fnapp.m_param = { arena }; break;
+    case Type::VarApp: this->as.m_varapp.m_param = { arena }; break;
+    case Type::If:
+    {
+      this->as.m_if.m_condition   = { arena };
+      this->as.m_if.m_else_branch = { arena };
+      this->as.m_if.m_true_branch = { arena };
+    }
+    break;
+    case Type::Div:
+    case Type::Sub:
     case Type::Modulus:
-    case Type::Mult   :
+    case Type::Mult:
     case Type::Add    : this->as.exprs = { arena, 2 }; break;
     case Type::Minus  : this->as.exprs = { arena, 1 }; break;
     default           : UT_FAIL_IF("Invalid type for this constructor");
@@ -207,6 +224,7 @@ to_string(
   case EX::Type::Var    : return "EX::Type::Var";
   case EX::Type::FnApp  : return "EX::Type::FnApp";
   case EX::Type::VarApp : return "EX::Type::VarApp";
+  case EX::Type::If     : return "EX::Type::If";
   case EX::Type::Unknown: return "EX::Type::Unknown";
   }
 
@@ -302,6 +320,13 @@ to_string(
   case EX::Type::Var:
   {
     s += "Var (" + std::to_string(expr.as.m_var) + ")";
+  }
+  break;
+  case EX::Type::If:
+  {
+    s += "if " + std::to_string(*expr.as.m_if.m_condition.last()) +    //
+         " => " + std::to_string(*expr.as.m_if.m_true_branch.last()) + //
+         " else " + std::to_string(*expr.as.m_if.m_else_branch.last());
   }
   break;
   case EX::Type::Unknown:
