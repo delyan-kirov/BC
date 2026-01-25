@@ -37,34 +37,13 @@ enum class Type
 struct Expr;
 using Exprs = UT::Vec<Expr>;
 
-enum class FnFlags : std::uint64_t
+enum FnFlags : std::uint64_t
 {
   MIN            = 0,
   NONE           = 0,
   FN_MUST_INLINE = 1 << 0,
   MAX            = FN_MUST_INLINE,
 };
-
-inline std::uint64_t
-operator&(
-  FnFlags l, FnFlags r)
-{
-  return (std::uint64_t)l & (std::uint64_t)r;
-}
-
-inline std::uint64_t
-operator|(
-  FnFlags l, FnFlags r)
-{
-  return (std::uint64_t)l | (std::uint64_t)r;
-}
-
-inline std::uint64_t
-operator^(
-  FnFlags l, FnFlags r)
-{
-  return (std::uint64_t)l ^ (std::uint64_t)r;
-}
 
 struct FnDef
 {

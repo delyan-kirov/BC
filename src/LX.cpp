@@ -10,13 +10,21 @@ bool
 Lexer::match_keyword(
   UT::String keyword, UT::String word)
 {
-  return UT::strcompare(keyword, word);
+  UT_BEGIN_TRACE(this->m_arena,
+                 this->m_events,
+                 "keyword = %s, word = %s",
+                 UT_TCS(keyword),
+                 UT_TCS(word));
+  bool result = UT::strcompare(keyword, word);
+  return result;
 }
 
 UT::String
 LX::Lexer::get_word(
   size_t idx)
 {
+  UT_BEGIN_TRACE(this->m_arena, this->m_events, "idx = %d", idx);
+
   UT::SB sb{};
   this->strip_white_space(idx);
   idx = this->m_cursor;
@@ -37,7 +45,8 @@ LX::E
 LX::Lexer::find_matching_paren(
   size_t &paren_match_idx)
 {
-  auto   trace = ER::Trace(this->m_arena, __PRETTY_FUNCTION__, this->m_events);
+  UT_BEGIN_TRACE(
+    this->m_arena, this->m_events, "paren_match_idx = %d", paren_match_idx);
   size_t stack = 1;
 
   for (size_t idx = this->m_cursor; this->m_input[idx]; ++idx)
@@ -54,8 +63,8 @@ LX::Lexer::find_matching_paren(
     if (0 == stack)
     {
       paren_match_idx = idx;
-      trace << "Found matching paren at: "
-            << std::to_string(this->m_cursor).c_str() << trace.end();
+
+      UT_TRACE("Found matching paren at: %d", this->m_cursor);
       return LX::E::OK;
     }
   }
@@ -82,7 +91,8 @@ Lexer::next_char()
 LX::E
 Lexer::push_int()
 {
-  auto   trace  = ER::Trace(this->m_arena, __PRETTY_FUNCTION__, this->m_events);
+  UT_BEGIN_TRACE(this->m_arena, this->m_events, "{}", 0);
+
   int    result = 0;
   size_t cursor = this->m_cursor;
   size_t lines  = this->m_lines;
@@ -127,7 +137,7 @@ void
 Lexer::push_operator(
   char c)
 {
-  auto trace = ER::Trace(this->m_arena, __PRETTY_FUNCTION__, this->m_events);
+  UT_BEGIN_TRACE(this->m_arena, this->m_events, "{}", 0);
 
   LX::Type t_type = LX::Type::Min;
   switch (c)
@@ -145,7 +155,7 @@ Lexer::push_operator(
 LX::E
 Lexer::run()
 {
-  auto trace = ER::Trace(this->m_arena, __PRETTY_FUNCTION__, this->m_events);
+  UT_BEGIN_TRACE(this->m_arena, this->m_events, "{}", 0);
 
   for (char c = this->next_char();           //
        c && (this->m_cursor <= this->m_end); //
@@ -325,7 +335,7 @@ Lexer::generate_event_report()
   for (size_t i = 0; i < events.m_len; ++i)
   {
     ER::E e = events.m_mem[i];
-    if (ER::Type::ERROR == e.m_type)
+    if (ER::Level::ERROR == e.m_level)
     {
       LX::E event = *(LX::E *)e.m_data;
       std::printf("[%s] %s\n", UT::SERROR, std::to_string(event).c_str());
@@ -373,12 +383,18 @@ Lexer::generate_event_report()
 
       return;
     }
+    else
+    {
+      std::printf("%s\n", (char *)e.m_data);
+    }
   }
 }
 void
 Lexer::subsume_sub_lexer(
   Lexer &l)
 {
+  UT_BEGIN_TRACE(this->m_arena, this->m_events, "{}", 0);
+
   for (auto t : l.m_tokens)
   {
     LX::Token token{ t };
@@ -397,8 +413,12 @@ E
 Lexer::match_operator(
   char c)
 {
+  UT_BEGIN_TRACE(this->m_arena, this->m_events, "{}", 0);
+
   this->strip_white_space(this->m_cursor);
   LX_ASSERT(c == this->next_char(), E::UNRECOGNIZED_STRING);
+
+  UT_TRACE("Successfully matched operator %c", c);
   return E::OK;
 };
 
@@ -406,6 +426,8 @@ void
 Lexer::strip_white_space(
   size_t idx)
 {
+  UT_BEGIN_TRACE(this->m_arena, this->m_events, "idx = %d", idx);
+
   char   c         = this->m_input[idx];
   size_t new_lines = 0;
 
@@ -424,6 +446,8 @@ void
 Lexer::push_group(
   Lexer l)
 {
+  UT_BEGIN_TRACE(this->m_arena, this->m_events, "{}", 0);
+
   Token t{ l.m_tokens };
   this->m_tokens.push(t);
   this->m_cursor = l.m_cursor;
