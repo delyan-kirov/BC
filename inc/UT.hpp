@@ -180,7 +180,6 @@ now_allocate:
 
 } // namespace AR
 
-
 namespace UT
 {
 
@@ -367,6 +366,18 @@ strdup(
 {
   auto new_s = (char *)arena.alloc(len);
   (void)std::memcpy(new_s, s, len);
+  String result{ new_s, len };
+  return result;
+}
+
+inline String
+strdup(
+  AR::Arena &arena, const char *s)
+{
+  size_t len   = std::strlen(s);
+  auto   new_s = (char *)arena.alloc(len + 1);
+  (void)std::memcpy(new_s, s, len);
+  new_s[len] = 0;
   String result{ new_s, len };
   return result;
 }
@@ -765,60 +776,30 @@ constexpr bool TRACE_ENABLE =
   false;
 #endif
 
-enum class Type
+enum class Level
 {
   MIN = 0,
   ERROR,
   WARNING,
-  UNFO,
+  INFO,
   MAX,
 };
 
 struct E
 {
-  Type       m_type          = Type::MIN;
-  AR::Arena *m_arena         = nullptr;
-  void      *m_data          = nullptr;
-  char *(*fmt)(void *m_data) = nullptr;
+  Level      m_level = Level::MIN;
+  size_t     m_type  = 0;
+  AR::Arena *m_arena = nullptr;
+  void      *m_data  = nullptr;
+  ;
 
   E();
-  E(
-    Type       type,
-    AR::Arena &arena,
-    void      *data         = nullptr,
-    char *(*fmt_fn)(void *) = nullptr)
-      : m_type{ type },    //
+  E(Level level, size_t type, AR::Arena &arena, void *data)
+      : m_level{ level },  //
+        m_type{ type },    //
         m_arena{ &arena }, //
-        m_data{ data },    //
-        fmt{ fmt_fn }      //
-  {
-  }
-};
-
-namespace
-{
-char *
-info_trace_fmt(
-  void *m_data)
-{
-  char *info_event = (char *)m_data;
-  return info_event;
-}
-
-} // namespace
-
-struct TraceE : public E
-{
-  TraceE(
-    void *data, AR::Arena &arena)
-      : E{
-          Type::UNFO, //
-          arena,
-          data,           //
-          info_trace_fmt, //
-        }
-  {
-  }
+        m_data{ data }     //
+  {};
 };
 
 class Events : public UT::Vec<E>
@@ -848,51 +829,39 @@ public:
 
   using UT::Vec<E>::push;
   using UT::Vec<E>::operator[];
-
-  void
-  dump_to_stdin()
-  {
-    for (size_t i = 0; i < this->m_len; ++i)
-    {
-      E           e      = this->m_mem[i];
-      char       *s      = e.fmt(e.m_data);
-      const char *prefix = "";
-      switch (e.m_type)
-      {
-      case ER::Type::ERROR: prefix = "\033[31mERROR\033[0m"; break;
-      case ER::Type::UNFO : prefix = "\033[32mINFO\033[0m"; break;
-      default             : break;
-      }
-      std::printf("[%s]%s\n", prefix, s);
-    }
-  }
-
-  // void trace (E e, const char *fmt, ...) UT_PRINTF_LIKE (3, 4);
 };
 
-class Trace : public UT::Block
+#define UT_BEGIN_TRACE(UT_ARENA, UT_EVENTS, UT_FORMAT, ...)                    \
+  ER::Trace trace{ __PRETTY_FUNCTION__, __FILE__, UT_ARENA, UT_EVENTS };       \
+  do                                                                           \
+  {                                                                            \
+    trace.log_entry(__LINE__, UT_FORMAT, __VA_ARGS__);                         \
+  } while (false)
+
+#define UT_TRACE(UT_FORMAT, ...) trace.logf(__LINE__, UT_FORMAT, __VA_ARGS__)
+
+#define UT_TRACE_ENTRY_ARROW " \033[36m>>>\033[0m "
+#define UT_TRACE_EXIT_ARROW " \033[36m<<<\033[0m "
+class Trace
 {
 public:
   const char *m_fn_name;
-  Events     &m_event_log;
+  const char *m_file_name;
+  AR::Arena  *m_arena;
+  Events     *m_event_log;
 
   Trace(
-    AR::Arena &arena, const char *fn_name, Events &event_log)
-      : UT::Block{ arena, std::strlen(fn_name) + 2 * UT::V_DEFAULT_MAX_LEN }, //
-        m_fn_name{ fn_name },                                                 //
-        m_event_log{ event_log }                                              //
+    const char *fn_name,
+    const char *file_name,
+    AR::Arena  &arena,
+    Events     &event_log)
   {
     if (TRACE_ENABLE)
     {
-      UT::SB sb{};
-      sb.concatf("%s :> begin", fn_name);
-
-      auto       s = sb.to_String(*this->m_arena);
-      ER::TraceE e{ s.m_mem, arena };
-      this->m_event_log.push(e);
-
-      this->push(this->m_fn_name);
-      this->push(":> ");
+      this->m_fn_name   = fn_name;
+      this->m_file_name = file_name;
+      this->m_arena     = &arena;
+      this->m_event_log = &event_log;
     }
   };
 
@@ -901,39 +870,61 @@ public:
     if (TRACE_ENABLE)
     {
       UT::SB sb{};
-      sb.concatf("%s :> end", this->m_fn_name);
-
-      ER::TraceE e{ (void *)sb.to_String(*this->m_arena).m_mem, *this->m_arena };
-      this->m_event_log.push(e);
+      sb.concatf(
+        UT_TRACE_EXIT_ARROW "%s->%s", this->m_file_name, this->m_fn_name);
+      {
+        UT::String buffer_copy
+          = UT::strdup(*this->m_arena, sb.to_cstr(*this->m_arena));
+        E event{ Level::INFO, 0, *this->m_arena, buffer_copy.m_mem };
+        this->m_event_log->push(event);
+      }
     }
   }
 
-  Block &
-  operator<<(
-    const char *s)
+  template <typename... Args>
+  void
+  log_entry(
+    int line, const char *fmt, Args &&...args)
   {
     if (TRACE_ENABLE)
     {
-      this->push(s); //
+      char  *buffer;
+      UT::SB sb{};
+      sb.concatf(UT_TRACE_ENTRY_ARROW "%s :: %s \n %d | %s",
+                 this->m_file_name,
+                 this->m_fn_name,
+                 line,
+                 fmt);
+      (void)asprintf(
+        &buffer, sb.to_cstr(*this->m_arena), std::forward<Args>(args)...);
+      {
+        UT::String buffer_copy = UT::strdup(*this->m_arena, buffer);
+        E          event{ Level::INFO, 0, *this->m_arena, buffer_copy.m_mem };
+        this->m_event_log->push(event);
+      }
+      std::free(buffer);
     }
-    return *this;
   }
 
-  const char *
-  end()
+  template <typename... Args>
+  void
+  logf(
+    int line, const char *fmt, Args &&...args)
   {
     if (TRACE_ENABLE)
     {
-      ER::TraceE e{ (void *)this->m_mem, *this->m_arena };
-      this->m_event_log.push(e);
-
-      std::memset(this->m_mem, 0, this->m_len);
-      this->m_len = 0;
-
-      this->push(this->m_fn_name);
-      this->push(" :> ");
+      char  *buffer;
+      UT::SB sb{};
+      sb.concatf(" %d | %s", line, fmt);
+      (void)asprintf(
+        &buffer, sb.to_cstr(*this->m_arena), std::forward<Args>(args)...);
+      {
+        UT::String buffer_copy = UT::strdup(*this->m_arena, buffer);
+        E          event{ Level::INFO, 0, *this->m_arena, buffer_copy.m_mem };
+        this->m_event_log->push(event);
+      }
+      std::free(buffer);
     }
-    return "";
   }
 };
 
@@ -943,20 +934,19 @@ namespace std
 {
 inline string
 to_string(
-  ER::Type type)
+  ER::Level type)
 {
   switch (type)
   {
-  case ER::Type::MIN    : return "MIN";
-  case ER::Type::ERROR  : return "ERROR";
-  case ER::Type::WARNING: return "WARNING";
-  case ER::Type::UNFO   : return "UNFO";
-  case ER::Type::MAX    : return "MAX";
+  case ER::Level::MIN    : return "MIN";
+  case ER::Level::ERROR  : return "ERROR";
+  case ER::Level::WARNING: return "WARNING";
+  case ER::Level::INFO   : return "INFO";
+  case ER::Level::MAX    : return "MAX";
   }
 
   return "UNREACHABLE";
 }
 } // namespace std
-
 
 #endif // UT_HEADER

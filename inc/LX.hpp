@@ -61,10 +61,10 @@ struct ErrorE : public ER::E
   ErrorE(
     AR::Arena &arena, const char *fn_name, const char *data, LX::E error)
       : E{
-          ER::Type::ERROR,    //
-          arena,              //
-          (void *)data,       //
-          ER::info_trace_fmt, //
+          ER::Level::ERROR, //
+          0,                //
+          arena,            //
+          (void *)data,     //
         }
   {
     UT::SB sb{};

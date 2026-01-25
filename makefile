@@ -6,7 +6,7 @@ BIN = bin/
 TST = tst/
 
 CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g -O1
-# CFLAGS += -DTRACE_ENABLED
+CFLAGS += -DTRACE_ENABLED
 CC = clang++ $(CFLAGS) -I$(INC)
 CFSO = -fPIC -shared
 
