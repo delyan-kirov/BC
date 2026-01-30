@@ -1,11 +1,11 @@
 #include "TL.hpp"
 #include "EX.hpp"
 #include "UT.hpp"
+#include <cstdio>
 #include <map>
 namespace TL
 {
 
-// TODO: Expressions evaluate to expressions, not just ssize_t
 using ExprMap = std::map<std::string, EX::Expr>;
 static ExprMap var_map;
 
@@ -34,6 +34,7 @@ EX::Expr
 eval(
   EX::Expr expr)
 {
+  printf("Expr = %s\n", UT_TCS(expr));
   switch (expr.m_type)
   {
   case EX::Type::Add:
@@ -88,6 +89,7 @@ eval(
 
       return eval(application_expr);
     }
+
     return expr;
   }
   case EX::Type::If:

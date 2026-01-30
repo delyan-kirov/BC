@@ -57,6 +57,7 @@ enum class E
   UNREACHABLE_CASE_REACHED,
   FAT_ARROW,
   ELSE_KEYWORD,
+  IN_KEYWORD,
   CONTROL_STRUCTURE_ERROR,
   MAX,
 };
@@ -283,6 +284,7 @@ to_string(
   case LX::E::FAT_ARROW               : return "FAT_ARROW";
   case LX::E::CONTROL_STRUCTURE_ERROR : return "CONTROL_STRUCTURE_ERROR";
   case LX::E::ELSE_KEYWORD            : return "ELSE_KEYWORD";
+  case LX::E::IN_KEYWORD              : return "IN_KEYWORD";
   case LX::E::MAX                     : return "MAX";
   }
 
@@ -302,7 +304,7 @@ to_string(
   case LX::Type::Minus  : return "Minus";
   case LX::Type::Mult   : return "Mult";
   case LX::Type::Div    : return "Div";
-  case LX::Type::IsEq     : return "Eq";
+  case LX::Type::IsEq   : return "Eq";
   case LX::Type::Modulus: return "Modulus";
   case LX::Type::Group  : return "Group";
   case LX::Type::Let    : return "LetIn";

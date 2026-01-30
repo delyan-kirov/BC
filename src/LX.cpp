@@ -225,7 +225,14 @@ Lexer::run()
       Lexer body_lexer{
         this->m_input, this->m_arena, this->m_cursor, this->m_end
       };
-      body_lexer.run();
+      LX::E e = body_lexer.run();
+      switch (e)
+      {
+      case E::OK:
+      case E::IN_KEYWORD:
+      case E::ELSE_KEYWORD: break;
+      default             : return e;
+      }
 
       Token fn{};
       fn.m_type             = Type::Fn;
@@ -237,7 +244,7 @@ Lexer::run()
       this->m_tokens.push(fn);
       this->skip_to(body_lexer);
 
-      return LX::E::OK;
+      return e;
     }
     break;
     default:
@@ -253,7 +260,15 @@ Lexer::run()
       else
       {
         UT::String word = this->get_word(this->m_cursor - 1);
-        if (this->match_keyword(LX::KEYWORD_LET, word))
+        if (this->match_keyword(LX::KEYWORD_IN, word))
+        {
+          return LX::E::IN_KEYWORD;
+        }
+        else if (this->match_keyword(LX::KEYWORD_ELSE, word))
+        {
+          return LX::E::ELSE_KEYWORD;
+        }
+        else if (this->match_keyword(LX::KEYWORD_LET, word))
         {
           UT::String var_name = this->get_word(this->m_cursor);
 
@@ -262,13 +277,14 @@ Lexer::run()
           Lexer let_lexer{
             this->m_input, this->m_arena, this->m_cursor, this->m_end
           };
-          let_lexer.run();
+          LX_ASSERT(E::IN_KEYWORD == let_lexer.run(),
+                    E::CONTROL_STRUCTURE_ERROR);
 
           Lexer in_lexer{ let_lexer.m_input,
                           let_lexer.m_arena,
                           let_lexer.m_cursor,
                           this->m_end };
-          in_lexer.run();
+          LX_FN_TRY(in_lexer.run());
 
           // TODO: Token should have an end
           Token token{};
@@ -281,10 +297,6 @@ Lexer::run()
 
           this->m_tokens.push(token);
           this->skip_to(in_lexer);
-        }
-        else if (this->match_keyword(LX::KEYWORD_IN, word))
-        {
-          /* Nothing to do */ return LX::E::OK;
         }
         else if (this->match_keyword(LX::KEYWORD_IF, word))
         {
@@ -314,10 +326,6 @@ Lexer::run()
 
           this->m_tokens.push(token);
           this->skip_to(else_branch_lexer);
-        }
-        else if (this->match_keyword(LX::KEYWORD_ELSE, word))
-        {
-          return LX::E::ELSE_KEYWORD;
         }
         else
         {

@@ -95,8 +95,9 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "let x = 3 in if x ?= 1 => 1 else if x ?= 2 => 2 else 3", 3 },
   { "let foo = \\x = x + 1 in foo 1", 2 },
   { "let xtreme = 34 in if xtreme => xtreme + 35 else 3", 69 },
+  { "let foo = \\x = x x in foo foo", 2 }, // INFINITE RECURSION 
 #endif
-  { "let a = 1 in let foo = \\b = b + a + 1 in 2 * (foo 2)", 8 },
+  { "let a = 1 in let foo = \\b = b + a + 1 in foo (foo 2)", 6 },
 
 };
 } // namespace TDATA
