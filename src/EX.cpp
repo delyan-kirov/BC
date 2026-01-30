@@ -204,6 +204,7 @@ Parser::run()
     break;
     case LX::Type::Let:
     {
+      // TODO: Support recursive functions
       // TODO: We should have a function application explicitly!
       // let var = body_expr in app_expr
       UT::String param = t.as.m_let_in_tokens.m_var_name;

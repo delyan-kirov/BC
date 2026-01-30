@@ -41,8 +41,11 @@ $(BIN)tst_mult: $(TST)tst_mult.cpp $(BC)
 	$(CC) $(BC) $(TST)tst_mult.cpp -o $@
 
 #-----------------------------CMND------------------------------
-COMMANDS = clean bear test init list format valgrind gf2 trace
+COMMANDS = clean bear test init list format valgrind gf2 trace executables
 .PHONY: COMMANDS
+
+executables: $(BC)
+	@true
 
 trace: CFLAGS += -DTRACE_ENABLED
 trace: clean $(BC)
