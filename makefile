@@ -12,8 +12,9 @@ CFSO = -fPIC -shared
 
 #------------------------------MAIN-----------------------------
 # 
-test: $(BIN)tst_mult
+test: $(BIN)tst_mult $(BIN)tst_addition_n_subtraction
 	@$(BIN)tst_mult
+	@$(BIN)tst_addition_n_subtraction
 
 #------------------------------OBJC-----------------------------
 BCsrc = \
@@ -39,6 +40,9 @@ $(BC): $(BCinc) $(BCsrc)
 
 $(BIN)tst_mult: $(TST)tst_mult.cpp $(BC)
 	$(CC) $(BC) $(TST)tst_mult.cpp -o $@
+
+$(BIN)tst_addition_n_subtraction: $(TST)tst_addition_n_subtraction.cpp $(BC)
+	$(CC) $(BC) $(TST)tst_addition_n_subtraction.cpp -o $@
 
 #-----------------------------CMND------------------------------
 COMMANDS = clean bear test init list format valgrind gf2 trace executables

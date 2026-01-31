@@ -1,108 +1,49 @@
-#include <exception>
-#include <iostream>
-#include <string>
-
-#include "EX.hpp"
-#include "LX.hpp"
 #include "TL.hpp"
+#include "UT.hpp"
+#include <cstdio>
 
-using std::string;
-using std::vector;
-
-namespace TDATA
+UT::String
+read_entrie_file(
+  const char *file_name, AR::Arena &arena)
 {
-constexpr std::pair<const char *, int> INPUTS[] = {
-  { "1 - (2 - (3 + 43)) + 4 - ( 1 + 3   )", 45 },
-  { "1+2", 3 },
-  { "-2", -2 },
-  { "10 - 5 - 2", 3 },
-  { "10 - (5 - 2)", 7 },
-  { "(1 + 2) + (3 + 4)", 10 },
-  { "(((((5)))))", 5 },
-  { "-5 + ((((-(-5)))))", 0 },
-  { "0 - 1", -1 },
-  { "0 - (1 + 2 + 3)", -6 },
-  { "(8 - 3) - (2 - 1)", 4 },
-  { "42", 42 },
-  { "(7 + 3) - (2 + 1)", 7 },
-  { "1 - (2 - (3 - (4 - 5)))", 3 },
-  { "1 - 2 - 3 - 4", -8 },
-  { "1 - (2 - 3) - 4", -2 },
-  { "(1 - 2) - (3 - 4)", 0 },
-  { "100 - (50 + 25)", 25 },
-  { "(100 - 50) + 25", 75 },
-  { "1 + (2 + (3 + (4 + 5)))", 15 },
-  { "1 - (2 + (3 + (4 + 5)))", -13 },
-  { "(1 + 2) - (3 + (4 - 5))", 1 },
-  { "((1 + 2) - 3) + (4 - 5)", -1 },
-  { "0 - (0 - (0 - (0 - 1)))", 1 },
-  { "1 - 2 - (3 - (4 + (5 - (6 + (7 - (8 - (9 + (10 - (11 + 12)))))))))", 4 },
-};
-}
+  FILE *file_stream = std::fopen(file_name, "rb");
 
-namespace
-{
-
-bool
-run()
-{
-  bool  result = true;
-  AR::T arena{};
-  for (auto tdata : TDATA::INPUTS)
+  if (!file_stream)
   {
-    const char *input  = tdata.first;
-    int         expect = tdata.second;
-
-    vector<LX::T> tokens = LX::run(input);
-    EX::T        *expr   = (EX::T *)arena.alloc<EX::T>();
-    try
-    {
-      size_t result = parse(tokens, arena, 0, tokens.size(), expr);
-      if (0 == result || EX::PARSER_FAILED == result)
-      {
-        std::cerr << "ERROR: Parser failed: " << result << std::endl;
-        std::cerr << "       " << std::to_string(expr) << "\n";
-        return -1;
-      }
-    }
-    catch (std::exception &e)
-    {
-      std::cerr << "ERROR: parser failed!\n";
-      return false;
-    }
-    catch (...)
-    {
-      std::cerr << "ERROR: unknown exception occured\n";
-      return false;
-    }
-
-    int  got        = TL::eval(expr);
-    bool new_result = (got == expect);
-
-    if (!new_result)
-    {
-      std::cerr << "ERROR: expected: " << expect << " but got: " << got
-                << std::endl;
-      std::cerr << "       input: " << input << " | "
-                << "parsed: " << std::to_string(expr) << std::endl;
-    }
-    else
-    {
-      std::cout << "\033[32m" << "OK: " << "\033[0m" << input << " -> " << got
-                << " | (" << std::to_string(expr) << ")" << std::endl;
-    }
-
-    result |= new_result;
+    std::fprintf(stderr, "ERROR: could not open file: %s\n", file_name);
   }
-  return result;
+
+  std::fseek(file_stream, 0, SEEK_END);
+  size_t file_len = ftell(file_stream);
+  std::rewind(file_stream);
+  char *buffer = (char *)arena.alloc(sizeof(char) * (file_len + 1));
+  buffer[file_len] = 0;
+
+  // TODO: optimize
+  size_t result = std::fread(buffer, file_len, 1, file_stream);
+  if (result <= 0)
+  {
+    std::fprintf(
+      stderr, "ERROR: could not map file %s to memory buffer\n", file_name);
+  }
+
+  return UT::String{buffer, file_len};
 }
-} // namespace
+
+constexpr const char *sut_file = "./examples/addition.se";
 
 int
 main()
 {
-  if (!run())
-  {
-    return 1;
-  }
+  AR::Arena   arena;
+  UT::String addition_se = read_entrie_file(sut_file, arena);
+  LX::Lexer   l{ addition_se.m_mem, arena, 0, addition_se.m_len };
+  (void)l.run();
+  std::printf("%s\n", UT_TCS(l.m_tokens));
+  l.generate_event_report();
+  EX::Parser parser{ l };
+  parser.run();
+  std::printf("Parser: %s\n", UT_TCS(*parser.m_exprs.begin()));
+  EX::Expr result = TL::eval(*parser.m_exprs.begin());
+  std::printf("Evaluated to %s\n", UT_TCS(result));
 }
