@@ -226,13 +226,8 @@ Lexer::run()
         this->m_input, this->m_arena, this->m_cursor, this->m_end
       };
       LX::E e = body_lexer.run();
-      switch (e)
-      {
-      case E::OK:
-      case E::IN_KEYWORD:
-      case E::ELSE_KEYWORD: break;
-      default             : return e;
-      }
+      LX_ASSERT(LX::E::OK == e || LX::E::IN_KEYWORD == e,
+                LX::E::CONTROL_STRUCTURE_ERROR);
 
       Token fn{};
       fn.m_type             = Type::Fn;
@@ -317,7 +312,9 @@ Lexer::run()
                                    true_branch_lexer.m_arena,
                                    true_branch_lexer.m_cursor,
                                    this->m_end };
-          LX_FN_TRY(else_branch_lexer.run());
+          LX::E e = else_branch_lexer.run();
+          LX_ASSERT(LX::E::OK == e || LX::E::IN_KEYWORD == e,
+                    LX::E::CONTROL_STRUCTURE_ERROR);
 
           Token token{ Type::If };
           token.as.m_if_tokens.m_condition   = if_condition_lexer.m_tokens;
@@ -326,6 +323,9 @@ Lexer::run()
 
           this->m_tokens.push(token);
           this->skip_to(else_branch_lexer);
+
+          UT_TRACE("If expression tokenized: %s", UT_TCS(token));
+          if (E::IN_KEYWORD == e) return e;
         }
         else
         {
@@ -352,8 +352,7 @@ Lexer::generate_event_report()
     ER::E e = events.m_mem[i];
     if (ER::Level::ERROR == e.m_level)
     {
-      LX::E event = *(LX::E *)e.m_data;
-      std::printf("[%s] %s\n", UT::SERROR, std::to_string(event).c_str());
+      std::printf("[%s] %s\n", UT::SERROR, (char *)e.m_data);
 
       // Find the line with the error
       size_t line       = 1;

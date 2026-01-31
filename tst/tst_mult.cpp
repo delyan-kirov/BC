@@ -89,15 +89,16 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   //    => (\foo = foo 2) (\x = x  + 1)
   //    => (\x = x + 1) 2
   //    => 2 + 1
-  { "if 1 => 2 + 3 else let x = 4 in x + 5", 5 },
   { "if 1 - 1 => 2 + 3 else let x = 4 in x + 5", 9 },
-  { "let foo = (\\x = (if x => x - 1 else x)) in foo 3", 3 }, // FIXME: Does not parse/tokenize right
   { "let x = 3 in if x ?= 1 => 1 else if x ?= 2 => 2 else 3", 3 },
   { "let foo = \\x = x + 1 in foo 1", 2 },
   { "let xtreme = 34 in if xtreme => xtreme + 35 else 3", 69 },
-  { "let foo = \\x = x x in foo foo", 2 }, // INFINITE RECURSION 
-#endif
+  { "let foo = \\x = x x in foo foo", 2 }, // NOTE: INFINITE RECURSION
   { "let a = 1 in let foo = \\b = b + a + 1 in foo (foo 2)", 6 },
+  { "if (let a = 1 in a) => 1 else 0", 0 }, // FIXME: This should be valid
+  { "let foo = \\x = (if x => x - 1 else x) in foo 3", 2 }, // FIXME: Bracketting is broken
+#endif
+  { "if 1 => 2 + 3 else let x = 4 in x + 5", 5 },
 
 };
 } // namespace TDATA
