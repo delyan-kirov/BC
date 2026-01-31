@@ -27,6 +27,7 @@ enum class Type
   Mult,
   Div,
   Modulus,
+  IsEq,
   FnDef,
   FnApp,
   VarApp,
@@ -117,6 +118,7 @@ struct Expr
     case Type::Sub:
     case Type::Modulus:
     case Type::Mult:
+    case Type::IsEq:
     case Type::Add    : this->as.exprs = { arena, 2 }; break;
     case Type::Minus  : this->as.exprs = { arena, 1 }; break;
     default           : UT_FAIL_IF("Invalid type for this constructor");
@@ -220,6 +222,7 @@ to_string(
   case EX::Type::Mult   : return "EX::Type::Mult";
   case EX::Type::Div    : return "EX::Type::Div";
   case EX::Type::Modulus: return "EX::Type::Modulus";
+  case EX::Type::IsEq   : return "EX::Type::IsEq";
   case EX::Type::FnDef  : return "EX::Type::FnDef";
   case EX::Type::Var    : return "EX::Type::Var";
   case EX::Type::FnApp  : return "EX::Type::FnApp";
@@ -295,6 +298,15 @@ to_string(
     s += "(";
     s += to_string(expr.as.exprs[0]);
     s += " % ";
+    s += to_string(expr.as.exprs[1]);
+    s += ")";
+  }
+  break;
+  case EX::Type::IsEq:
+  {
+    s += "(";
+    s += to_string(expr.as.exprs[0]);
+    s += " ?= ";
     s += to_string(expr.as.exprs[1]);
     s += ")";
   }

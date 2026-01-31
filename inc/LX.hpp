@@ -7,6 +7,16 @@
 
 namespace LX
 {
+enum class E;
+}
+
+namespace std
+{
+string to_string(LX::E);
+}
+
+namespace LX
+{
 
 constexpr UT::String KEYWORD_LET{ "let" };
 constexpr UT::String KEYWORD_IN{ "in" };
@@ -16,8 +26,11 @@ constexpr UT::String KEYWORD_ELSE{ "else" };
 #define LX_ERROR_REPORT(LX_ERROR_E, LX_ERROR_MSG)                              \
   do                                                                           \
   {                                                                            \
-    this->m_events.push(LX::ErrorE{                                            \
-      this->m_arena, __PRETTY_FUNCTION__, (LX_ERROR_MSG), (LX_ERROR_E) });     \
+    this->m_events.push(LX::ErrorE{ this->m_arena,                             \
+                                    __PRETTY_FUNCTION__,                       \
+                                    __LINE__,                                  \
+                                    (LX_ERROR_MSG),                            \
+                                    (LX_ERROR_E) });                           \
     return (LX_ERROR_E);                                                       \
   } while (false)
 
@@ -29,6 +42,7 @@ constexpr UT::String KEYWORD_ELSE{ "else" };
     {                                                                          \
       this->m_events.push(LX::ErrorE{ this->m_arena,                           \
                                       __PRETTY_FUNCTION__,                     \
+                                      __LINE__,                                \
                                       ("The function: " #LX_FN " failed!"),    \
                                       result });                               \
       return result;                                                           \
@@ -40,8 +54,11 @@ constexpr UT::String KEYWORD_ELSE{ "else" };
   {                                                                            \
     if (!(LX_BOOL_EXPR))                                                       \
     {                                                                          \
-      this->m_events.push(LX::ErrorE{                                          \
-        this->m_arena, __PRETTY_FUNCTION__, (#LX_BOOL_EXPR), (LX_ERROR_E) });  \
+      this->m_events.push(LX::ErrorE{ this->m_arena,                           \
+                                      __PRETTY_FUNCTION__,                     \
+                                      __LINE__,                                \
+                                      (#LX_BOOL_EXPR),                         \
+                                      (LX_ERROR_E) });                         \
       return (LX_ERROR_E);                                                     \
     }                                                                          \
   } while (false)
@@ -57,6 +74,7 @@ enum class E
   UNREACHABLE_CASE_REACHED,
   FAT_ARROW,
   ELSE_KEYWORD,
+  IN_KEYWORD,
   CONTROL_STRUCTURE_ERROR,
   MAX,
 };
@@ -64,7 +82,11 @@ enum class E
 struct ErrorE : public ER::E
 {
   ErrorE(
-    AR::Arena &arena, const char *fn_name, const char *data, LX::E error)
+    AR::Arena  &arena,
+    const char *fn_name,
+    int         line,
+    const char *data,
+    LX::E       error)
       : E{
           ER::Level::ERROR, //
           0,                //
@@ -73,10 +95,9 @@ struct ErrorE : public ER::E
         }
   {
     UT::SB sb{};
-    sb.concatf("%16c%s %s", '-', fn_name, data);
-    UT::Vu<char> msg    = UT::memcopy(*this->m_arena, sb.vu().m_mem);
-    *(LX::E *)msg.m_mem = error;
-    this->m_data        = (void *)msg.m_mem;
+    sb.concatf("[%s] %s ln(%d) %s", UT_TCS(error), fn_name, line, data);
+    UT::Vu<char> msg = UT::memcopy(*this->m_arena, sb.vu().m_mem);
+    this->m_data     = (void *)msg.m_mem;
   }
 };
 
@@ -89,6 +110,7 @@ enum class Type
   Div,
   Modulus,
   Mult,
+  IsEq,
   Group,
   Let,
   Fn,
@@ -232,6 +254,11 @@ public:
   {
     this->m_cursor = l.m_cursor;
     this->m_lines  = l.m_lines;
+
+    for (auto e : l.m_events)
+    {
+      this->m_events.push(e);
+    }
   }
 
   ~Lexer() {}
@@ -282,6 +309,7 @@ to_string(
   case LX::E::FAT_ARROW               : return "FAT_ARROW";
   case LX::E::CONTROL_STRUCTURE_ERROR : return "CONTROL_STRUCTURE_ERROR";
   case LX::E::ELSE_KEYWORD            : return "ELSE_KEYWORD";
+  case LX::E::IN_KEYWORD              : return "IN_KEYWORD";
   case LX::E::MAX                     : return "MAX";
   }
 
@@ -301,6 +329,7 @@ to_string(
   case LX::Type::Minus  : return "Minus";
   case LX::Type::Mult   : return "Mult";
   case LX::Type::Div    : return "Div";
+  case LX::Type::IsEq   : return "Eq";
   case LX::Type::Modulus: return "Modulus";
   case LX::Type::Group  : return "Group";
   case LX::Type::Let    : return "LetIn";
@@ -339,6 +368,10 @@ to_string(
   case LX::Type::Div:
     return "Op("
            "/"
+           ")";
+  case LX::Type::IsEq:
+    return "Op("
+           "?="
            ")";
   case LX::Type::Modulus:
     return "Op("
@@ -397,6 +430,7 @@ to_string(
     case LX::Type::Modulus:
     case LX::Type::Mult   :
     case LX::Type::Plus   :
+    case LX::Type::IsEq   :
     case LX::Type::Min    :
     case LX::Type::Max    : s += to_string(t); break;
     case LX::Type::Word   : s += "Word(" + to_string(t.as.m_string) + ")"; break;

@@ -204,6 +204,7 @@ Parser::run()
     break;
     case LX::Type::Let:
     {
+      // TODO: Support recursive functions
       // TODO: We should have a function application explicitly!
       // let var = body_expr in app_expr
       UT::String param = t.as.m_let_in_tokens.m_var_name;
@@ -296,6 +297,11 @@ Parser::run()
 
       this->m_exprs.push(if_expr);
       i += 1;
+    }
+    break;
+    case LX::Type::IsEq:
+    {
+      this->parse_max_precedence_arithmetic_op(EX::Type::IsEq, i);
     }
     break;
     case LX::Type::Min:
