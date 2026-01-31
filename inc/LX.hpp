@@ -18,10 +18,17 @@ string to_string(LX::E);
 namespace LX
 {
 
-constexpr UT::String KEYWORD_LET{ "let" };
-constexpr UT::String KEYWORD_IN{ "in" };
-constexpr UT::String KEYWORD_IF{ "if" };
-constexpr UT::String KEYWORD_ELSE{ "else" };
+namespace Keyword
+{
+
+constexpr UT::String LET{ "let" };
+constexpr UT::String IN{ "in" };
+constexpr UT::String IF{ "if" };
+constexpr UT::String ELSE{ "else" };
+constexpr UT::String INT{ "int" };
+constexpr UT::String PUB{ "pub" };
+
+} // namespace Keyword
 
 #define LX_ERROR_REPORT(LX_ERROR_E, LX_ERROR_MSG)                              \
   do                                                                           \
@@ -76,6 +83,7 @@ enum class E
   ELSE_KEYWORD,
   IN_KEYWORD,
   CONTROL_STRUCTURE_ERROR,
+  WORD_NOT_FOUND,
   MAX,
 };
 
@@ -116,6 +124,8 @@ enum class Type
   Fn,
   Word,
   If,
+  IntDef,
+  ExtDef,
   Max,
 };
 
@@ -144,6 +154,12 @@ struct Fn
   Tokens     m_body;
 };
 
+struct SymDef
+{
+  UT::String m_sym_name;
+  Tokens     m_def;
+};
+
 struct Token
 {
   Type   m_type;
@@ -155,6 +171,7 @@ struct Token
     Let        m_let_in_tokens;
     If         m_if_tokens;
     Fn         m_fn;
+    SymDef     m_sym;
     UT::String m_string;
     ssize_t    m_int = 0;
   } as;
@@ -253,7 +270,7 @@ public:
     Lexer const &l)
   {
     this->m_cursor = l.m_cursor;
-    this->m_lines  = l.m_lines;
+    this->m_lines += l.m_lines;
 
     for (auto e : l.m_events)
     {
@@ -268,6 +285,8 @@ public:
   void subsume_sub_lexer(Lexer &l);
 
   LX::E find_matching_paren(size_t &paren_match_idx);
+
+  LX::E find_next_global_symbol(size_t &idx);
 
   char next_char();
 
@@ -284,6 +303,8 @@ public:
   bool match_keyword(UT::String keyword, UT::String word);
 
   void strip_white_space(size_t idx);
+
+  void strip_line(size_t idx);
 
   E run();
 };
@@ -310,6 +331,7 @@ to_string(
   case LX::E::CONTROL_STRUCTURE_ERROR : return "CONTROL_STRUCTURE_ERROR";
   case LX::E::ELSE_KEYWORD            : return "ELSE_KEYWORD";
   case LX::E::IN_KEYWORD              : return "IN_KEYWORD";
+  case LX::E::WORD_NOT_FOUND          : return "WORD_NOT_FOUND";
   case LX::E::MAX                     : return "MAX";
   }
 
@@ -336,14 +358,17 @@ to_string(
   case LX::Type::Word   : return "Word";
   case LX::Type::Fn     : return "Fn";
   case LX::Type::If     : return "If";
+  case LX::Type::IntDef : return "IntDef";
+  case LX::Type::ExtDef : return "ExtDef";
   case LX::Type::Max    : return "Max";
   }
 
-  UT_FAIL_IF("UNREACHABLE");
+  UT_FAIL_MSG("Got unexpected type %d", t);
   return "";
 }
 
 inline string to_string(LX::Tokens ts);
+
 inline string
 to_string(
   LX::Token t)
@@ -406,6 +431,16 @@ to_string(
   {
     return to_string(t.as.m_tokens);
   }
+  case LX::Type::ExtDef:
+  {
+    return "pub " + to_string(t.as.m_sym.m_sym_name) + " = "
+           + to_string(t.as.m_sym.m_def);
+  }
+  case LX::Type::IntDef:
+  {
+    return "int " + to_string(t.as.m_sym.m_sym_name) + " = "
+           + to_string(t.as.m_sym.m_def);
+  }
   }
   UT_FAIL_IF("UNREACHABLE");
   return "";
@@ -431,11 +466,13 @@ to_string(
     case LX::Type::Mult   :
     case LX::Type::Plus   :
     case LX::Type::IsEq   :
+    case LX::Type::IntDef :
+    case LX::Type::ExtDef :
     case LX::Type::Min    :
     case LX::Type::Max    : s += to_string(t); break;
     case LX::Type::Word   : s += "Word(" + to_string(t.as.m_string) + ")"; break;
     case LX::Type::If     : s += to_string(t); break;
-    default               : UT_FAIL_IF("Unreachable");
+    default               : UT_FAIL_MSG("Got unexpected type: %s", UT_TCS(t.m_type));
     }
 
     s += (i != ts.m_len - 1) ? " , " : "";

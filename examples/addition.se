@@ -1,4 +1,17 @@
 # this is an expression
-int expr0 = 1 + 1
 
-int expr1 = 2
+pub exprr
+	=
+		if
+			x
+				=>
+						1
+		else
+			2
+
+int exprr =
+	let
+		x
+		=
+	3
+	in x + 1

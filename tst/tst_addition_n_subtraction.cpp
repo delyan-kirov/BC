@@ -16,7 +16,7 @@ read_entrie_file(
   std::fseek(file_stream, 0, SEEK_END);
   size_t file_len = ftell(file_stream);
   std::rewind(file_stream);
-  char *buffer = (char *)arena.alloc(sizeof(char) * (file_len + 1));
+  char *buffer     = (char *)arena.alloc(sizeof(char) * (file_len + 1));
   buffer[file_len] = 0;
 
   // TODO: optimize
@@ -27,7 +27,7 @@ read_entrie_file(
       stderr, "ERROR: could not map file %s to memory buffer\n", file_name);
   }
 
-  return UT::String{buffer, file_len};
+  return UT::String{ buffer, file_len };
 }
 
 constexpr const char *sut_file = "./examples/addition.se";
@@ -35,9 +35,9 @@ constexpr const char *sut_file = "./examples/addition.se";
 int
 main()
 {
-  AR::Arena   arena;
+  AR::Arena  arena;
   UT::String addition_se = read_entrie_file(sut_file, arena);
-  LX::Lexer   l{ addition_se.m_mem, arena, 0, addition_se.m_len };
+  LX::Lexer  l{ addition_se.m_mem, arena, 0, addition_se.m_len };
   (void)l.run();
   std::printf("%s\n", UT_TCS(l.m_tokens));
   l.generate_event_report();

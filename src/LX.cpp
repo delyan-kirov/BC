@@ -1,5 +1,6 @@
 #include "LX.hpp"
 #include "UT.hpp"
+#include <cstddef>
 #include <cstdio>
 #include <string>
 
@@ -29,8 +30,13 @@ LX::Lexer::get_word(
   this->strip_white_space(idx);
   idx = this->m_cursor;
 
-  for (char c = this->m_input[idx++];       //
-       c && (c != ' ') && !std::isdigit(c); // And more, TODO
+  for (char c = this->m_input[idx++]; c                   //
+                                      && (' ' != c)       //
+                                      && !std::isdigit(c) //
+                                      && ('\n' != c)      //
+                                      && ('(' != c)       //
+                                      && (')' != c)       //
+       ; // TODO: potentially more cases missing
        c = this->m_input[idx++])
   {
     sb.add(c);
@@ -152,6 +158,7 @@ Lexer::push_operator(
   this->m_tokens.push(LX::Token{ t_type });
 }
 
+// TODO: candidate for refactor
 LX::E
 Lexer::run()
 {
@@ -171,6 +178,11 @@ Lexer::run()
     case '%':
     {
       this->push_operator(c);
+    }
+    break;
+    case '#':
+    {
+      this->strip_line(this->m_cursor);
     }
     break;
     case '(':
@@ -199,6 +211,7 @@ Lexer::run()
                       "')' should never match in this branch");
     }
     break;
+    case '\t':
     case ' ':
     {
       ; // Do nothing
@@ -255,15 +268,45 @@ Lexer::run()
       else
       {
         UT::String word = this->get_word(this->m_cursor - 1);
-        if (this->match_keyword(LX::KEYWORD_IN, word))
+
+        if (this->match_keyword(LX::Keyword::IN, word))
         {
           return LX::E::IN_KEYWORD;
         }
-        else if (this->match_keyword(LX::KEYWORD_ELSE, word))
+        else if (this->match_keyword(LX::Keyword::ELSE, word))
         {
           return LX::E::ELSE_KEYWORD;
         }
-        else if (this->match_keyword(LX::KEYWORD_LET, word))
+        else if (this->match_keyword(LX::Keyword::INT, word)
+                 || this->match_keyword(LX::Keyword::PUB, word))
+        {
+          size_t next_symbol_idx;
+          E      e = this->find_next_global_symbol(next_symbol_idx);
+          if (E::WORD_NOT_FOUND == e) next_symbol_idx = this->m_end;
+
+          UT::String sym_name = this->get_word(this->m_cursor);
+
+          LX_ASSERT("" != sym_name,
+                    E::WORD_NOT_FOUND); // TODO: use a different error
+
+          LX_FN_TRY(this->match_operator('='));
+
+          Lexer new_lexer{
+            this->m_input, this->m_arena, this->m_cursor, next_symbol_idx
+          };
+          LX_FN_TRY(new_lexer.run());
+
+          Token symbol{ "int" == word ? Type::IntDef : Type::ExtDef };
+          symbol.m_cursor            = new_lexer.m_cursor;
+          symbol.m_line              = new_lexer.m_lines;
+          symbol.as.m_sym.m_def      = new_lexer.m_tokens;
+          symbol.as.m_sym.m_sym_name = sym_name;
+
+          this->m_tokens.push(symbol);
+          this->skip_to(new_lexer);
+          this->m_cursor = next_symbol_idx;
+        }
+        else if (this->match_keyword(LX::Keyword::LET, word))
         {
           UT::String var_name = this->get_word(this->m_cursor);
 
@@ -293,7 +336,7 @@ Lexer::run()
           this->m_tokens.push(token);
           this->skip_to(in_lexer);
         }
-        else if (this->match_keyword(LX::KEYWORD_IF, word))
+        else if (this->match_keyword(LX::Keyword::IF, word))
         {
           Lexer if_condition_lexer{
             this->m_input, this->m_arena, this->m_cursor, this->m_end
@@ -343,6 +386,7 @@ Lexer::run()
   return LX::E::OK;
 }
 
+// TODO: should be rewritten
 void
 Lexer::generate_event_report()
 {
@@ -423,6 +467,7 @@ Lexer::subsume_sub_lexer(
   }
 }
 
+// TODO: candidate for refactor
 E
 Lexer::match_operator(
   char c)
@@ -436,6 +481,7 @@ Lexer::match_operator(
   return E::OK;
 };
 
+// TODO: candidate for refactor
 void
 Lexer::strip_white_space(
   size_t idx)
@@ -445,7 +491,7 @@ Lexer::strip_white_space(
   char   c         = this->m_input[idx];
   size_t new_lines = 0;
 
-  while (' ' == c || '\n' == c)
+  while (' ' == c || '\n' == c || '\t' == c)
   {
     if ('\n' == c) new_lines += 1;
     idx += 1;
@@ -455,6 +501,25 @@ Lexer::strip_white_space(
   this->m_lines += new_lines;
   this->m_cursor = idx;
 };
+
+// TODO: candidate for refactor
+void
+Lexer::strip_line(
+  size_t idx)
+{
+  UT_BEGIN_TRACE(this->m_arena, this->m_events, "idx = %d", idx);
+
+  char c = this->m_input[idx];
+
+  while (c && '\n' != c)
+  {
+    idx += 1;
+    c = this->m_input[idx];
+  }
+
+  this->m_lines += 1;
+  this->m_cursor = idx;
+}
 
 void
 Lexer::push_group(
@@ -466,4 +531,34 @@ Lexer::push_group(
   this->m_tokens.push(t);
   this->m_cursor = l.m_cursor;
 }
+
+// TODO: candidate for refactor
+LX::E
+Lexer::find_next_global_symbol(
+  size_t &idx)
+{
+  Lexer search_lexer{
+    this->m_input, this->m_arena, this->m_cursor, this->m_end
+  };
+
+  for (UT::String next_word = search_lexer.get_word(this->m_cursor);
+       this->m_cursor < this->m_end;
+       next_word = search_lexer.get_word(search_lexer.m_cursor))
+  {
+    if ("int" == next_word || "pub" == next_word)
+    {
+      /*
+         Need to return the cursor just before
+         ..int...
+          ^    ^
+      */
+      idx = search_lexer.m_cursor - 3 - 1;
+      return E::OK;
+    }
+  }
+
+  UT_FAIL_IF("UNREACHABLE");
+  return E::WORD_NOT_FOUND;
+}
+
 } // namespace LX

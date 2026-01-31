@@ -97,8 +97,8 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   { "let a = 1 in let foo = \\b = b + a + 1 in foo (foo 2)", 6 },
   { "if (let a = 1 in a) => 1 else 0", 0 }, // FIXME: This should be valid
   { "let foo = \\x = (if x => x - 1 else x) in foo 3", 2 }, // FIXME: Bracketting is broken
-#endif
   { "if 1 => 2 + 3 else let x = 4 in x + 5", 5 },
+#endif
 
 };
 } // namespace TDATA

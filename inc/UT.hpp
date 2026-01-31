@@ -363,7 +363,51 @@ struct String : public Vu<char>
     return (this->m_len == other.m_len)
            && (0 == std::memcmp(this->m_mem, other.m_mem, this->m_len));
   }
+
+  bool
+  operator!=(
+    String &other)
+  {
+    return !((this->m_len == other.m_len)
+             && (0 == std::memcmp(this->m_mem, other.m_mem, this->m_len)));
+  }
 };
+
+inline bool
+operator==(
+  const char *left, UT::String right)
+{
+  size_t other_len = std::strlen(left);
+  return (right.m_len == other_len)
+         && (0 == std::memcmp(right.m_mem, left, right.m_len));
+}
+
+inline bool
+operator==(
+  UT::String right, const char *left)
+{
+  size_t other_len = std::strlen(left);
+  return (right.m_len == other_len)
+         && (0 == std::memcmp(right.m_mem, left, right.m_len));
+}
+
+inline bool
+operator!=(
+  const char *left, UT::String right)
+{
+  size_t other_len = std::strlen(left);
+  return !((right.m_len == other_len)
+           && (0 == std::memcmp(right.m_mem, left, right.m_len)));
+}
+
+inline bool
+operator!=(
+  UT::String right, const char *left)
+{
+  size_t other_len = std::strlen(left);
+  return !((right.m_len == other_len)
+           && (0 == std::memcmp(right.m_mem, left, right.m_len)));
+}
 
 inline String
 memcopy(
