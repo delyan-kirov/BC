@@ -7,14 +7,14 @@
 namespace TL
 {
 
-#define TypeEnumVariants                                                       \
+#define TL_TypeEnumVariants                                                    \
   X(IntDef)                                                                    \
   X(ExtDef)
 
 enum class Type
 {
 #define X(enum) enum,
-  TypeEnumVariants
+  TL_TypeEnumVariants
 #undef X
 };
 
@@ -46,8 +46,10 @@ to_string(
   {
 #define X(X_enum)                                                              \
   case TL::Type::X_enum: return #X_enum;
-    TypeEnumVariants
+    TL_TypeEnumVariants
+#undef X
   }
+  UT_FAIL_IF("UNREACHABLE");
 }
 
 } // namespace std

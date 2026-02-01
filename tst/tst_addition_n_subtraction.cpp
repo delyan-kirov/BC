@@ -1,6 +1,5 @@
 #include "TL.hpp"
 #include "UT.hpp"
-#include <cstdio>
 
 constexpr UT::String sut_file = "./examples/addition.se";
 

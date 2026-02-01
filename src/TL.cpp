@@ -7,6 +7,7 @@
 
 namespace TL
 {
+// TODO: Don't use these global maps, that's stupid
 using ExprMap = std::map<std::string, EX::Expr>;
 static ExprMap var_map;
 
@@ -14,7 +15,7 @@ Mod::Mod(
   UT::String file_name)
 {
   AR::Arena  arena{};
-  UT::String source_code = UT::read_entrie_file(file_name, arena);
+  UT::String source_code = UT::map_entire_file(file_name, arena);
 
   LX::Lexer l{ source_code.m_mem, arena, 0, source_code.m_len };
   l.run();
@@ -39,6 +40,12 @@ Mod::Mod(
 
     std::printf(
       "%s %s = %s\n", UT_TCS(def.m_type), UT_TCS(def_name), UT_TCS(def.m_expr));
+
+    var_map[std::to_string(def_name)] = eval(def.m_expr);
+
+    std::printf("INFO: %s = %s\n",
+                UT_TCS(def_name),
+                UT_TCS(var_map[std::to_string(def_name)]));
   }
 }
 
@@ -67,7 +74,7 @@ EX::Expr
 eval(
   EX::Expr expr)
 {
-  printf("Expr = %s\n", UT_TCS(expr));
+  // printf("Expr = %s\n", UT_TCS(expr));
   switch (expr.m_type)
   {
   case EX::Type::Add:
@@ -91,6 +98,8 @@ eval(
     }
   }
   break;
+  // TODO: This is broken, we should evaluate not like this, one way is to
+  // generate dynamic instances of a function call if the function is recursive
   case EX::Type::FnApp:
   {
     EX::Expr    param      = *expr.as.m_fnapp.m_param.last();
@@ -99,6 +108,7 @@ eval(
     std::string param_name = std::to_string(fn_def.m_param);
 
     var_map[param_name] = eval(param);
+    printf("Expr = %s\n", UT_TCS(var_map[param_name]));
     return eval(body);
   }
   case EX::Type::FnDef:
@@ -130,6 +140,17 @@ eval(
     return eval(*expr.as.m_if.m_condition.last()).as.m_int
              ? eval(*expr.as.m_if.m_true_branch.begin())
              : eval(*expr.as.m_if.m_else_branch.begin());
+  }
+  case EX::Type::Let:
+  {
+    UT::String var_name        = expr.as.m_let.m_var_name;
+    EX::Expr  *value           = expr.as.m_let.m_value;
+    EX::Expr  *continuation    = expr.as.m_let.m_continuation;
+    EX::Expr   value_evaluated = eval(*value);
+
+    var_map[std::to_string(var_name)] = value_evaluated;
+
+    return eval(*continuation);
   }
   case EX::Type::Unknown:
   default:

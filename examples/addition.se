@@ -3,13 +3,18 @@
 pub a = 1
 
 int b = let c
-	= a * a
+	= a + a
 	in c + 2
 
 int foo
 	= \x = 2*x + b
 
+int baz = foo 2
+
 int fib = \x =
 	if x ?= 0 => 0
 	else if x ?= 1 => 1
-	else (fib (x - 1)) + (fib (x - 2))
+	else (fib (x - 1)) + (fib (x - 1))
+
+# TODO: This is broken, we don't ignore comment
+# int resfib = fib 2

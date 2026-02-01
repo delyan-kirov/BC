@@ -746,10 +746,10 @@ SB::append(
 
 // TODO: Better print messages
 inline String
-read_entrie_file(
+map_entire_file(
   UT::String file_name, AR::Arena &arena)
 {
-  const char *file_str    = file_name.to_cstr(arena);
+  const char *file_str    = file_name.m_mem;
   FILE       *file_stream = std::fopen(file_str, "rb");
 
   if (!file_stream)

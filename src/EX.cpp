@@ -207,27 +207,22 @@ Parser::run()
       // TODO: Support recursive functions
       // TODO: We should have a function application explicitly!
       // let var = body_expr in app_expr
-      UT::String param = t.as.m_let_in_tokens.m_var_name;
+      UT::String var_name = t.as.m_let_in_tokens.m_var_name;
 
-      EX::Parser body_parser{ *this, t.as.m_let_in_tokens.m_in_tokens };
-      body_parser.run();
-      EX::Expr body_expr = *body_parser.m_exprs.last();
+      EX::Parser value_parser{ *this, t.as.m_let_in_tokens.m_let_tokens };
+      value_parser.run();
+      EX::Expr *value_expr = value_parser.m_exprs.last();
 
-      EX::Parser app_parser{ *this, t.as.m_let_in_tokens.m_let_tokens };
-      app_parser.run();
-      EX::Expr app_expr = *app_parser.m_exprs.last();
+      EX::Parser continuation_parser{ *this, t.as.m_let_in_tokens.m_in_tokens };
+      continuation_parser.run();
+      EX::Expr *continuation_expr = continuation_parser.m_exprs.last();
 
-      EX::FnDef fn_def{};
-      fn_def.m_flags = EX::FnFlags::FN_MUST_INLINE;
-      fn_def.m_param = param;
-      fn_def.m_body  = { this->m_arena };
-      fn_def.m_body.push(body_expr);
+      EX::Expr let_expr{ EX::Type::Let };
+      let_expr.as.m_let.m_continuation = continuation_expr;
+      let_expr.as.m_let.m_var_name     = var_name;
+      let_expr.as.m_let.m_value        = value_expr;
 
-      EX::Expr fn_app{ EX::Type::FnApp, this->m_arena };
-      fn_app.as.m_fnapp.m_param.push(app_expr);
-      fn_app.as.m_fnapp.m_body = fn_def;
-
-      this->m_exprs.push(fn_app);
+      this->m_exprs.push(let_expr);
 
       i += 1;
     }

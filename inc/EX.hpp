@@ -17,22 +17,28 @@ enum class E
   MAX
 };
 
+#define EX_Type_EnumVariants                                                   \
+  X(Unknown)                                                                   \
+  X(Int)                                                                       \
+  X(Minus)                                                                     \
+  X(Add)                                                                       \
+  X(Sub)                                                                       \
+  X(Mult)                                                                      \
+  X(Div)                                                                       \
+  X(Modulus)                                                                   \
+  X(Let)                                                                       \
+  X(IsEq)                                                                      \
+  X(FnDef)                                                                     \
+  X(FnApp)                                                                     \
+  X(VarApp)                                                                    \
+  X(Var)                                                                       \
+  X(If)
+
 enum class Type
 {
-  Unknown = 0,
-  Int,
-  Minus,
-  Add,
-  Sub,
-  Mult,
-  Div,
-  Modulus,
-  IsEq,
-  FnDef,
-  FnApp,
-  VarApp,
-  Var,
-  If,
+#define X(X_enum) X_enum,
+  EX_Type_EnumVariants
+#undef X
 };
 
 struct Expr;
@@ -81,6 +87,13 @@ struct VarApp
   Exprs      m_param;
 };
 
+struct Let
+{
+  UT::String m_var_name;
+  Expr      *m_value;
+  Expr      *m_continuation;
+};
+
 struct Expr
 {
   Type m_type;
@@ -93,6 +106,7 @@ struct Expr
     Exprs      exprs;
     ssize_t    m_int = 0;
     If         m_if;
+    Let        m_let;
   } as;
 
   Expr() = default;
@@ -225,24 +239,13 @@ to_string(
 {
   switch (expr_type)
   {
-  case EX::Type::Int    : return "EX::Type::Int";
-  case EX::Type::Minus  : return "EX::Type::Minus";
-  case EX::Type::Sub    : return "EX::Type::Sub";
-  case EX::Type::Add    : return "EX::Type::Add";
-  case EX::Type::Mult   : return "EX::Type::Mult";
-  case EX::Type::Div    : return "EX::Type::Div";
-  case EX::Type::Modulus: return "EX::Type::Modulus";
-  case EX::Type::IsEq   : return "EX::Type::IsEq";
-  case EX::Type::FnDef  : return "EX::Type::FnDef";
-  case EX::Type::Var    : return "EX::Type::Var";
-  case EX::Type::FnApp  : return "EX::Type::FnApp";
-  case EX::Type::VarApp : return "EX::Type::VarApp";
-  case EX::Type::If     : return "EX::Type::If";
-  case EX::Type::Unknown: return "EX::Type::Unknown";
+#define X(X_enum)                                                              \
+  case EX::Type::X_enum: return #X_enum;
+    EX_Type_EnumVariants
   }
+#undef X
 
   UT_FAIL_IF("UNREACHABLE");
-  return "";
 }
 
 inline string to_string(EX::FnDef fndef);
@@ -354,6 +357,13 @@ to_string(
   case EX::Type::Unknown:
   {
     s += "EX::T::Unknown";
+  }
+  break;
+  case EX::Type::Let:
+  {
+    s += "let " + to_string(expr.as.m_let.m_var_name) + " = "
+         + to_string(*expr.as.m_let.m_value) + " in "
+         + to_string(*expr.as.m_let.m_continuation);
   }
   break;
   default:
