@@ -196,6 +196,7 @@ struct Token
 
 class Lexer
 {
+  // TODO: use UT::String, not const char*
 public:
   AR::Arena  &m_arena;
   ER::Events  m_events;

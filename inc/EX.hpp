@@ -128,6 +128,7 @@ struct Expr
 
 class Parser
 {
+  // TODO: use UT::String, not const char*
 public:
   AR::Arena       &m_arena;
   ER::Events       m_events;
@@ -149,6 +150,15 @@ public:
   {
     this->m_end = this->m_tokens.m_len;
   };
+
+  Parser(LX::Tokens tokens, AR::Arena &arena, const char *input)
+      : m_arena{ arena },
+        m_events{ arena },
+        m_input{ input },
+        m_tokens{ tokens },
+        m_begin{ 0 },
+        m_end{ tokens.m_len },
+        m_exprs{ arena } {};
 
   Parser(EX::Parser old, size_t begin, size_t end)
       : m_arena{ old.m_arena },   //

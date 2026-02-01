@@ -684,7 +684,6 @@ Lexer::find_next_global_symbol(
     }
   }
 
-  UT_FAIL_IF("UNREACHABLE");
   return E::WORD_NOT_FOUND;
 }
 

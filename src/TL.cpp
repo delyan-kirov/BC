@@ -1,13 +1,46 @@
 #include "TL.hpp"
 #include "EX.hpp"
+#include "LX.hpp"
 #include "UT.hpp"
 #include <cstdio>
 #include <map>
+
 namespace TL
 {
-
 using ExprMap = std::map<std::string, EX::Expr>;
 static ExprMap var_map;
+
+Mod::Mod(
+  UT::String file_name)
+{
+  AR::Arena  arena{};
+  UT::String source_code = UT::read_entrie_file(file_name, arena);
+
+  LX::Lexer l{ source_code.m_mem, arena, 0, source_code.m_len };
+  l.run();
+
+  for (LX::Token t : l.m_tokens)
+  {
+    TL::Type def_type = TL::Type::ExtDef;
+    switch (t.m_type)
+    {
+    case LX::Type::ExtDef: def_type = TL::Type::ExtDef; break;
+    case LX::Type::IntDef: def_type = TL::Type::IntDef; break;
+    default              : UT_FAIL_MSG("UNREACHABLE token type: %s", UT_TCS(t.m_type));
+    }
+
+    UT::String def_name   = t.as.m_sym.m_sym_name;
+    LX::Tokens def_tokens = t.as.m_sym.m_def;
+
+    EX::Parser parser{ def_tokens, arena, source_code.m_mem };
+    parser.run();
+
+    TL::Def def{ def_type, def_name, *parser.m_exprs.last() };
+
+    std::printf(
+      "%s %s = %s\n", UT_TCS(def.m_type), UT_TCS(def_name), UT_TCS(def.m_expr));
+  }
+}
 
 static EX::Expr
 eval_bi_op(
