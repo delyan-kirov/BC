@@ -11,10 +11,19 @@ int foo
 
 int baz = foo 2
 
+int baz = foo 5
+
+pub powtwo = \param = \z =
+	if param ?= 0 => 0
+	else powtwo (param - 1)
+
+# TODO: Functions don't accept multiple params as they should
+int t = powtwo 25 3
+
 int fib = \x =
 	if x ?= 0 => 0
 	else if x ?= 1 => 1
-	else (fib (x - 1)) + (fib (x - 1))
+	else (fib (x - 1)) + (fib (x - 2))
 
 # TODO: This is broken, we don't ignore comment
-# int resfib = fib 2
+# int resfib = fib 1
