@@ -6,7 +6,8 @@ constexpr UT::String sut_file = "./examples/addition.se";
 int
 main()
 {
-  TL::Mod mod(sut_file);
+  AR::Arena arena;
+  TL::Mod   mod(sut_file, arena);
 
   // AR::Arena  arena;
   // UT::String addition_se = UT::read_entrie_file(sut_file, arena);

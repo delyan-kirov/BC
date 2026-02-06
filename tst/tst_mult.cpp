@@ -119,12 +119,14 @@ run()
     EX::Parser parser{ l };
     parser.run();
     std::printf("Parser: %s\n", UT_TCS(*parser.m_exprs.begin()));
-    EX::Expr result = TL::eval(*parser.m_exprs.begin());
-    std::printf("Evaluated to %s\n", UT_TCS(result));
 
-    if (EX::Type::Int == result.m_type)
+    TL::Instance instance{ *parser.m_exprs.begin(), TL::Env{} };
+    TL::Instance result = TL::eval(instance);
+    std::printf("Evaluated to %s\n", UT_TCS(result.m_expr));
+
+    if (EX::Type::Int == result.m_expr.m_type)
     {
-      UT_FAIL_IF(tdata.second != result.as.m_int);
+      UT_FAIL_IF(tdata.second != result.m_expr.as.m_int);
     }
   }
 

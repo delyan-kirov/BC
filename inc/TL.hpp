@@ -3,13 +3,21 @@
 
 #include "EX.hpp"
 #include "UT.hpp"
-
-namespace TL
-{
+#include <map>
 
 #define TL_TypeEnumVariants                                                    \
   X(IntDef)                                                                    \
   X(ExtDef)
+
+namespace TL
+{
+using Env = std::map<std::string, EX::Expr>;
+
+struct Instance
+{
+  EX::Expr m_expr;
+  Env      m_env;
+};
 
 enum class Type
 {
@@ -30,10 +38,10 @@ struct Mod
   UT::String   m_name;
   UT::Vec<Def> m_defs;
 
-  Mod(UT::String file_name);
+  Mod(UT::String file_name, AR::Arena &arena);
 };
 
-EX::Expr eval(EX::Expr expr);
+Instance eval(Instance &inst);
 } // namespace TL
 
 namespace std
