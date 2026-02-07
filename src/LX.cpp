@@ -55,7 +55,7 @@ LX::Lexer::find_matching_paren(
     this->m_arena, this->m_events, "paren_match_idx = %d", paren_match_idx);
   size_t stack = 1;
 
-  for (size_t idx = this->m_cursor; this->m_input[idx]; ++idx)
+  for (size_t idx = this->m_cursor; idx < this->m_end; ++idx)
   {
     char c = this->m_input[idx];
     if (')' == c)
@@ -81,17 +81,12 @@ LX::Lexer::find_matching_paren(
 char
 Lexer::next_char()
 {
-  if (this->m_input[this->m_cursor])
-  {
-    char c = this->m_input[this->m_cursor];
-    if ('\n' == c)
-    {
-      this->m_lines += 1;
-    }
-    this->m_cursor += 1;
-    return c;
-  }
-  return '\0';
+  if (this->m_cursor >= this->m_end) return '\0';
+  char c = this->m_input[this->m_cursor];
+  UT_FAIL_IF('\0' == c);
+  if ('\n' == c) this->m_lines += 1;
+  this->m_cursor += 1;
+  return c;
 }
 
 LX::E
@@ -130,12 +125,6 @@ Lexer::push_int()
     LX_ERROR_REPORT(E::NUMBER_PARSING_FAILURE, "");
   }
 
-  if (this->m_input[this->m_cursor])
-  {
-    // We parsed one char more, we need to go back one step
-    this->m_cursor -= 1;
-  }
-
   return LX::E::OK;
 }
 
@@ -164,9 +153,9 @@ Lexer::run()
 {
   UT_BEGIN_TRACE(this->m_arena, this->m_events, "{}", 0);
 
-  for (char c = this->next_char();           //
-       c && (this->m_cursor <= this->m_end); //
-       c = this->next_char()                 //
+  for (char c = this->next_char(); //
+       c;                          //
+       c = this->next_char()       //
   )
   {
     switch (c)
@@ -249,7 +238,7 @@ Lexer::run()
     case '(':
     {
       size_t group_begin = this->m_cursor + 1;
-      size_t group_end   = this->m_cursor + 1;
+      size_t group_end   = group_begin;
 
       LX_FN_TRY(this->find_matching_paren(group_end));
 
@@ -500,12 +489,12 @@ Lexer::run()
     case 'Y':
     case 'Z':
     {
-      UT_TODO(Capital letters reserved for types);
+      UT_TODO("Capital letters reserved for types");
     }
     break;
     default:
     {
-      UT_TODO(Non ascii chars not supported yet);
+      UT_TODO("Non ascii chars not supported yet");
     }
     }
   }
@@ -656,7 +645,7 @@ Lexer::push_group(
 
   Token t{ l.m_tokens };
   this->m_tokens.push(t);
-  this->m_cursor = l.m_cursor;
+  this->m_cursor = l.m_cursor + 1;
 }
 
 // TODO: candidate for refactor
@@ -669,7 +658,7 @@ Lexer::find_next_global_symbol(
   };
 
   for (UT::String next_word = search_lexer.get_word(this->m_cursor);
-       this->m_cursor < this->m_end;
+       search_lexer.m_cursor < search_lexer.m_end;
        next_word = search_lexer.get_word(search_lexer.m_cursor))
   {
     if ("int" == next_word || "pub" == next_word)

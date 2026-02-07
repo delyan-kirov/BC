@@ -745,31 +745,41 @@ SB::append(
 }
 
 // TODO: Better print messages
+// TODO: Better error handling
 inline String
-map_entire_file(
+read_entire_file(
   UT::String file_name, AR::Arena &arena)
 {
-  const char *file_str    = file_name.m_mem;
-  FILE       *file_stream = std::fopen(file_str, "rb");
+  const char *file_str = file_name.m_mem;
+  size_t      file_len = 0;
+  char       *buffer   = nullptr;
+  size_t      result   = 0;
 
+  FILE *file_stream = std::fopen(file_str, "rb");
   if (!file_stream)
   {
     std::fprintf(stderr, "ERROR: could not open file: %s\n", file_str);
+    goto DEFER_RETURN;
   }
 
   std::fseek(file_stream, 0, SEEK_END);
-  size_t file_len = ftell(file_stream);
+  file_len = ftell(file_stream);
+
   std::rewind(file_stream);
-  char *buffer     = (char *)arena.alloc(sizeof(char) * (file_len + 1));
+  buffer           = (char *)arena.alloc(sizeof(char) * (file_len + 1));
   buffer[file_len] = 0;
 
-  size_t result = std::fread(buffer, file_len, 1, file_stream);
-  if (result <= 0)
+  result = std::fread(buffer, 1, file_len, file_stream);
+  if (result != file_len)
   {
     std::fprintf(
       stderr, "ERROR: could not map file %s to memory buffer\n", file_str);
+
+    goto DEFER_RETURN;
   }
 
+DEFER_RETURN:
+  std::fclose(file_stream);
   return UT::String{ buffer, file_len };
 }
 

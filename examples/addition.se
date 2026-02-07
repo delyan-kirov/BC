@@ -20,4 +20,12 @@ int fib = \x =
 		 in let preprevious = fib (x - 2)
 		 in previous + preprevious
 
-int fibtwelve = fib 30
+int fibtwelve = fib 15
+
+pub powtwo = \x =
+	if x ?= 0 => 1
+	else 2 * (powtwo (x - 1))
+
+
+int powtwofive = powtwo 50
+

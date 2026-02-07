@@ -7,16 +7,16 @@
 
 namespace TL
 {
-static AR::Arena global_arena{};
-
 Mod::Mod(
   UT::String file_name, AR::Arena &arena)
 {
-  UT::String source_code = UT::map_entire_file(file_name, arena);
+  UT::String source_code = UT::read_entire_file(file_name, arena);
   this->m_defs           = { arena };
+  this->m_name           = file_name;
 
   LX::Lexer l{ source_code.m_mem, arena, 0, source_code.m_len };
   l.run();
+  l.generate_event_report();
 
   Env global_env{};
 

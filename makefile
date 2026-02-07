@@ -63,6 +63,7 @@ list:
 
 valgrind:
 	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose ./bin/tst_mult
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose ./bin/tst_addition_n_subtraction
 
 format:
 	find . -regex '.*\.\(cpp\|hpp\|c\|h\)$\' -exec clang-format -i {} + 
