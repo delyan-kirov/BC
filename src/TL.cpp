@@ -4,6 +4,7 @@
 #include "UT.hpp"
 #include <cstdio>
 #include <map>
+#include <string>
 
 namespace TL
 {
@@ -264,8 +265,6 @@ eval(
     }
   }
   break;
-  // TODO: This is broken, we should evaluate not like this, one way is to
-  // generate dynamic instances of a function call if the function is recursive
   case EX::Type::FnApp:
   {
     EX::Expr    param      = *expr.as.m_fnapp.m_param.last();
@@ -278,7 +277,9 @@ eval(
     env[param_name] = eval(param_instance).m_expr;
 
     Instance body_instance{ body, env };
-    return eval(body_instance);
+    body_instance = eval(body_instance);
+
+    return body_instance;
   }
   case EX::Type::FnDef:
   {
@@ -286,23 +287,25 @@ eval(
   }
   case EX::Type::VarApp:
   {
-    EX::Expr    param_expr = *expr.as.m_varapp.m_param.last();
-    std::string fn_name    = std::to_string(expr.as.m_varapp.m_fn_name);
-    auto        fn_def_it  = env.find(fn_name);
+    // TODO: See if this works for fn application
+    std::string fn_name   = std::to_string(expr.as.m_varapp.m_fn_name);
+    auto        fn_def_it = env.find(fn_name);
+    EX::Expr    fndef{};
 
     if (env.end() != fn_def_it)
     {
-      EX::Expr fn_def_expr = fn_def_it->second;
-      EX::Expr application_expr{ EX::Type::FnApp,
-                                 *expr.as.m_varapp.m_param.m_arena };
+      fndef            = fn_def_it->second;
+      EX::Exprs params = expr.as.m_varapp.m_param;
+      for (EX::Expr &param_expr : params)
+      {
+        Instance param_inst{ param_expr, env };
+        env[std::to_string(fndef.as.m_fn.m_param)] = eval(param_inst).m_expr;
+        fndef = *fndef.as.m_fn.m_body.last();
+      }
 
-      application_expr.as.m_fnapp.m_body = fn_def_expr.as.m_fn;
-      application_expr.as.m_fnapp.m_param.push(param_expr);
-      Instance app_instance{ application_expr, env };
-
+      Instance app_instance{ fndef, env };
       return eval(app_instance);
     }
-
     return inst;
   }
   case EX::Type::If:

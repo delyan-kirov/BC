@@ -26,6 +26,14 @@ pub powtwo = \x =
 	if x ?= 0 => 1
 	else 2 * (powtwo (x - 1))
 
+int powtwofifty = powtwo 50
 
-int powtwofive = powtwo 50
+pub addthree = \x = \y = \z = x + y + z
+pub addthreeres = addthree (1 + 1) 2 (addthree 3 2 2)
+
+pub summate = \sum = \x =
+	if x ?= 0 => sum
+	else summate (sum + x) (x - 1)
+
+pub summing = summate 0 10
 

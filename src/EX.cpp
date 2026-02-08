@@ -110,7 +110,24 @@ Parser::run()
     {
       EX::Expr expr{ EX::Type::Int };
       expr.as.m_int = t.as.m_int;
-      this->m_exprs.push(expr);
+      if (this->m_exprs.is_empty()) goto CASE_INT_SINGLE_EXPR;
+
+      // TODO: this if should be a new utility function
+      // TODO: this logic should apply to groups, possibly other tokens
+      // TODO: this should be extended to fn-defs/apps, not just var-apps
+      if (/* EX::Type::FnApp == this->m_exprs.last()->m_type
+          || EX::Type::FnDef == this->m_exprs.last()->m_type
+          || */
+          EX::Type::VarApp == this->m_exprs.last()->m_type)
+      {
+        // (\x = \y = ...) expr expr
+        this->m_exprs.last()->as.m_varapp.m_param.push(expr);
+      }
+      else
+      {
+      CASE_INT_SINGLE_EXPR:
+        this->m_exprs.push(expr);
+      }
 
       i += 1;
     }
@@ -119,7 +136,25 @@ Parser::run()
     {
       Parser group_parser{ *this, t.as.m_tokens };
       group_parser.run();
-      this->m_exprs.push(*group_parser.m_exprs.last());
+      EX::Expr expr = *group_parser.m_exprs.last();
+      if (this->m_exprs.is_empty()) goto CASE_GROUP_SINGLE_PARAM;
+
+      // TODO: this if should be a new utility function
+      // TODO: this logic should apply to groups, possibly other tokens
+      // TODO: this should be extended to fn-defs/apps, not just var-apps
+      if (/* EX::Type::FnApp == this->m_exprs.last()->m_type
+          || EX::Type::FnDef == this->m_exprs.last()->m_type
+          || */
+          EX::Type::VarApp == this->m_exprs.last()->m_type)
+      {
+        // (\x = \y = ...) expr expr
+        this->m_exprs.last()->as.m_varapp.m_param.push(expr);
+      }
+      else
+      {
+      CASE_GROUP_SINGLE_PARAM:
+        this->m_exprs.push(expr);
+      }
 
       i += 1;
     }
