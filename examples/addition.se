@@ -37,3 +37,6 @@ pub summate = \sum = \x =
 
 pub summing = summate 0 10
 
+pub neg = \x = -x
+
+pub negres = neg (2 + 1)

@@ -52,6 +52,7 @@ enum FnFlags : std::uint64_t
   MAX            = FN_MUST_INLINE,
 };
 
+// TODO: use Expr* not the vector Exprs
 struct FnDef
 {
   FnFlags    m_flags;
@@ -70,9 +71,9 @@ struct FnDef
 
 struct If
 {
-  Exprs m_condition;
-  Exprs m_true_branch;
-  Exprs m_else_branch;
+  Expr *m_condition;
+  Expr *m_true_branch;
+  Expr *m_else_branch;
 };
 
 struct FnApp
@@ -99,14 +100,15 @@ struct Expr
   Type m_type;
   union
   {
-    FnDef      m_fn;
-    FnApp      m_fnapp;
-    VarApp     m_varapp;
-    UT::String m_var;
-    Exprs      exprs;
-    ssize_t    m_int = 0;
-    If         m_if;
-    Let        m_let;
+    FnDef          m_fn;
+    FnApp          m_fnapp;
+    VarApp         m_varapp;
+    UT::String     m_var;
+    UT::Pair<Expr> m_pair;
+    Expr          *m_expr;
+    ssize_t        m_int = 0;
+    If             m_if;
+    Let            m_let;
   } as;
 
   Expr() = default;
@@ -123,9 +125,9 @@ struct Expr
     case Type::VarApp: this->as.m_varapp.m_param = { arena }; break;
     case Type::If:
     {
-      this->as.m_if.m_condition   = { arena };
-      this->as.m_if.m_else_branch = { arena };
-      this->as.m_if.m_true_branch = { arena };
+      this->as.m_if.m_condition   = (Expr *)arena.alloc<Expr>(1);
+      this->as.m_if.m_else_branch = (Expr *)arena.alloc<Expr>(1);
+      this->as.m_if.m_true_branch = (Expr *)arena.alloc<Expr>(1);
     }
     break;
     case Type::Div:
@@ -133,8 +135,8 @@ struct Expr
     case Type::Modulus:
     case Type::Mult:
     case Type::IsEq:
-    case Type::Add    : this->as.exprs = { arena, 2 }; break;
-    case Type::Minus  : this->as.exprs = { arena, 1 }; break;
+    case Type::Add    : this->as.m_pair = { arena }; break;
+    case Type::Minus  : this->as.m_expr = (Expr *)arena.alloc<Expr>(1); break;
     default           : UT_FAIL_IF("Invalid type for this constructor");
     }
   };
@@ -266,61 +268,61 @@ to_string(
   case EX::Type::Add:
   {
     s += "(";
-    s += to_string(expr.as.exprs[0]);
+    s += to_string(expr.as.m_pair.first());
     s += " + ";
-    s += to_string(expr.as.exprs[1]);
+    s += to_string(expr.as.m_pair.second());
     s += ")";
   }
   break;
   case EX::Type::Minus:
   {
     s += "-(";
-    s += to_string(expr.as.exprs[0]);
+    s += to_string(*expr.as.m_expr);
     s += ")";
   }
   break;
   case EX::Type::Sub:
   {
     s += "(";
-    s += to_string(expr.as.exprs[0]);
+    s += to_string(expr.as.m_pair.first());
     s += " - ";
-    s += to_string(expr.as.exprs[1]);
+    s += to_string(expr.as.m_pair.second());
     s += ")";
   }
   break;
   case EX::Type::Mult:
   {
     s += "(";
-    s += to_string(expr.as.exprs[0]);
+    s += to_string(expr.as.m_pair.first());
     s += " * ";
-    s += to_string(expr.as.exprs[1]);
+    s += to_string(expr.as.m_pair.second());
     s += ")";
   }
   break;
   case EX::Type::Div:
   {
     s += "(";
-    s += to_string(expr.as.exprs[0]);
+    s += to_string(expr.as.m_pair.first());
     s += " / ";
-    s += to_string(expr.as.exprs[1]);
+    s += to_string(expr.as.m_pair.second());
     s += ")";
   }
   break;
   case EX::Type::Modulus:
   {
     s += "(";
-    s += to_string(expr.as.exprs[0]);
+    s += to_string(expr.as.m_pair.first());
     s += " % ";
-    s += to_string(expr.as.exprs[1]);
+    s += to_string(expr.as.m_pair.second());
     s += ")";
   }
   break;
   case EX::Type::IsEq:
   {
     s += "(";
-    s += to_string(expr.as.exprs[0]);
+    s += to_string(expr.as.m_pair.first());
     s += " ?= ";
-    s += to_string(expr.as.exprs[1]);
+    s += to_string(expr.as.m_pair.second());
     s += ")";
   }
   break;
@@ -349,9 +351,9 @@ to_string(
   break;
   case EX::Type::If:
   {
-    s += "if " + std::to_string(*expr.as.m_if.m_condition.last()) +    //
-         " => " + std::to_string(*expr.as.m_if.m_true_branch.last()) + //
-         " else " + std::to_string(*expr.as.m_if.m_else_branch.last());
+    s += "if " + std::to_string(*expr.as.m_if.m_condition) +    //
+         " => " + std::to_string(*expr.as.m_if.m_true_branch) + //
+         " else " + std::to_string(*expr.as.m_if.m_else_branch);
   }
   break;
   case EX::Type::Unknown:

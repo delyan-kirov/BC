@@ -581,6 +581,44 @@ template <typename O> struct Vec
   }
 };
 
+template <typename T> class Pair
+{
+  T *data;
+
+public:
+  Pair(
+    AR::Arena &arena)
+  {
+    this->data = (T *)arena.alloc<T>(2);
+  };
+  Pair() = default;
+  T
+  first()
+  {
+    return data[0];
+  }
+  T
+  second()
+  {
+    return data[1];
+  }
+  T*
+  begin()
+  {
+    return data;
+  }
+  T*
+  end()
+  {
+    return data + 2;
+  }
+  T*
+  last()
+  {
+    return data + 1;
+  }
+};
+
 class SB
 {
 public:

@@ -87,8 +87,8 @@ Parser::parse_binop(
   result = new_parser.run();
 
   EX::Expr right = *new_parser.m_exprs.last();
-  root_expr.as.exprs.push(left);
-  root_expr.as.exprs.push(right);
+  *root_expr.as.m_pair.begin() = left;
+  *root_expr.as.m_pair.last() = right;
 
   *this->m_exprs.last() = root_expr;
 
@@ -223,7 +223,7 @@ Parser::run()
         new_parser.run();
 
         EX::Expr expr{ Type::Minus, this->m_arena };
-        expr.as.exprs[0] = *new_parser.m_exprs.last();
+        *expr.as.m_expr = *new_parser.m_exprs.last();
 
         this->m_exprs.push(expr);
         i += 2;
@@ -321,9 +321,9 @@ Parser::run()
       EX::Expr else_branch_expr = *else_branch_parser.m_exprs.last();
 
       EX::Expr if_expr{ EX::Type::If, this->m_arena };
-      if_expr.as.m_if.m_condition.push(condition);
-      if_expr.as.m_if.m_else_branch.push(else_branch_expr);
-      if_expr.as.m_if.m_true_branch.push(true_branch_expr);
+      *if_expr.as.m_if.m_condition = condition;
+      *if_expr.as.m_if.m_else_branch = else_branch_expr;
+      *if_expr.as.m_if.m_true_branch = true_branch_expr;
 
       this->m_exprs.push(if_expr);
       i += 1;

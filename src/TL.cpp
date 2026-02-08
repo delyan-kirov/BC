@@ -63,9 +63,9 @@ eval_bi_op(
   Env      env  = inst.m_env;
   EX::Expr expr = inst.m_expr;
 
-  Instance left_instance  = Instance{ expr.as.exprs[0], env };
+  Instance left_instance  = Instance{ expr.as.m_pair.first(), env };
   ssize_t  left           = eval(left_instance).m_expr.as.m_int;
-  Instance right_instance = Instance{ expr.as.exprs[1], env };
+  Instance right_instance = Instance{ expr.as.m_pair.second(), env };
   ssize_t  right          = eval(right_instance).m_expr.as.m_int;
   Instance result_instance{ EX::Type::Int, env };
 
@@ -83,159 +83,6 @@ eval_bi_op(
   return result_instance;
 }
 
-// TODO: finish impl
-void
-alpha_conversion(
-  EX::Expr *expr, UT::String old_var, UT::String new_var)
-{
-  UT_TODO(Finish impl);
-  switch (expr->m_type)
-  {
-  case EX::Type::Add:
-  case EX::Type::Sub:
-  case EX::Type::Div:
-  case EX::Type::IsEq:
-  case EX::Type::Modulus:
-  case EX::Type::Mult:
-  {
-    EX::Exprs exprs = expr->as.exprs;
-    alpha_conversion(exprs.m_mem + 0, old_var, new_var);
-    alpha_conversion(exprs.m_mem + 1, old_var, new_var);
-    return;
-  }
-  case EX::Type::Minus:
-  {
-    EX::Exprs exprs = expr->as.exprs;
-    alpha_conversion(exprs.m_mem, old_var, new_var);
-    return;
-  }
-  case EX::Type::Var:
-  {
-    if (expr->as.m_var == old_var)
-    {
-      expr->as.m_var = new_var;
-    }
-    return;
-  }
-  case EX::Type::FnApp:
-  {
-    alpha_conversion(expr->as.m_fnapp.m_param.m_mem, old_var, new_var);
-    if (expr->as.m_fnapp.m_body.m_param == old_var)
-    {
-      expr->as.m_fnapp.m_body.m_param = new_var;
-    }
-    alpha_conversion(expr->as.m_fnapp.m_body.m_body.m_mem, old_var, new_var);
-    return;
-  }
-  case EX::Type::VarApp:
-  {
-    if (expr->as.m_varapp.m_fn_name == old_var)
-    {
-      expr->as.m_varapp.m_fn_name = new_var;
-    }
-    alpha_conversion(expr->as.m_varapp.m_param.m_mem, old_var, new_var);
-
-    return;
-  }
-  case EX::Type::Let:
-  {
-    if (expr->as.m_let.m_var_name == old_var)
-    {
-      expr->as.m_let.m_var_name = new_var;
-    }
-    alpha_conversion(expr->as.m_let.m_value, old_var, new_var);
-    alpha_conversion(expr->as.m_let.m_continuation, old_var, new_var);
-
-    return;
-  }
-  case EX::Type::FnDef:
-  {
-    if (expr->as.m_fn.m_param == old_var)
-    {
-      expr->as.m_fn.m_param = new_var;
-    }
-    alpha_conversion(expr->as.m_fn.m_body.m_mem, old_var, new_var);
-
-    return;
-  }
-  case EX::Type::Int:
-  {
-    return;
-  }
-  case EX::Type::If:
-  {
-    alpha_conversion(expr->as.m_if.m_condition.m_mem, old_var, new_var);
-    alpha_conversion(expr->as.m_if.m_true_branch.m_mem, old_var, new_var);
-    alpha_conversion(expr->as.m_if.m_else_branch.m_mem, old_var, new_var);
-    return;
-  }
-  case EX::Type::Unknown:
-  {
-    UT_FAIL_IF("UNREACHABLE");
-  }
-  }
-}
-
-// TODO: finish impl
-EX::Expr
-clone_expression(
-  EX::Expr expr, AR::Arena)
-{
-  UT_TODO(Finish impl);
-  EX::Expr new_expr;
-  new_expr.m_type = expr.m_type;
-
-  switch (expr.m_type)
-  {
-  case EX::Type::Add:
-  case EX::Type::Sub:
-  case EX::Type::Div:
-  case EX::Type::IsEq:
-  case EX::Type::Modulus:
-  case EX::Type::Mult:
-  {
-    return new_expr;
-  }
-  case EX::Type::Minus:
-  {
-    return new_expr;
-  }
-  case EX::Type::Var:
-  {
-    return new_expr;
-  }
-  case EX::Type::FnApp:
-  {
-    return new_expr;
-  }
-  case EX::Type::VarApp:
-  {
-    return new_expr;
-  }
-  case EX::Type::Let:
-  {
-    return new_expr;
-  }
-  case EX::Type::FnDef:
-  {
-    return new_expr;
-  }
-  case EX::Type::Int:
-  {
-    return new_expr;
-  }
-  case EX::Type::If:
-  {
-    return new_expr;
-  }
-  case EX::Type::Unknown:
-  {
-    UT_FAIL_IF("UNREACHABLE");
-  }
-  }
-  return new_expr;
-}
-
 Instance
 eval(
   Instance &inst)
@@ -246,7 +93,6 @@ eval(
   switch (expr.m_type)
   {
   case EX::Type::Add:
-  case EX::Type::Minus:
   case EX::Type::Sub:
   case EX::Type::Mult:
   case EX::Type::Div:
@@ -263,6 +109,16 @@ eval(
       Instance new_instance{ var_expr->second, env };
       return new_instance;
     }
+  }
+  break;
+  case EX::Type::Minus:
+  {
+    Instance new_instance{ *expr.as.m_expr, env };
+    new_instance = eval(new_instance);
+    // TODO: this assumes the expression evaluates to an int, which is not
+    // always the case
+    new_instance.m_expr.as.m_int *= -1;
+    return new_instance;
   }
   break;
   case EX::Type::FnApp:
@@ -310,9 +166,9 @@ eval(
   }
   case EX::Type::If:
   {
-    Instance cond_instance{ *expr.as.m_if.m_condition.last(), env };
-    Instance true_instance{ *expr.as.m_if.m_true_branch.last(), env };
-    Instance else_instance{ *expr.as.m_if.m_else_branch.last(), env };
+    Instance cond_instance{ *expr.as.m_if.m_condition, env };
+    Instance true_instance{ *expr.as.m_if.m_true_branch, env };
+    Instance else_instance{ *expr.as.m_if.m_else_branch, env };
 
     return eval(cond_instance).m_expr.as.m_int ? eval(true_instance)
                                                : eval(else_instance);
