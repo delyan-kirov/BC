@@ -86,9 +86,9 @@ Parser::parse_binop(
   EX::Parser new_parser{ *this, start, end };
   result = new_parser.run();
 
-  EX::Expr right = *new_parser.m_exprs.last();
+  EX::Expr right               = *new_parser.m_exprs.last();
   *root_expr.as.m_pair.begin() = left;
-  *root_expr.as.m_pair.last() = right;
+  *root_expr.as.m_pair.last()  = right;
 
   *this->m_exprs.last() = root_expr;
 
@@ -272,7 +272,7 @@ Parser::run()
       EX::Expr body_expr = *body_parser.m_exprs.last();
 
       EX::FnDef fn_def{ EX::FnFlags::FN_MUST_INLINE, param, this->m_arena };
-      fn_def.m_body.push(body_expr);
+      *fn_def.m_body = body_expr;
 
       i += 1;
       if (this->match_token_type(
@@ -298,7 +298,7 @@ Parser::run()
         EX::Expr fn_def{ EX::Type::FnDef, this->m_arena };
         fn_def.as.m_fn.m_flags = FnFlags::FN_MUST_INLINE;
         fn_def.as.m_fn.m_param = param;
-        fn_def.as.m_fn.m_body.push(body_expr);
+        *fn_def.as.m_fn.m_body = body_expr;
 
         this->m_exprs.push(fn_def);
       }
@@ -321,7 +321,7 @@ Parser::run()
       EX::Expr else_branch_expr = *else_branch_parser.m_exprs.last();
 
       EX::Expr if_expr{ EX::Type::If, this->m_arena };
-      *if_expr.as.m_if.m_condition = condition;
+      *if_expr.as.m_if.m_condition   = condition;
       *if_expr.as.m_if.m_else_branch = else_branch_expr;
       *if_expr.as.m_if.m_true_branch = true_branch_expr;
 

@@ -44,10 +44,13 @@ Mod::Mod(
 
     this->m_defs.push(def);
 
-    std::printf("%s %s = %s\n",
-                UT_TCS(def.m_type),
-                UT_TCS(def_name),
-                UT_TCS(global_env[std::to_string(def_name)]));
+    if (false)
+    {
+      std::printf("%s %s = %s\n",
+                  UT_TCS(def.m_type),
+                  UT_TCS(def_name),
+                  UT_TCS(global_env[std::to_string(def_name)]));
+    }
   }
 
   for (auto it = global_env.begin(); it != global_env.end(); ++it)
@@ -125,7 +128,7 @@ eval(
   {
     EX::Expr    param      = *expr.as.m_fnapp.m_param.last();
     EX::FnDef   fn_def     = expr.as.m_fnapp.m_body;
-    EX::Expr    body       = *fn_def.m_body.last();
+    EX::Expr    body       = *fn_def.m_body;
     std::string param_name = std::to_string(fn_def.m_param);
     Env         env        = inst.m_env;
 
@@ -156,7 +159,7 @@ eval(
       {
         Instance param_inst{ param_expr, env };
         env[std::to_string(fndef.as.m_fn.m_param)] = eval(param_inst).m_expr;
-        fndef = *fndef.as.m_fn.m_body.last();
+        fndef                                      = *fndef.as.m_fn.m_body;
       }
 
       Instance app_instance{ fndef, env };

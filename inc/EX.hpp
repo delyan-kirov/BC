@@ -57,7 +57,7 @@ struct FnDef
 {
   FnFlags    m_flags;
   UT::String m_param;
-  Exprs      m_body;
+  Expr      *m_body;
 
   FnDef() = default;
   FnDef(
@@ -65,7 +65,7 @@ struct FnDef
       : m_flags{ flags },
         m_param{ param }
   {
-    this->m_body = { arena };
+    this->m_body = (EX::Expr *)arena.alloc<EX::Expr>(1);
   }
 };
 
@@ -120,9 +120,11 @@ struct Expr
   {
     switch (type)
     {
-    case Type::FnDef : this->as.m_fn.m_body = { arena }; break;
     case Type::FnApp : this->as.m_fnapp.m_param = { arena }; break;
     case Type::VarApp: this->as.m_varapp.m_param = { arena }; break;
+    case Type::FnDef:
+      this->as.m_fn.m_body = (EX::Expr *)arena.alloc<EX::Expr>(1);
+      break;
     case Type::If:
     {
       this->as.m_if.m_condition   = (Expr *)arena.alloc<Expr>(1);
@@ -329,7 +331,7 @@ to_string(
   case EX::Type::FnDef:
   {
     s += "( \\" + to_string(expr.as.m_fn.m_param) + " = "
-         + to_string(*expr.as.m_fn.m_body.last()) + " )";
+         + to_string(*expr.as.m_fn.m_body) + " )";
   }
   break;
   case EX::Type::FnApp:
@@ -382,8 +384,8 @@ inline string
 to_string(
   EX::FnDef fndef)
 {
-  return "(\\" + to_string(fndef.m_param) + " = "
-         + to_string(*fndef.m_body.last()) + ")";
+  return "(\\" + to_string(fndef.m_param) + " = " + to_string(*fndef.m_body)
+         + ")";
 }
 } // namespace std
 

@@ -602,17 +602,17 @@ public:
   {
     return data[1];
   }
-  T*
+  T *
   begin()
   {
     return data;
   }
-  T*
+  T *
   end()
   {
     return data + 2;
   }
-  T*
+  T *
   last()
   {
     return data + 1;
