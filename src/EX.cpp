@@ -13,9 +13,11 @@ Parser::parse_min_precedence_arithmetic_op(
   UT_FAIL_IF(not(EX::Type::Add == type || EX::Type::Sub == type));
   E result = E::OK;
 
+  // TODO: https://github.com/delyan-kirov/BC/issues/24
   if (this->match_token_type(
         idx + 1, LX::Type::Int, LX::Type::Group, LX::Type::Word))
   {
+    // TODO: https://github.com/delyan-kirov/BC/issues/24
     if (this->match_token_type(idx + 2, LX::Type::Mult, LX::Type::Modulus))
     {
       if (EX::Type::Sub == type)
@@ -54,12 +56,14 @@ Parser::parse_max_precedence_arithmetic_op(
 {
   E result = E::OK;
 
+  // TODO: https://github.com/delyan-kirov/BC/issues/24
   if (this->match_token_type(
         idx + 1, LX::Type::Int, LX::Type::Group, LX::Type::Word))
   {
     this->parse_binop(type, idx + 1, idx + 2);
     idx += 2;
   }
+  // TODO: https://github.com/delyan-kirov/BC/issues/24
   else if (this->match_token_type(idx + 1, LX::Type::Minus))
   {
     parse_binop(type, idx + 1, idx + 2);
@@ -112,9 +116,7 @@ Parser::run()
       expr.as.m_int = t.as.m_int;
       if (this->m_exprs.is_empty()) goto CASE_INT_SINGLE_EXPR;
 
-      // TODO: this if should be a new utility function
-      // TODO: this logic should apply to groups, possibly other tokens
-      // TODO: this should be extended to fn-defs/apps, not just var-apps
+      // FIXME: https://github.com/delyan-kirov/BC/issues/26
       if (/* EX::Type::FnApp == this->m_exprs.last()->m_type
           || EX::Type::FnDef == this->m_exprs.last()->m_type
           || */
@@ -139,9 +141,7 @@ Parser::run()
       EX::Expr expr = *group_parser.m_exprs.last();
       if (this->m_exprs.is_empty()) goto CASE_GROUP_SINGLE_PARAM;
 
-      // TODO: this if should be a new utility function
-      // TODO: this logic should apply to groups, possibly other tokens
-      // TODO: this should be extended to fn-defs/apps, not just var-apps
+      // FIXME: https://github.com/delyan-kirov/BC/issues/26
       if (/* EX::Type::FnApp == this->m_exprs.last()->m_type
           || EX::Type::FnDef == this->m_exprs.last()->m_type
           || */
@@ -216,6 +216,7 @@ Parser::run()
                                     LX::Type::Div,
                                     LX::Type::Modulus)) // The minus is unary
       {
+        // TODO: https://github.com/delyan-kirov/BC/issues/24
         UT_FAIL_IF(not this->match_token_type(
           i + 1, LX::Type::Group, LX::Type::Int, LX::Type::Word));
 
@@ -230,6 +231,7 @@ Parser::run()
       }
       else // Binary minus
       {
+        // TODO: https://github.com/delyan-kirov/BC/issues/24
         UT_FAIL_IF(not this->match_token_type(
           i + 1, LX::Type::Group, LX::Type::Int, LX::Type::Word));
 
@@ -239,8 +241,7 @@ Parser::run()
     break;
     case LX::Type::Let:
     {
-      // TODO: Support recursive functions
-      // TODO: We should have a function application explicitly!
+      // FIXME: https://github.com/delyan-kirov/BC/issues/25
       // let var = body_expr in app_expr
       UT::String var_name = t.as.m_let_in_tokens.m_var_name;
 

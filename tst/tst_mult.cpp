@@ -8,6 +8,7 @@
 namespace TDATA
 {
 constexpr std::pair<const char *, int> INPUTS[] = {
+// FIXME: https://github.com/delyan-kirov/BC/issues/24
 #if 0
   { "1 / 2", 0 },
   { "3 * 2 + 2 / 2", 7 },
