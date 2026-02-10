@@ -18,7 +18,8 @@ Parser::parse_min_precedence_arithmetic_op(
         idx + 1, LX::Type::Int, LX::Type::Group, LX::Type::Word))
   {
     // TODO: https://github.com/delyan-kirov/BC/issues/24
-    if (this->match_token_type(idx + 2, LX::Type::Mult, LX::Type::Modulus))
+    if (this->match_token_type(
+          idx + 2, LX::Type::Mult, LX::Type::Modulus, LX::Type::Div))
     {
       if (EX::Type::Sub == type)
       {

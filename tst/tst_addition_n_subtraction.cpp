@@ -1,8 +1,8 @@
 #include "TL.hpp"
 #include "UT.hpp"
 
-constexpr UT::String sut_file       = "./examples/addition.se";
-constexpr UT::String sut_file_basic = "./examples/basic.se";
+constexpr UT::String sut_file       = "./dat/addition.se";
+constexpr UT::String sut_file_basic = "./dat/basic.se";
 
 int
 main()
