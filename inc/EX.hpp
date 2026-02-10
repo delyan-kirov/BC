@@ -17,22 +17,28 @@ enum class E
   MAX
 };
 
+#define EX_Type_EnumVariants                                                   \
+  X(Unknown)                                                                   \
+  X(Int)                                                                       \
+  X(Minus)                                                                     \
+  X(Add)                                                                       \
+  X(Sub)                                                                       \
+  X(Mult)                                                                      \
+  X(Div)                                                                       \
+  X(Modulus)                                                                   \
+  X(Let)                                                                       \
+  X(IsEq)                                                                      \
+  X(FnDef)                                                                     \
+  X(FnApp)                                                                     \
+  X(VarApp)                                                                    \
+  X(Var)                                                                       \
+  X(If)
+
 enum class Type
 {
-  Unknown = 0,
-  Int,
-  Minus,
-  Add,
-  Sub,
-  Mult,
-  Div,
-  Modulus,
-  IsEq,
-  FnDef,
-  FnApp,
-  VarApp,
-  Var,
-  If,
+#define X(X_enum) X_enum,
+  EX_Type_EnumVariants
+#undef X
 };
 
 struct Expr;
@@ -46,11 +52,12 @@ enum FnFlags : std::uint64_t
   MAX            = FN_MUST_INLINE,
 };
 
+// TODO: use Expr* not the vector Exprs
 struct FnDef
 {
   FnFlags    m_flags;
   UT::String m_param;
-  Exprs      m_body;
+  Expr      *m_body;
 
   FnDef() = default;
   FnDef(
@@ -58,15 +65,15 @@ struct FnDef
       : m_flags{ flags },
         m_param{ param }
   {
-    this->m_body = { arena };
+    this->m_body = (EX::Expr *)arena.alloc<EX::Expr>(1);
   }
 };
 
 struct If
 {
-  Exprs m_condition;
-  Exprs m_true_branch;
-  Exprs m_else_branch;
+  Expr *m_condition;
+  Expr *m_true_branch;
+  Expr *m_else_branch;
 };
 
 struct FnApp
@@ -81,18 +88,27 @@ struct VarApp
   Exprs      m_param;
 };
 
+struct Let
+{
+  UT::String m_var_name;
+  Expr      *m_value;
+  Expr      *m_continuation;
+};
+
 struct Expr
 {
   Type m_type;
   union
   {
-    FnDef      m_fn;
-    FnApp      m_fnapp;
-    VarApp     m_varapp;
-    UT::String m_var;
-    Exprs      exprs;
-    ssize_t    m_int = 0;
-    If         m_if;
+    FnDef          m_fn;
+    FnApp          m_fnapp;
+    VarApp         m_varapp;
+    UT::String     m_var;
+    UT::Pair<Expr> m_pair;
+    Expr          *m_expr;
+    ssize_t        m_int = 0;
+    If             m_if;
+    Let            m_let;
   } as;
 
   Expr() = default;
@@ -104,14 +120,16 @@ struct Expr
   {
     switch (type)
     {
-    case Type::FnDef : this->as.m_fn.m_body = { arena }; break;
     case Type::FnApp : this->as.m_fnapp.m_param = { arena }; break;
     case Type::VarApp: this->as.m_varapp.m_param = { arena }; break;
+    case Type::FnDef:
+      this->as.m_fn.m_body = (EX::Expr *)arena.alloc<EX::Expr>(1);
+      break;
     case Type::If:
     {
-      this->as.m_if.m_condition   = { arena };
-      this->as.m_if.m_else_branch = { arena };
-      this->as.m_if.m_true_branch = { arena };
+      this->as.m_if.m_condition   = (Expr *)arena.alloc<Expr>(1);
+      this->as.m_if.m_else_branch = (Expr *)arena.alloc<Expr>(1);
+      this->as.m_if.m_true_branch = (Expr *)arena.alloc<Expr>(1);
     }
     break;
     case Type::Div:
@@ -119,8 +137,8 @@ struct Expr
     case Type::Modulus:
     case Type::Mult:
     case Type::IsEq:
-    case Type::Add    : this->as.exprs = { arena, 2 }; break;
-    case Type::Minus  : this->as.exprs = { arena, 1 }; break;
+    case Type::Add    : this->as.m_pair = { arena }; break;
+    case Type::Minus  : this->as.m_expr = (Expr *)arena.alloc<Expr>(1); break;
     default           : UT_FAIL_IF("Invalid type for this constructor");
     }
   };
@@ -128,6 +146,7 @@ struct Expr
 
 class Parser
 {
+  // TODO: use UT::String, not const char*
 public:
   AR::Arena       &m_arena;
   ER::Events       m_events;
@@ -149,6 +168,15 @@ public:
   {
     this->m_end = this->m_tokens.m_len;
   };
+
+  Parser(LX::Tokens tokens, AR::Arena &arena, const char *input)
+      : m_arena{ arena },
+        m_events{ arena },
+        m_input{ input },
+        m_tokens{ tokens },
+        m_begin{ 0 },
+        m_end{ tokens.m_len },
+        m_exprs{ arena } {};
 
   Parser(EX::Parser old, size_t begin, size_t end)
       : m_arena{ old.m_arena },   //
@@ -215,24 +243,13 @@ to_string(
 {
   switch (expr_type)
   {
-  case EX::Type::Int    : return "EX::Type::Int";
-  case EX::Type::Minus  : return "EX::Type::Minus";
-  case EX::Type::Sub    : return "EX::Type::Sub";
-  case EX::Type::Add    : return "EX::Type::Add";
-  case EX::Type::Mult   : return "EX::Type::Mult";
-  case EX::Type::Div    : return "EX::Type::Div";
-  case EX::Type::Modulus: return "EX::Type::Modulus";
-  case EX::Type::IsEq   : return "EX::Type::IsEq";
-  case EX::Type::FnDef  : return "EX::Type::FnDef";
-  case EX::Type::Var    : return "EX::Type::Var";
-  case EX::Type::FnApp  : return "EX::Type::FnApp";
-  case EX::Type::VarApp : return "EX::Type::VarApp";
-  case EX::Type::If     : return "EX::Type::If";
-  case EX::Type::Unknown: return "EX::Type::Unknown";
+#define X(X_enum)                                                              \
+  case EX::Type::X_enum: return #X_enum;
+    EX_Type_EnumVariants
   }
+#undef X
 
   UT_FAIL_IF("UNREACHABLE");
-  return "";
 }
 
 inline string to_string(EX::FnDef fndef);
@@ -253,68 +270,68 @@ to_string(
   case EX::Type::Add:
   {
     s += "(";
-    s += to_string(expr.as.exprs[0]);
+    s += to_string(expr.as.m_pair.first());
     s += " + ";
-    s += to_string(expr.as.exprs[1]);
+    s += to_string(expr.as.m_pair.second());
     s += ")";
   }
   break;
   case EX::Type::Minus:
   {
     s += "-(";
-    s += to_string(expr.as.exprs[0]);
+    s += to_string(*expr.as.m_expr);
     s += ")";
   }
   break;
   case EX::Type::Sub:
   {
     s += "(";
-    s += to_string(expr.as.exprs[0]);
+    s += to_string(expr.as.m_pair.first());
     s += " - ";
-    s += to_string(expr.as.exprs[1]);
+    s += to_string(expr.as.m_pair.second());
     s += ")";
   }
   break;
   case EX::Type::Mult:
   {
     s += "(";
-    s += to_string(expr.as.exprs[0]);
+    s += to_string(expr.as.m_pair.first());
     s += " * ";
-    s += to_string(expr.as.exprs[1]);
+    s += to_string(expr.as.m_pair.second());
     s += ")";
   }
   break;
   case EX::Type::Div:
   {
     s += "(";
-    s += to_string(expr.as.exprs[0]);
+    s += to_string(expr.as.m_pair.first());
     s += " / ";
-    s += to_string(expr.as.exprs[1]);
+    s += to_string(expr.as.m_pair.second());
     s += ")";
   }
   break;
   case EX::Type::Modulus:
   {
     s += "(";
-    s += to_string(expr.as.exprs[0]);
+    s += to_string(expr.as.m_pair.first());
     s += " % ";
-    s += to_string(expr.as.exprs[1]);
+    s += to_string(expr.as.m_pair.second());
     s += ")";
   }
   break;
   case EX::Type::IsEq:
   {
     s += "(";
-    s += to_string(expr.as.exprs[0]);
+    s += to_string(expr.as.m_pair.first());
     s += " ?= ";
-    s += to_string(expr.as.exprs[1]);
+    s += to_string(expr.as.m_pair.second());
     s += ")";
   }
   break;
   case EX::Type::FnDef:
   {
     s += "( \\" + to_string(expr.as.m_fn.m_param) + " = "
-         + to_string(*expr.as.m_fn.m_body.last()) + " )";
+         + to_string(*expr.as.m_fn.m_body) + " )";
   }
   break;
   case EX::Type::FnApp:
@@ -336,14 +353,21 @@ to_string(
   break;
   case EX::Type::If:
   {
-    s += "if " + std::to_string(*expr.as.m_if.m_condition.last()) +    //
-         " => " + std::to_string(*expr.as.m_if.m_true_branch.last()) + //
-         " else " + std::to_string(*expr.as.m_if.m_else_branch.last());
+    s += "if " + std::to_string(*expr.as.m_if.m_condition) +    //
+         " => " + std::to_string(*expr.as.m_if.m_true_branch) + //
+         " else " + std::to_string(*expr.as.m_if.m_else_branch);
   }
   break;
   case EX::Type::Unknown:
   {
     s += "EX::T::Unknown";
+  }
+  break;
+  case EX::Type::Let:
+  {
+    s += "let " + to_string(expr.as.m_let.m_var_name) + " = "
+         + to_string(*expr.as.m_let.m_value) + " in "
+         + to_string(*expr.as.m_let.m_continuation);
   }
   break;
   default:
@@ -360,8 +384,8 @@ inline string
 to_string(
   EX::FnDef fndef)
 {
-  return "(\\" + to_string(fndef.m_param) + " = "
-         + to_string(*fndef.m_body.last()) + ")";
+  return "(\\" + to_string(fndef.m_param) + " = " + to_string(*fndef.m_body)
+         + ")";
 }
 } // namespace std
 

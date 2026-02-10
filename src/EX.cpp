@@ -86,9 +86,9 @@ Parser::parse_binop(
   EX::Parser new_parser{ *this, start, end };
   result = new_parser.run();
 
-  EX::Expr right = *new_parser.m_exprs.last();
-  root_expr.as.exprs.push(left);
-  root_expr.as.exprs.push(right);
+  EX::Expr right               = *new_parser.m_exprs.last();
+  *root_expr.as.m_pair.begin() = left;
+  *root_expr.as.m_pair.last()  = right;
 
   *this->m_exprs.last() = root_expr;
 
@@ -110,7 +110,24 @@ Parser::run()
     {
       EX::Expr expr{ EX::Type::Int };
       expr.as.m_int = t.as.m_int;
-      this->m_exprs.push(expr);
+      if (this->m_exprs.is_empty()) goto CASE_INT_SINGLE_EXPR;
+
+      // TODO: this if should be a new utility function
+      // TODO: this logic should apply to groups, possibly other tokens
+      // TODO: this should be extended to fn-defs/apps, not just var-apps
+      if (/* EX::Type::FnApp == this->m_exprs.last()->m_type
+          || EX::Type::FnDef == this->m_exprs.last()->m_type
+          || */
+          EX::Type::VarApp == this->m_exprs.last()->m_type)
+      {
+        // (\x = \y = ...) expr expr
+        this->m_exprs.last()->as.m_varapp.m_param.push(expr);
+      }
+      else
+      {
+      CASE_INT_SINGLE_EXPR:
+        this->m_exprs.push(expr);
+      }
 
       i += 1;
     }
@@ -119,7 +136,25 @@ Parser::run()
     {
       Parser group_parser{ *this, t.as.m_tokens };
       group_parser.run();
-      this->m_exprs.push(*group_parser.m_exprs.last());
+      EX::Expr expr = *group_parser.m_exprs.last();
+      if (this->m_exprs.is_empty()) goto CASE_GROUP_SINGLE_PARAM;
+
+      // TODO: this if should be a new utility function
+      // TODO: this logic should apply to groups, possibly other tokens
+      // TODO: this should be extended to fn-defs/apps, not just var-apps
+      if (/* EX::Type::FnApp == this->m_exprs.last()->m_type
+          || EX::Type::FnDef == this->m_exprs.last()->m_type
+          || */
+          EX::Type::VarApp == this->m_exprs.last()->m_type)
+      {
+        // (\x = \y = ...) expr expr
+        this->m_exprs.last()->as.m_varapp.m_param.push(expr);
+      }
+      else
+      {
+      CASE_GROUP_SINGLE_PARAM:
+        this->m_exprs.push(expr);
+      }
 
       i += 1;
     }
@@ -188,7 +223,7 @@ Parser::run()
         new_parser.run();
 
         EX::Expr expr{ Type::Minus, this->m_arena };
-        expr.as.exprs[0] = *new_parser.m_exprs.last();
+        *expr.as.m_expr = *new_parser.m_exprs.last();
 
         this->m_exprs.push(expr);
         i += 2;
@@ -207,27 +242,22 @@ Parser::run()
       // TODO: Support recursive functions
       // TODO: We should have a function application explicitly!
       // let var = body_expr in app_expr
-      UT::String param = t.as.m_let_in_tokens.m_var_name;
+      UT::String var_name = t.as.m_let_in_tokens.m_var_name;
 
-      EX::Parser body_parser{ *this, t.as.m_let_in_tokens.m_in_tokens };
-      body_parser.run();
-      EX::Expr body_expr = *body_parser.m_exprs.last();
+      EX::Parser value_parser{ *this, t.as.m_let_in_tokens.m_let_tokens };
+      value_parser.run();
+      EX::Expr *value_expr = value_parser.m_exprs.last();
 
-      EX::Parser app_parser{ *this, t.as.m_let_in_tokens.m_let_tokens };
-      app_parser.run();
-      EX::Expr app_expr = *app_parser.m_exprs.last();
+      EX::Parser continuation_parser{ *this, t.as.m_let_in_tokens.m_in_tokens };
+      continuation_parser.run();
+      EX::Expr *continuation_expr = continuation_parser.m_exprs.last();
 
-      EX::FnDef fn_def{};
-      fn_def.m_flags = EX::FnFlags::FN_MUST_INLINE;
-      fn_def.m_param = param;
-      fn_def.m_body  = { this->m_arena };
-      fn_def.m_body.push(body_expr);
+      EX::Expr let_expr{ EX::Type::Let };
+      let_expr.as.m_let.m_continuation = continuation_expr;
+      let_expr.as.m_let.m_var_name     = var_name;
+      let_expr.as.m_let.m_value        = value_expr;
 
-      EX::Expr fn_app{ EX::Type::FnApp, this->m_arena };
-      fn_app.as.m_fnapp.m_param.push(app_expr);
-      fn_app.as.m_fnapp.m_body = fn_def;
-
-      this->m_exprs.push(fn_app);
+      this->m_exprs.push(let_expr);
 
       i += 1;
     }
@@ -242,7 +272,7 @@ Parser::run()
       EX::Expr body_expr = *body_parser.m_exprs.last();
 
       EX::FnDef fn_def{ EX::FnFlags::FN_MUST_INLINE, param, this->m_arena };
-      fn_def.m_body.push(body_expr);
+      *fn_def.m_body = body_expr;
 
       i += 1;
       if (this->match_token_type(
@@ -268,7 +298,7 @@ Parser::run()
         EX::Expr fn_def{ EX::Type::FnDef, this->m_arena };
         fn_def.as.m_fn.m_flags = FnFlags::FN_MUST_INLINE;
         fn_def.as.m_fn.m_param = param;
-        fn_def.as.m_fn.m_body.push(body_expr);
+        *fn_def.as.m_fn.m_body = body_expr;
 
         this->m_exprs.push(fn_def);
       }
@@ -291,9 +321,9 @@ Parser::run()
       EX::Expr else_branch_expr = *else_branch_parser.m_exprs.last();
 
       EX::Expr if_expr{ EX::Type::If, this->m_arena };
-      if_expr.as.m_if.m_condition.push(condition);
-      if_expr.as.m_if.m_else_branch.push(else_branch_expr);
-      if_expr.as.m_if.m_true_branch.push(true_branch_expr);
+      *if_expr.as.m_if.m_condition   = condition;
+      *if_expr.as.m_if.m_else_branch = else_branch_expr;
+      *if_expr.as.m_if.m_true_branch = true_branch_expr;
 
       this->m_exprs.push(if_expr);
       i += 1;

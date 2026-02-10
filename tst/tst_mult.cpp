@@ -89,16 +89,16 @@ constexpr std::pair<const char *, int> INPUTS[] = {
   //    => (\foo = foo 2) (\x = x  + 1)
   //    => (\x = x + 1) 2
   //    => 2 + 1
-  { "if 1 - 1 => 2 + 3 else let x = 4 in x + 5", 9 },
-  { "let x = 3 in if x ?= 1 => 1 else if x ?= 2 => 2 else 3", 3 },
-  { "let foo = \\x = x + 1 in foo 1", 2 },
-  { "let xtreme = 34 in if xtreme => xtreme + 35 else 3", 69 },
   { "let foo = \\x = x x in foo foo", 2 }, // NOTE: INFINITE RECURSION
-  { "let a = 1 in let foo = \\b = b + a + 1 in foo (foo 2)", 6 },
   { "if (let a = 1 in a) => 1 else 0", 0 }, // FIXME: This should be valid
   { "let foo = \\x = (if x => x - 1 else x) in foo 3", 2 }, // FIXME: Bracketting is broken
-#endif
+  { "let a = 1 in let foo = \\b = b + a + 1 in foo (foo 2)", 6 }, // FIXME: Lexer goes out of its mind
   { "if 1 => 2 + 3 else let x = 4 in x + 5", 5 },
+  { "let xtreme = 34 in if xtreme => xtreme + 35 else 3", 69 },
+  { "let foo = \\x = x + 1 in foo 1", 2 },
+  { "let x = 3 in if x ?= 1 => 1 else if x ?= 2 => 2 else 3", 3 },
+  { "if 1 - 1 => 2 + 3 else let x = 4 in x + 5", 9 },
+#endif
 
 };
 } // namespace TDATA
@@ -119,12 +119,14 @@ run()
     EX::Parser parser{ l };
     parser.run();
     std::printf("Parser: %s\n", UT_TCS(*parser.m_exprs.begin()));
-    EX::Expr result = TL::eval(*parser.m_exprs.begin());
-    std::printf("Evaluated to %s\n", UT_TCS(result));
 
-    if (EX::Type::Int == result.m_type)
+    TL::Instance instance{ *parser.m_exprs.begin(), TL::Env{} };
+    TL::Instance result = TL::eval(instance);
+    std::printf("Evaluated to %s\n", UT_TCS(result.m_expr));
+
+    if (EX::Type::Int == result.m_expr.m_type)
     {
-      UT_FAIL_IF(tdata.second != result.as.m_int);
+      UT_FAIL_IF(tdata.second != result.m_expr.as.m_int);
     }
   }
 

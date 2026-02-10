@@ -363,7 +363,51 @@ struct String : public Vu<char>
     return (this->m_len == other.m_len)
            && (0 == std::memcmp(this->m_mem, other.m_mem, this->m_len));
   }
+
+  bool
+  operator!=(
+    String &other)
+  {
+    return !((this->m_len == other.m_len)
+             && (0 == std::memcmp(this->m_mem, other.m_mem, this->m_len)));
+  }
 };
+
+inline bool
+operator==(
+  const char *left, UT::String right)
+{
+  size_t other_len = std::strlen(left);
+  return (right.m_len == other_len)
+         && (0 == std::memcmp(right.m_mem, left, right.m_len));
+}
+
+inline bool
+operator==(
+  UT::String right, const char *left)
+{
+  size_t other_len = std::strlen(left);
+  return (right.m_len == other_len)
+         && (0 == std::memcmp(right.m_mem, left, right.m_len));
+}
+
+inline bool
+operator!=(
+  const char *left, UT::String right)
+{
+  size_t other_len = std::strlen(left);
+  return !((right.m_len == other_len)
+           && (0 == std::memcmp(right.m_mem, left, right.m_len)));
+}
+
+inline bool
+operator!=(
+  UT::String right, const char *left)
+{
+  size_t other_len = std::strlen(left);
+  return !((right.m_len == other_len)
+           && (0 == std::memcmp(right.m_mem, left, right.m_len)));
+}
 
 inline String
 memcopy(
@@ -537,6 +581,44 @@ template <typename O> struct Vec
   }
 };
 
+template <typename T> class Pair
+{
+  T *data;
+
+public:
+  Pair(
+    AR::Arena &arena)
+  {
+    this->data = (T *)arena.alloc<T>(2);
+  };
+  Pair() = default;
+  T
+  first()
+  {
+    return data[0];
+  }
+  T
+  second()
+  {
+    return data[1];
+  }
+  T *
+  begin()
+  {
+    return data;
+  }
+  T *
+  end()
+  {
+    return data + 2;
+  }
+  T *
+  last()
+  {
+    return data + 1;
+  }
+};
+
 class SB
 {
 public:
@@ -698,6 +780,45 @@ SB::append(
   Args &&...args)
 {
   (..., this->concat(std::forward<Args>(args), " "));
+}
+
+// TODO: Better print messages
+// TODO: Better error handling
+inline String
+read_entire_file(
+  UT::String file_name, AR::Arena &arena)
+{
+  const char *file_str = file_name.m_mem;
+  size_t      file_len = 0;
+  char       *buffer   = nullptr;
+  size_t      result   = 0;
+
+  FILE *file_stream = std::fopen(file_str, "rb");
+  if (!file_stream)
+  {
+    std::fprintf(stderr, "ERROR: could not open file: %s\n", file_str);
+    goto DEFER_RETURN;
+  }
+
+  std::fseek(file_stream, 0, SEEK_END);
+  file_len = ftell(file_stream);
+
+  std::rewind(file_stream);
+  buffer           = (char *)arena.alloc(sizeof(char) * (file_len + 1));
+  buffer[file_len] = 0;
+
+  result = std::fread(buffer, 1, file_len, file_stream);
+  if (result != file_len)
+  {
+    std::fprintf(
+      stderr, "ERROR: could not map file %s to memory buffer\n", file_str);
+
+    goto DEFER_RETURN;
+  }
+
+DEFER_RETURN:
+  std::fclose(file_stream);
+  return UT::String{ buffer, file_len };
 }
 
 } // namespace UT

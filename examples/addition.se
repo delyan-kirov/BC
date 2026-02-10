@@ -1,0 +1,53 @@
+# this is an expression
+
+pub a = 1
+
+int b = let c
+	= a + a
+	in c + 2
+
+int foo
+	= \x = 2*x + b
+
+int baz = foo 2
+
+int baz = foo 5
+
+int fib = \x =
+	if x ?= 0 => 0
+	else if x ?= 1 => 1
+	else let previous = fib (x - 1)
+		 in let preprevious = fib (x - 2)
+		 in previous + preprevious
+
+int fibtwelve = fib 15
+
+pub powtwo = \x =
+	if x ?= 0 => 1
+	else 2 * (powtwo (x - 1))
+
+int powtwofifty = powtwo 50
+
+pub pow = \base = \power =
+	if power ?= 0 => 1
+	else base * (pow base (power - 1))
+
+pub powres = pow 3 9
+
+pub addthree = \x = \y = \z = x + y + z
+pub addthreeres = addthree (1 + 1) 2 (addthree 3 2 2)
+
+pub summate = \sum = \x =
+	if x ?= 0 => sum
+	else summate (sum + x) (x - 1)
+
+pub summing = summate 0 10
+
+pub neg = \x = -x
+
+pub negres = neg (2 + 1)
+
+pub fnappthis = \fn = \x = fn x
+pub appli =
+	let newfn = \x = -x
+	in fnappthis newfn 31
