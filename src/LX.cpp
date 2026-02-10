@@ -661,6 +661,10 @@ Lexer::find_next_global_symbol(
        search_lexer.m_cursor < search_lexer.m_end;
        next_word = search_lexer.get_word(search_lexer.m_cursor))
   {
+    if ("#" == next_word)
+    {
+      search_lexer.strip_line(search_lexer.m_cursor);
+    }
     if ("int" == next_word || "pub" == next_word)
     {
       /*
