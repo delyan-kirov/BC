@@ -2,12 +2,16 @@
 #include "LX.hpp"
 #include "TL.hpp"
 #include "UT.hpp"
+#include <cstdio>
+#include <utility>
 
 #define TSTxCTL 0
 
 namespace TDATA
 {
-constexpr std::pair<const char *, int> INPUTS[] = {
+using INPUTS_t = std::pair<const char *, int>;
+
+constexpr INPUTS_t INPUTS[] = {
   // TODO: Split test, add more data
   // FIXME: https://github.com/delyan-kirov/BC/issues/24
   { "1 / 2", 0 },
@@ -73,10 +77,10 @@ constexpr std::pair<const char *, int> INPUTS[] = {
     "2)))))) * (3 + (4 * (2 + (1 * 5)))))",
     178 },
   { "(3 + ((((((1)) + 1))))) - (-(1 + 2)) - ((((1))))", 7 },
+  { "1+ 2", 3 },
 #if false
   { "(1 + 2) + -1 * (1 * (2 * -1) * 1 + ((1 * 1)))",
     4 }, // TODO: treat -int as a separate token
-  { "1+ 2", 3 }, // FIXME: This does not work be cause the `+` is ignored
 #endif
 
 };
@@ -87,8 +91,9 @@ namespace
 bool
 run()
 {
-  for (auto tdata : TDATA::INPUTS)
+  for (size_t i = 0; i < ARRAY_LEN(TDATA::INPUTS); ++i)
   {
+    auto        tdata = TDATA::INPUTS[i];
     AR::Arena   arena{};
     const char *input = tdata.first;
     LX::Lexer   l{ input, arena, 0, std::strlen(input) };
@@ -102,7 +107,13 @@ run()
 
     if (EX::Type::Int == result.m_expr.m_type)
     {
-      UT_FAIL_IF(tdata.second != result.m_expr.as.m_int);
+      if (tdata.second != result.m_expr.as.m_int)
+      {
+        UT_FAIL_MSG("Expected %s but found %s, expression number %zu",
+                    UT_TCS(tdata.second),
+                    UT_TCS(result.m_expr.as.m_int),
+                    i);
+      }
     }
   }
 

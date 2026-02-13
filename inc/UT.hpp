@@ -10,6 +10,10 @@
 #include <string>
 #include <utility>
 
+// TODO: There should be a special format for macro args
+// This is because arguments can resolve to other macros
+// Which is dangerous and difficult to debug
+// Therefore, arguments should follow some type of convention
 #if defined(__GNUC__) || defined(__clang__)
 #define UT_PRINTF_LIKE(fmt_idx, arg_idx)                                       \
   __attribute__((format(printf, fmt_idx, arg_idx)))
@@ -41,6 +45,9 @@
   } while (false)
 
 #define UT_TCS(o) (std::to_string(o).c_str())
+
+#define ARRAY_LEN(UT_ARRAY_OBJ)                                                \
+  (sizeof(UT_ARRAY_OBJ) / (sizeof(UT_ARRAY_OBJ[0])))
 
 namespace AR
 {

@@ -16,7 +16,7 @@ int baz = foo 5
 int fib = \x =
 	if x ?= 0 => 0
 	else if x ?= 1 => 1
-	else let previous = fib (x - 1)
+else let previous = fib (x - 1)
 		 in let preprevious = fib (x - 2)
 		 in previous + preprevious
 
