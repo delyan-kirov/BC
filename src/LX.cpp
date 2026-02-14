@@ -1,12 +1,55 @@
 #include "LX.hpp"
 #include "UT.hpp"
-#include <cctype>
-#include <cstddef>
-#include <cstdio>
-#include <string>
 
 namespace LX
 {
+
+namespace
+{
+bool
+is_white_space(
+  char c)
+{
+  switch (c)
+  {
+  case ' ':
+  case '\t':
+  case '\n': return true;
+  default  : return false;
+  }
+}
+
+bool
+delimits_word(
+  char c)
+{
+  switch (c)
+  {
+  case ' ':
+  case '\t':
+  case '\n':
+  case '(':
+  case ')':
+  case '+':
+  case '-':
+  case '*':
+  case '/':
+  case '\\':
+  case '%':
+  case '^':
+  case '!':
+  case '~':
+  case '$':
+  case ';':
+  case '=':
+  case ':':
+  case ',':
+  case '@' : return true;
+  default  : return false;
+  }
+}
+
+} // namespace
 
 bool
 Lexer::match_keyword(
@@ -21,6 +64,8 @@ Lexer::match_keyword(
   return result;
 }
 
+// TODO: should be comment aware
+// FIXME: 'word=' does not work but it should
 UT::String
 LX::Lexer::get_word(
   size_t idx)
@@ -31,14 +76,8 @@ LX::Lexer::get_word(
   this->strip_white_space(idx);
   idx = this->m_cursor;
 
-  for (char c = this->m_input[idx++]; c                   //
-                                      && (' ' != c)       //
-                                      && !std::isdigit(c) //
-                                      && ('\n' != c)      //
-                                      && ('(' != c)       //
-                                      && (')' != c)       //
-       ; // TODO: potentially more cases missing
-       c = this->m_input[idx++])
+  for (char c = this->m_input[idx++]; c && (!delimits_word(c));
+       c      = this->m_input[idx++])
   {
     sb.add(c);
   }
@@ -461,6 +500,7 @@ Lexer::run()
         };
         LX_FN_TRY(new_lexer.run());
 
+        // TODO: candidate for refactor
         Token symbol{ "int" == word ? Type::IntDef : Type::ExtDef };
         symbol.m_cursor            = new_lexer.m_cursor;
         symbol.m_line              = new_lexer.m_lines;
@@ -521,6 +561,7 @@ Lexer::run()
         LX_ASSERT(LX::E::OK == e || LX::E::IN_KEYWORD == e,
                   LX::E::CONTROL_STRUCTURE_ERROR);
 
+        // TODO: candidate for refactor
         Token token{ Type::If };
         token.as.m_if_tokens.m_condition   = if_condition_lexer.m_tokens;
         token.as.m_if_tokens.m_true_branch = true_branch_lexer.m_tokens;
@@ -669,7 +710,7 @@ Lexer::match_operator(
 {
   UT_BEGIN_TRACE(this->m_arena, this->m_events, "{}", 0);
 
-  this->strip_white_space(this->m_cursor);
+  this->strip_white_space(this->m_cursor - 1);
   LX_ASSERT(c == this->next_char(), E::UNRECOGNIZED_STRING);
 
   UT_TRACE("Successfully matched operator %c", c);
@@ -686,7 +727,7 @@ Lexer::strip_white_space(
   char   c         = this->m_input[idx];
   size_t new_lines = 0;
 
-  while (' ' == c || '\n' == c || '\t' == c)
+  while (is_white_space(c))
   {
     if ('\n' == c) new_lines += 1;
     idx += 1;

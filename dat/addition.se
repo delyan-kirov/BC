@@ -20,13 +20,13 @@ else let previous = fib (x - 1)
 		 in let preprevious = fib (x - 2)
 		 in previous + preprevious
 
-int fibtwelve = fib 15
+int fib12 = fib 15
 
-pub powtwo = \x =
+pub pow2 = \x =
 	if x ?= 0 => 1
-	else 2 * (powtwo (x - 1))
+	else 2 * (pow2 (x - 1))
 
-int powtwofifty = powtwo 50
+int pow2_50 = powtwo 50
 
 pub pow = \base = \power =
 	if power ?= 0 => 1
@@ -34,8 +34,8 @@ pub pow = \base = \power =
 
 pub powres = pow 3 9
 
-pub addthree = \x = \y = \z = x + y + z
-pub addthreeres = addthree (1 + 1) 2 (addthree 3 2 2)
+pub add3 = \x = \y = \z = x + y + z
+pub add3res = add3 (1 + 1) 2 (add3 3 2 2)
 
 pub summate = \sum = \x =
 	if x ?= 0 => sum
@@ -45,7 +45,7 @@ pub summing = summate 0 10
 
 pub neg = \x = -x
 
-pub negres = neg (2 + 1)
+pub neg3 = neg (2 + 1)
 
 pub fnappthis = \fn = \x = fn x
 pub appli =
@@ -58,7 +58,7 @@ pub appli =
 # 	else 2 * (innerrec (x - 1))
 # in innerrec
 
-pub innerrecres = tryrecfn 3
+# pub inner1 = tryrecfn 3
 
 # FIXME: https://github.com/delyan-kirov/BC/issues/23
 # pub succ = \n = \f = \x = f (n f x)

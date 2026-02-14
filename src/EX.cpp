@@ -1,8 +1,6 @@
 #include "EX.hpp"
 #include "LX.hpp"
 #include "UT.hpp"
-#include <cassert>
-#include <cstdio>
 
 namespace EX
 {
