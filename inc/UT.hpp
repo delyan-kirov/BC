@@ -581,6 +581,14 @@ template <typename O> struct Vec
     this->m_len += 1;
   };
 
+  O
+  pop()
+  {
+    O o = *this->last();
+    m_len -= 1;
+    return o;
+  };
+
   bool
   is_empty()
   {

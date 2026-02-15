@@ -26,7 +26,7 @@ pub pow2 = \x =
 	if x ?= 0 => 1
 	else 2 * (pow2 (x - 1))
 
-int pow2_50 = powtwo 50
+int pow2_50 = pow2 50
 
 pub pow = \base = \power =
 	if power ?= 0 => 1

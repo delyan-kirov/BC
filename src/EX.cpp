@@ -115,14 +115,26 @@ Parser::run()
       expr.as.m_int = t.as.m_int;
       if (this->m_exprs.is_empty()) goto CASE_INT_SINGLE_EXPR;
 
-      // FIXME: https://github.com/delyan-kirov/BC/issues/26
-      if (/* EX::Type::FnApp == this->m_exprs.last()->m_type
-          || EX::Type::FnDef == this->m_exprs.last()->m_type
-          || */
-          EX::Type::VarApp == this->m_exprs.last()->m_type)
+      if (EX::Type::VarApp == this->m_exprs.last()->m_type)
       {
         // (\x = \y = ...) expr expr
         this->m_exprs.last()->as.m_varapp.m_param.push(expr);
+      }
+      else if (EX::Type::FnDef == this->m_exprs.last()->m_type)
+      {
+        // (\x = \y = ...) expr expr
+        EX::Expr fnapp{ EX::Type::FnApp, m_arena };
+        fnapp.as.m_fnapp.m_param.push(expr);
+        fnapp.as.m_fnapp.m_body.m_body  = this->m_exprs.last()->as.m_fn.m_body;
+        fnapp.as.m_fnapp.m_body.m_param = this->m_exprs.last()->as.m_fn.m_param;
+        fnapp.as.m_fnapp.m_body.m_flags = this->m_exprs.last()->as.m_fn.m_flags;
+
+        (void)m_exprs.pop();
+        m_exprs.push(fnapp);
+      }
+      else if (EX::Type::FnApp == this->m_exprs.last()->m_type)
+      {
+        m_exprs.last()->as.m_fnapp.m_param.push(expr);
       }
       else
       {
@@ -140,14 +152,25 @@ Parser::run()
       EX::Expr expr = *group_parser.m_exprs.last();
       if (this->m_exprs.is_empty()) goto CASE_GROUP_SINGLE_PARAM;
 
-      // FIXME: https://github.com/delyan-kirov/BC/issues/26
-      if (/* EX::Type::FnApp == this->m_exprs.last()->m_type
-          || EX::Type::FnDef == this->m_exprs.last()->m_type
-          || */
-          EX::Type::VarApp == this->m_exprs.last()->m_type)
+      if (EX::Type::VarApp == this->m_exprs.last()->m_type)
       {
         // (\x = \y = ...) expr expr
         this->m_exprs.last()->as.m_varapp.m_param.push(expr);
+      }
+      else if (EX::Type::FnDef == this->m_exprs.last()->m_type)
+      {
+        // (\x = \y = ...) expr expr
+        EX::Expr fnapp{ EX::Type::FnApp, m_arena };
+        fnapp.as.m_fnapp.m_param.push(expr);
+        fnapp.as.m_fnapp.m_body.m_body  = this->m_exprs.last();
+        fnapp.as.m_fnapp.m_body.m_param = this->m_exprs.last()->as.m_fn.m_param;
+        fnapp.as.m_fnapp.m_body.m_flags = this->m_exprs.last()->as.m_fn.m_flags;
+
+        (void)m_exprs.pop();
+      }
+      else if (EX::Type::FnApp == this->m_exprs.last()->m_type)
+      {
+        m_exprs.last()->as.m_fnapp.m_param.push(expr);
       }
       else
       {
@@ -159,8 +182,37 @@ Parser::run()
     }
     break;
     case LX::Type::Word:
+    // TODO: candidate for refactor, label abuse unnecessary
     {
+      EX::Expr var{ EX::Type::Var };
+      var.as.m_var = t.as.m_string;
       i += 1;
+
+      if (this->m_exprs.is_empty()) goto CASE_WORD_NOT_APPLIED;
+
+      if (EX::Type::VarApp == this->m_exprs.last()->m_type)
+      {
+        // (\x = \y = ...) expr expr
+        this->m_exprs.last()->as.m_varapp.m_param.push(var);
+      }
+      else if (EX::Type::FnDef == this->m_exprs.last()->m_type)
+      {
+        // (\x = \y = ...) expr expr
+        EX::Expr fnapp{ EX::Type::FnApp, m_arena };
+        fnapp.as.m_fnapp.m_param.push(var);
+        fnapp.as.m_fnapp.m_body.m_body  = this->m_exprs.last();
+        fnapp.as.m_fnapp.m_body.m_param = this->m_exprs.last()->as.m_fn.m_param;
+        fnapp.as.m_fnapp.m_body.m_flags = this->m_exprs.last()->as.m_fn.m_flags;
+
+        (void)m_exprs.pop();
+      }
+      else if (EX::Type::FnApp == this->m_exprs.last()->m_type)
+      {
+        m_exprs.last()->as.m_fnapp.m_param.push(var);
+      }
+      goto CASE_WORD_END;
+
+    CASE_WORD_NOT_APPLIED:
       if (this->match_token_type(
             i, LX::Type::Group, LX::Type::Int, LX::Type::Fn, LX::Type::Word))
       {
@@ -180,12 +232,11 @@ Parser::run()
       }
       else
       {
-        EX::Expr var{ EX::Type::Var };
-        var.as.m_var = t.as.m_string;
         this->m_exprs.push(var);
       }
     }
-    break;
+    CASE_WORD_END:
+      break;
     case LX::Type::Plus:
     {
       this->parse_min_precedence_arithmetic_op(EX::Type::Add, i);
