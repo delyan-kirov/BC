@@ -126,16 +126,18 @@ eval(
   break;
   case EX::Type::FnApp:
   {
-    EX::Expr    param      = *expr.as.m_fnapp.m_param.last();
-    EX::FnDef   fn_def     = expr.as.m_fnapp.m_body;
-    EX::Expr    body       = *fn_def.m_body;
-    std::string param_name = std::to_string(fn_def.m_param);
-    Env         env        = inst.m_env;
+    EX::Exprs params = expr.as.m_fnapp.m_param;
+    EX::Expr  fndef  = expr;
+    Env       env    = inst.m_env;
 
-    Instance param_instance{ param, env };
-    env[param_name] = eval(param_instance).m_expr;
+    for (EX::Expr &param_expr : params)
+    {
+      Instance param_inst{ param_expr, env };
+      env[std::to_string(fndef.as.m_fn.m_param)] = eval(param_inst).m_expr;
+      fndef                                      = *fndef.as.m_fn.m_body;
+    }
 
-    Instance body_instance{ body, env };
+    Instance body_instance{ fndef, env };
     body_instance = eval(body_instance);
 
     return body_instance;
@@ -146,7 +148,6 @@ eval(
   }
   case EX::Type::VarApp:
   {
-    // TODO: See if this works for fn application
     std::string fn_name   = std::to_string(expr.as.m_varapp.m_fn_name);
     auto        fn_def_it = env.find(fn_name);
     EX::Expr    fndef{};
@@ -163,7 +164,9 @@ eval(
       }
 
       Instance app_instance{ fndef, env };
-      return eval(app_instance);
+      app_instance = eval(app_instance);
+
+      return app_instance;
     }
     return inst;
   }

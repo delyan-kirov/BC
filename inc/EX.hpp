@@ -336,8 +336,20 @@ to_string(
   break;
   case EX::Type::FnApp:
   {
-    s += to_string(expr.as.m_fnapp.m_body) + " (" + " "
-         + to_string(*expr.as.m_fnapp.m_param.last()) + " )";
+    s += to_string(expr.as.m_fnapp.m_body) + " (" + " ";
+    for (size_t i = 0; i < expr.as.m_fnapp.m_param.m_len; ++i)
+    {
+      auto &param = expr.as.m_fnapp.m_param[i];
+      if (i != expr.as.m_fnapp.m_param.m_len - 1)
+      {
+        s += to_string(param) + ", ";
+      }
+      else
+      {
+        s += to_string(param);
+      }
+    }
+    s += " )";
   }
   break;
   case EX::Type::VarApp:

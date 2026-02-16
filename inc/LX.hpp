@@ -291,6 +291,8 @@ public:
 
   char next_char();
 
+  char peek_char();
+
   E push_int();
 
   void push_operator(char c);

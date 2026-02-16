@@ -1,11 +1,55 @@
 #include "LX.hpp"
 #include "UT.hpp"
-#include <cstddef>
-#include <cstdio>
-#include <string>
 
 namespace LX
 {
+
+namespace
+{
+bool
+is_white_space(
+  char c)
+{
+  switch (c)
+  {
+  case ' ':
+  case '\t':
+  case '\n': return true;
+  default  : return false;
+  }
+}
+
+bool
+delimits_word(
+  char c)
+{
+  switch (c)
+  {
+  case ' ':
+  case '\t':
+  case '\n':
+  case '(':
+  case ')':
+  case '+':
+  case '-':
+  case '*':
+  case '/':
+  case '\\':
+  case '%':
+  case '^':
+  case '!':
+  case '~':
+  case '$':
+  case ';':
+  case '=':
+  case ':':
+  case ',':
+  case '@' : return true;
+  default  : return false;
+  }
+}
+
+} // namespace
 
 bool
 Lexer::match_keyword(
@@ -20,6 +64,8 @@ Lexer::match_keyword(
   return result;
 }
 
+// TODO: should be comment aware
+// FIXME: 'word=' does not work but it should
 UT::String
 LX::Lexer::get_word(
   size_t idx)
@@ -30,14 +76,8 @@ LX::Lexer::get_word(
   this->strip_white_space(idx);
   idx = this->m_cursor;
 
-  for (char c = this->m_input[idx++]; c                   //
-                                      && (' ' != c)       //
-                                      && !std::isdigit(c) //
-                                      && ('\n' != c)      //
-                                      && ('(' != c)       //
-                                      && (')' != c)       //
-       ; // TODO: potentially more cases missing
-       c = this->m_input[idx++])
+  for (char c = this->m_input[idx++]; c && (!delimits_word(c));
+       c      = this->m_input[idx++])
   {
     sb.add(c);
   }
@@ -94,9 +134,10 @@ Lexer::push_int()
 {
   UT_BEGIN_TRACE(this->m_arena, this->m_events, "{}", 0);
 
-  int    result = 0;
-  size_t cursor = this->m_cursor;
-  size_t lines  = this->m_lines;
+  int    result       = 0;
+  size_t cursor       = this->m_cursor;
+  size_t lines        = this->m_lines;
+  bool   parse_as_hex = false;
 
   std::string s{
     this->m_input[this->m_cursor
@@ -106,13 +147,48 @@ Lexer::push_int()
   };
   for (char c = this->next_char(); c; c = this->next_char())
   {
-    if (!c || !std::isdigit(c)) break;
+    if (!c || !std::isdigit(c))
+    {
+      switch (c)
+      {
+      case '+':
+      case '-':
+      case '*':
+      case '/':
+      case '%':
+      case '?':
+      case '=': this->m_cursor -= 1; break;
+      case '|':
+      case '^':
+      case '~':
+      case '&':
+      case '@':
+      case '$':
+      case '#':
+      case '!':
+        LX_ERROR_REPORT(LX::E::NUMBER_PARSING_FAILURE,
+                        "Symbol reserved but currently not parse-able");
+        break;
+      case ')':
+      case ' ':
+      case '\t':
+      case '\n': break;
+      case 'x' : parse_as_hex = true; goto LX_ACCUMILATE_STRING;
+      default:
+        LX_ERROR_REPORT(LX::E::NUMBER_PARSING_FAILURE,
+                        "Unparse-able symbol found");
+        break;
+      }
+      break;
+    }
+  LX_ACCUMILATE_STRING:
     s += c;
   }
 
   try
   {
-    result = std::stoi(s.c_str(), nullptr, 10);
+    result = parse_as_hex ? std::stoi(s.c_str(), nullptr, 16)
+                          : std::stoi(s.c_str(), nullptr, 10);
 
     LX::Token t{ LX::Type::Int };
     t.as.m_int = result;
@@ -122,7 +198,7 @@ Lexer::push_int()
   {
     this->m_cursor = cursor;
     this->m_lines  = lines;
-    LX_ERROR_REPORT(E::NUMBER_PARSING_FAILURE, "");
+    LX_ERROR_REPORT(E::NUMBER_PARSING_FAILURE, "std::stoi exception occured");
   }
 
   return LX::E::OK;
@@ -222,6 +298,48 @@ Lexer::run()
     break;
 
     case '-':
+    {
+      char next_c = this->peek_char();
+      switch (next_c)
+      {
+      case ' ':
+      case '\t':
+      case '\n':
+      case '(' : this->push_operator(c); break;
+      case '\0':
+      {
+        // TODO: There should be better error message reporting
+        LX_ERROR_REPORT(
+          E::UNREACHABLE_CASE_REACHED,
+          "Expression starting with '-' should be followed by a variable, "
+          "literal or parenthesis but expression ends unexpectedly");
+      }
+      default:
+      {
+        if (std::isalpha(next_c))
+        {
+          if (std::islower(next_c))
+          {
+            this->push_operator(c);
+          }
+          else
+          {
+            LX_ASSERT(false, E::UNRECOGNIZED_STRING);
+          }
+        }
+        else if (std::isdigit(next_c))
+        {
+          this->push_int();
+        }
+        else
+        {
+          LX_ASSERT(false, E::OPERATOR_MATCH_FAILURE);
+        }
+      }
+      break;
+      }
+    }
+    break;
     case '+':
     case '*':
     case '/':
@@ -382,6 +500,7 @@ Lexer::run()
         };
         LX_FN_TRY(new_lexer.run());
 
+        // TODO: candidate for refactor
         Token symbol{ "int" == word ? Type::IntDef : Type::ExtDef };
         symbol.m_cursor            = new_lexer.m_cursor;
         symbol.m_line              = new_lexer.m_lines;
@@ -442,6 +561,7 @@ Lexer::run()
         LX_ASSERT(LX::E::OK == e || LX::E::IN_KEYWORD == e,
                   LX::E::CONTROL_STRUCTURE_ERROR);
 
+        // TODO: candidate for refactor
         Token token{ Type::If };
         token.as.m_if_tokens.m_condition   = if_condition_lexer.m_tokens;
         token.as.m_if_tokens.m_true_branch = true_branch_lexer.m_tokens;
@@ -590,7 +710,7 @@ Lexer::match_operator(
 {
   UT_BEGIN_TRACE(this->m_arena, this->m_events, "{}", 0);
 
-  this->strip_white_space(this->m_cursor);
+  this->strip_white_space(this->m_cursor - 1);
   LX_ASSERT(c == this->next_char(), E::UNRECOGNIZED_STRING);
 
   UT_TRACE("Successfully matched operator %c", c);
@@ -607,7 +727,7 @@ Lexer::strip_white_space(
   char   c         = this->m_input[idx];
   size_t new_lines = 0;
 
-  while (' ' == c || '\n' == c || '\t' == c)
+  while (is_white_space(c))
   {
     if ('\n' == c) new_lines += 1;
     idx += 1;
@@ -648,6 +768,12 @@ Lexer::push_group(
   this->m_cursor = l.m_cursor + 1;
 }
 
+char
+Lexer::peek_char()
+{
+  return this->m_cursor < this->m_end ? this->m_input[this->m_cursor] : '\0';
+}
+
 // TODO: candidate for refactor
 LX::E
 Lexer::find_next_global_symbol(
@@ -661,6 +787,11 @@ Lexer::find_next_global_symbol(
        search_lexer.m_cursor < search_lexer.m_end;
        next_word = search_lexer.get_word(search_lexer.m_cursor))
   {
+    // FIXME: lexer .get_word method should be aware of comments '#'
+    if ("#" == next_word)
+    {
+      search_lexer.strip_line(search_lexer.m_cursor);
+    }
     if ("int" == next_word || "pub" == next_word)
     {
       /*
