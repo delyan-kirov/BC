@@ -1,0 +1,36 @@
+# #include "raylib.h"
+
+# int main(void)
+# {
+#     const int screenWidth = 800;
+#     const int screenHeight = 600;
+
+#     InitWindow(screenWidth, screenHeight, "Triangle Demo");
+
+#     SetTargetFPS(60);
+
+#     Vector2 v1 = { 400, 100 };
+#     Vector2 v2 = { 200, 500 };
+#     Vector2 v3 = { 600, 500 };
+
+#     while (!WindowShouldClose())
+#     {
+#         BeginDrawing();
+
+#         ClearBackground(RAYWHITE);
+
+#         DrawTriangle(v1, v2, v3, RED);
+
+#         EndDrawing();
+#     }
+
+#     CloseWindow();
+
+#     return 0;
+# }
+
+# 1. loop indefinitely
+# 2. tuples
+# 3. strings
+# 4. not
+# 5. and-then operator ;
