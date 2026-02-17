@@ -3,13 +3,11 @@
 
 #include "LX.hpp"
 #include "UT.hpp"
-#include <cstdint>
-#include <cstdio>
-#include <string>
 
 namespace EX
 {
 
+// TODO: more expressive error handling
 enum class E
 {
   MIN = -1,
@@ -44,6 +42,7 @@ enum class Type
 struct Expr;
 using Exprs = UT::Vec<Expr>;
 
+// TODO: remove this
 enum FnFlags : std::uint64_t
 {
   MIN            = 0,
@@ -52,7 +51,7 @@ enum FnFlags : std::uint64_t
   MAX            = FN_MUST_INLINE,
 };
 
-// TODO: use Expr* not the vector Exprs
+// TODO: don't use m_ for structs
 struct FnDef
 {
   FnFlags    m_flags;
@@ -69,6 +68,7 @@ struct FnDef
   }
 };
 
+// TODO: don't use m_ for structs
 struct If
 {
   Expr *m_condition;
@@ -76,18 +76,21 @@ struct If
   Expr *m_else_branch;
 };
 
+// TODO: don't use m_ for structs
 struct FnApp
 {
   FnDef m_body;
   Exprs m_param;
 };
 
+// TODO: don't use m_ for structs
 struct VarApp
 {
   UT::String m_fn_name;
   Exprs      m_param;
 };
 
+// TODO: don't use m_ for structs
 struct Let
 {
   UT::String m_var_name;
@@ -95,6 +98,9 @@ struct Let
   Expr      *m_continuation;
 };
 
+// TODO: don't use m_ for structs
+// TODO: think about as-pattern getter-setters
+// TODO: don't use m_type, use tag
 struct Expr
 {
   Type m_type;
@@ -114,6 +120,7 @@ struct Expr
   Expr() = default;
   Expr(Type type)
       : m_type{ type } {};
+  // TODO: member functions should be implemented in cpp file when possible
   Expr(
     Type type, AR::Arena &arena)
       : m_type{ type }

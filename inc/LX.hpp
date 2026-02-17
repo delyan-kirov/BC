@@ -30,6 +30,7 @@ constexpr UT::String PUB{ "pub" };
 
 } // namespace Keyword
 
+// TODO: More expressive event reporting
 #define LX_ERROR_REPORT(LX_ERROR_E, LX_ERROR_MSG)                              \
   do                                                                           \
   {                                                                            \
@@ -70,6 +71,7 @@ constexpr UT::String PUB{ "pub" };
     }                                                                          \
   } while (false)
 
+// TODO: Use X-macros
 enum class E
 {
   MIN = (ssize_t)-1,
@@ -109,6 +111,7 @@ struct ErrorE : public ER::E
   }
 };
 
+// TODO: Use X-macros
 enum class Type
 {
   Min = 0,
@@ -132,6 +135,7 @@ enum class Type
 struct Token;
 using Tokens = UT::Vec<Token>;
 
+// TODO: don't use m_ for structs
 struct If
 // if expr => expr else expr
 // [TODO] if expr is pattern => is ... else =>
@@ -141,6 +145,7 @@ struct If
   Tokens m_else_branch;
 };
 
+// TODO: don't use m_ for structs
 struct Let
 {
   UT::String m_var_name;
@@ -148,18 +153,21 @@ struct Let
   Tokens     m_in_tokens;
 };
 
+// TODO: don't use m_ for structs
 struct Fn
 {
   UT::String m_var_name;
   Tokens     m_body;
 };
 
+// TODO: don't use m_ for structs
 struct SymDef
 {
   UT::String m_sym_name;
   Tokens     m_def;
 };
 
+// TODO: don't use m_ for structs
 struct Token
 {
   Type   m_type;
@@ -194,6 +202,7 @@ struct Token
   };
 };
 
+// TODO: member functions should be implemented in the cpp file if possible
 class Lexer
 {
   // TODO: use UT::String, not const char*
