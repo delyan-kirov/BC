@@ -3,6 +3,7 @@
 #include "LX.hpp"
 #include "UT.hpp"
 #include <cstdio>
+#include <dlfcn.h>
 #include <map>
 #include <string>
 
@@ -168,7 +169,26 @@ eval(
 
       return app_instance;
     }
-    return inst;
+    else
+    {
+      void *handle    = dlopen("./bin/bc.so", RTLD_LAZY | RTLD_DEEPBIND);
+      void *printchar = dlsym(handle, fn_name.c_str());
+
+      int     ret   = 0;
+      ssize_t param = expr.as.m_varapp.m_param.last()->as.m_int;
+
+      __asm__("mov %1, %%rdi\n" // 64-bit
+              "mov %2, %%rax\n"
+              "call *%%rax\n"
+              "mov %%eax, %0\n"
+              : "=r"(ret)
+              : "r"(param), "r"(printchar)
+              : "rdi", "rax", "memory");
+
+      dlclose(handle);
+
+      return inst;
+    }
   }
   case EX::Type::If:
   {
