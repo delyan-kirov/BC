@@ -32,7 +32,8 @@ enum class E
   X(FnApp)                                                                     \
   X(VarApp)                                                                    \
   X(Var)                                                                       \
-  X(If)
+  X(If)                                                                        \
+  X(Not)
 
 enum class Type
 {
@@ -380,6 +381,11 @@ to_string(
     s += "let " + to_string(expr.as.m_let.m_var_name) + " = "
          + to_string(*expr.as.m_let.m_value) + " in "
          + to_string(*expr.as.m_let.m_continuation);
+  }
+  break;
+  case EX::Type::Not:
+  {
+    s += "neg ( " + to_string (*expr.as.m_expr) + " )";
   }
   break;
   default:

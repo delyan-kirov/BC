@@ -11,5 +11,5 @@ main()
   (void)sut_file_basic;
   (void)sut_file;
 
-  TL::Mod mod(sut_file, arena);
+  TL::Mod mod(sut_file_basic, arena);
 }

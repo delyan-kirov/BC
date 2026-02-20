@@ -192,6 +192,16 @@ eval(
 
     return eval(continuation_instrance);
   }
+  case EX::Type::Not:
+  {
+    Instance inner_instance{ *expr.as.m_expr, env };
+    inner_instance       = eval(inner_instance);
+    ssize_t &inner_value = inner_instance.m_expr.as.m_int;
+    inner_value          = not inner_value;
+
+    return inner_instance;
+  }
+  break;
   case EX::Type::Unknown:
   default:
   {

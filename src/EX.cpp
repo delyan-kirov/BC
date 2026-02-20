@@ -11,11 +11,9 @@ Parser::parse_min_precedence_arithmetic_op(
   UT_FAIL_IF(not(EX::Type::Add == type || EX::Type::Sub == type));
   E result = E::OK;
 
-  // TODO: https://github.com/delyan-kirov/BC/issues/24
   if (this->match_token_type(
         idx + 1, LX::Type::Int, LX::Type::Group, LX::Type::Word))
   {
-    // TODO: https://github.com/delyan-kirov/BC/issues/24
     if (this->match_token_type(
           idx + 2, LX::Type::Mult, LX::Type::Modulus, LX::Type::Div))
     {
@@ -55,14 +53,12 @@ Parser::parse_max_precedence_arithmetic_op(
 {
   E result = E::OK;
 
-  // TODO: https://github.com/delyan-kirov/BC/issues/24
   if (this->match_token_type(
         idx + 1, LX::Type::Int, LX::Type::Group, LX::Type::Word))
   {
     this->parse_binop(type, idx + 1, idx + 2);
     idx += 2;
   }
-  // TODO: https://github.com/delyan-kirov/BC/issues/24
   else if (this->match_token_type(idx + 1, LX::Type::Minus))
   {
     parse_binop(type, idx + 1, idx + 2);
@@ -182,59 +178,61 @@ Parser::run()
     }
     break;
     case LX::Type::Word:
-    // TODO: candidate for refactor, label abuse unnecessary
-    {
-      EX::Expr var{ EX::Type::Var };
-      var.as.m_var = t.as.m_string;
-      i += 1;
-
-      if (this->m_exprs.is_empty()) goto CASE_WORD_NOT_APPLIED;
-
-      if (EX::Type::VarApp == this->m_exprs.last()->m_type)
+      // TODO: candidate for refactor, label abuse unnecessary
       {
-        // (\x = \y = ...) expr expr
-        this->m_exprs.last()->as.m_varapp.m_param.push(var);
-      }
-      else if (EX::Type::FnDef == this->m_exprs.last()->m_type)
-      {
-        // (\x = \y = ...) expr expr
-        EX::Expr fnapp{ EX::Type::FnApp, m_arena };
-        fnapp.as.m_fnapp.m_param.push(var);
-        fnapp.as.m_fnapp.m_body.m_body  = this->m_exprs.last();
-        fnapp.as.m_fnapp.m_body.m_param = this->m_exprs.last()->as.m_fn.m_param;
-        fnapp.as.m_fnapp.m_body.m_flags = this->m_exprs.last()->as.m_fn.m_flags;
-
-        (void)m_exprs.pop();
-      }
-      else if (EX::Type::FnApp == this->m_exprs.last()->m_type)
-      {
-        m_exprs.last()->as.m_fnapp.m_param.push(var);
-      }
-      goto CASE_WORD_END;
-
-    CASE_WORD_NOT_APPLIED:
-      if (this->match_token_type(
-            i, LX::Type::Group, LX::Type::Int, LX::Type::Fn, LX::Type::Word))
-      {
-        LX::Tokens next_token = { this->m_arena };
-        next_token.push(this->m_tokens[i]);
-
-        EX::Parser param_parser{ *this, next_token };
-        param_parser.run();
-        EX::Exprs param_expr = param_parser.m_exprs;
-
-        EX::Expr var_app{ EX::Type::VarApp, this->m_arena };
-        var_app.as.m_varapp.m_fn_name = t.as.m_string;
-        var_app.as.m_varapp.m_param   = param_expr;
-
-        this->m_exprs.push(var_app);
+        EX::Expr var{ EX::Type::Var };
+        var.as.m_var = t.as.m_string;
         i += 1;
+
+        if (this->m_exprs.is_empty()) goto CASE_WORD_NOT_APPLIED;
+
+        if (EX::Type::VarApp == this->m_exprs.last()->m_type)
+        {
+          // (\x = \y = ...) expr expr
+          this->m_exprs.last()->as.m_varapp.m_param.push(var);
+        }
+        else if (EX::Type::FnDef == this->m_exprs.last()->m_type)
+        {
+          // (\x = \y = ...) expr expr
+          EX::Expr fnapp{ EX::Type::FnApp, m_arena };
+          fnapp.as.m_fnapp.m_param.push(var);
+          fnapp.as.m_fnapp.m_body.m_body = this->m_exprs.last();
+          fnapp.as.m_fnapp.m_body.m_param
+            = this->m_exprs.last()->as.m_fn.m_param;
+          fnapp.as.m_fnapp.m_body.m_flags
+            = this->m_exprs.last()->as.m_fn.m_flags;
+
+          (void)m_exprs.pop();
+        }
+        else if (EX::Type::FnApp == this->m_exprs.last()->m_type)
+        {
+          m_exprs.last()->as.m_fnapp.m_param.push(var);
+        }
+        goto CASE_WORD_END;
+
+      CASE_WORD_NOT_APPLIED:
+        if (this->match_token_type(
+              i, LX::Type::Group, LX::Type::Int, LX::Type::Fn, LX::Type::Word))
+        {
+          LX::Tokens next_token = { this->m_arena };
+          next_token.push(this->m_tokens[i]);
+
+          EX::Parser param_parser{ *this, next_token };
+          param_parser.run();
+          EX::Exprs param_expr = param_parser.m_exprs;
+
+          EX::Expr var_app{ EX::Type::VarApp, this->m_arena };
+          var_app.as.m_varapp.m_fn_name = t.as.m_string;
+          var_app.as.m_varapp.m_param   = param_expr;
+
+          this->m_exprs.push(var_app);
+          i += 1;
+        }
+        else
+        {
+          this->m_exprs.push(var);
+        }
       }
-      else
-      {
-        this->m_exprs.push(var);
-      }
-    }
     CASE_WORD_END:
       break;
     case LX::Type::Plus:
@@ -266,7 +264,6 @@ Parser::run()
                                     LX::Type::Div,
                                     LX::Type::Modulus)) // The minus is unary
       {
-        // TODO: https://github.com/delyan-kirov/BC/issues/24
         UT_FAIL_IF(not this->match_token_type(
           i + 1, LX::Type::Group, LX::Type::Int, LX::Type::Word));
 
@@ -281,7 +278,6 @@ Parser::run()
       }
       else // Binary minus
       {
-        // TODO: https://github.com/delyan-kirov/BC/issues/24
         UT_FAIL_IF(not this->match_token_type(
           i + 1, LX::Type::Group, LX::Type::Int, LX::Type::Word));
 
@@ -383,6 +379,24 @@ Parser::run()
     case LX::Type::IsEq:
     {
       this->parse_max_precedence_arithmetic_op(EX::Type::IsEq, i);
+    }
+    break;
+    case LX::Type::Not:
+    {
+      i += 1;
+
+      LX::Tokens next_token = { this->m_arena };
+      next_token.push(this->m_tokens[i]);
+
+      EX::Parser not_parser{ *this, next_token };
+      not_parser.run();
+
+      EX::Expr not_expr{ EX::Type::Not };
+      not_expr.as.m_expr = not_parser.m_exprs.last();
+
+      m_exprs.push(not_expr);
+
+      i += 1;
     }
     break;
     case LX::Type::Min:

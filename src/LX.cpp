@@ -271,7 +271,6 @@ Lexer::run()
     }
     break;
 
-    case '!':
     case '"':
     case '$':
     case '&':
@@ -294,6 +293,12 @@ Lexer::run()
     case '~':
     {
       UT_FAIL_MSG("Symbol `%c` reserved but not used", c);
+    }
+    break;
+    case '!':
+    {
+      Token not_token{ LX::Type::Not };
+      m_tokens.push(not_token);
     }
     break;
 

@@ -13,3 +13,5 @@ pub add2 = \x = \y = x + y
 pub sum = add2 1 2
 pub sumx = add2 1 # FIXME: does not print correctly
 pub sumy = sumx -3
+
+pub notthat = ! (1 - 1)

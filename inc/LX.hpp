@@ -109,24 +109,30 @@ struct ErrorE : public ER::E
   }
 };
 
+#define LX_Type_ENUM_VARIANTS                                                  \
+  X(Min)                                                                       \
+  X(Int)                                                                       \
+  X(Plus)                                                                      \
+  X(Minus)                                                                     \
+  X(Div)                                                                       \
+  X(Modulus)                                                                   \
+  X(Mult)                                                                      \
+  X(IsEq)                                                                      \
+  X(Group)                                                                     \
+  X(Let)                                                                       \
+  X(Fn)                                                                        \
+  X(Word)                                                                      \
+  X(If)                                                                        \
+  X(IntDef)                                                                    \
+  X(ExtDef)                                                                    \
+  X(Not)                                                                       \
+  X(Max)
+
 enum class Type
 {
-  Min = 0,
-  Int,
-  Plus,
-  Minus,
-  Div,
-  Modulus,
-  Mult,
-  IsEq,
-  Group,
-  Let,
-  Fn,
-  Word,
-  If,
-  IntDef,
-  ExtDef,
-  Max,
+#define X(LX_ENUM_VALUE) LX_ENUM_VALUE,
+  LX_Type_ENUM_VARIANTS
+#undef X
 };
 
 struct Token;
@@ -348,22 +354,10 @@ to_string(
 {
   switch (t)
   {
-  case LX::Type::Min    : return "Min";
-  case LX::Type::Int    : return "Int";
-  case LX::Type::Plus   : return "Plus";
-  case LX::Type::Minus  : return "Minus";
-  case LX::Type::Mult   : return "Mult";
-  case LX::Type::Div    : return "Div";
-  case LX::Type::IsEq   : return "Eq";
-  case LX::Type::Modulus: return "Modulus";
-  case LX::Type::Group  : return "Group";
-  case LX::Type::Let    : return "LetIn";
-  case LX::Type::Word   : return "Word";
-  case LX::Type::Fn     : return "Fn";
-  case LX::Type::If     : return "If";
-  case LX::Type::IntDef : return "IntDef";
-  case LX::Type::ExtDef : return "ExtDef";
-  case LX::Type::Max    : return "Max";
+#define X(LX_ENUM_VALUE)                                                       \
+  case LX::Type::LX_ENUM_VALUE: return #LX_ENUM_VALUE;
+    LX_Type_ENUM_VARIANTS
+#undef X
   }
 
   UT_FAIL_MSG("Got unexpected type %d", t);
@@ -443,6 +437,10 @@ to_string(
   {
     return "int " + to_string(t.as.m_sym.m_sym_name) + " = "
            + to_string(t.as.m_sym.m_def);
+  }
+  case LX::Type::Not:
+  {
+    return "(not)";
   }
   }
   UT_FAIL_IF("UNREACHABLE");

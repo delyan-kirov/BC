@@ -13,7 +13,6 @@ using INPUTS_t = std::pair<const char *, int>;
 
 constexpr INPUTS_t INPUTS[] = {
   // TODO: Split test, add more data
-  // FIXME: https://github.com/delyan-kirov/BC/issues/24
   { "1 / 2", 0 },
   { "2 * 2", 4 },
   { "1 - 1 - 2", -2 },
@@ -78,9 +77,8 @@ constexpr INPUTS_t INPUTS[] = {
     178 },
   { "(3 + ((((((1)) + 1))))) - (-(1 + 2)) - ((((1))))", 7 },
   { "1+ 2", 3 },
+  { "(1 + 2) + -1 * (1 * (2 * -1) * 1 + ((1 * 1)))", 4 },
 #if false
-  { "(1 + 2) + -1 * (1 * (2 * -1) * 1 + ((1 * 1)))",
-    4 }, // TODO: treat -int as a separate token
 #endif
 
 };
