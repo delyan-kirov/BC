@@ -399,6 +399,16 @@ Parser::run()
       i += 1;
     }
     break;
+    case LX::Type::Str:
+    {
+      i += 1;
+
+      EX::Expr string_expr{ Type::Str };
+      string_expr.as.m_string = t.as.m_string;
+
+      m_exprs.push(string_expr);
+    }
+    break;
     case LX::Type::Min:
     case LX::Type::Max:
     default:

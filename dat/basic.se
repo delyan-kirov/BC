@@ -1,17 +1,4 @@
 # this is a comment
 
-pub t = putchar 72
-pub t = putchar 101
-pub t = putchar 108
-pub t = putchar 108
-pub t = putchar 111
-pub t = putchar 44
-pub t = putchar 32
-pub t = putchar 119
-pub t = putchar 111
-pub t = putchar 114
-pub t = putchar 108
-pub t = putchar 100
-pub t = putchar 33
-pub s = putchar 10
-
+pub world = "Hello world!"
+pub hello_world = puts world

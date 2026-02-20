@@ -33,7 +33,8 @@ enum class E
   X(VarApp)                                                                    \
   X(Var)                                                                       \
   X(If)                                                                        \
-  X(Not)
+  X(Not)                                                                       \
+  X(Str)
 
 enum class Type
 {
@@ -53,7 +54,6 @@ enum FnFlags : std::uint64_t
   MAX            = FN_MUST_INLINE,
 };
 
-// TODO: use Expr* not the vector Exprs
 struct FnDef
 {
   FnFlags    m_flags;
@@ -105,6 +105,7 @@ struct Expr
     FnApp          m_fnapp;
     VarApp         m_varapp;
     UT::String     m_var;
+    UT::String     m_string;
     UT::Pair<Expr> m_pair;
     Expr          *m_expr;
     ssize_t        m_int = 0;
@@ -385,13 +386,18 @@ to_string(
   break;
   case EX::Type::Not:
   {
-    s += "neg ( " + to_string (*expr.as.m_expr) + " )";
+    s += "neg ( " + to_string(*expr.as.m_expr) + " )";
+  }
+  break;
+  case EX::Type::Str:
+  {
+    s += "\"" + to_string(expr.as.m_string) + "\"";
   }
   break;
   default:
   {
     // TODO: Don't use default case here, fail under switch
-    UT_FAIL_IF("UNREACHABLE");
+    UT_FAIL_MSG("UNREACHABLE %d", expr.m_type);
   }
   break;
   }

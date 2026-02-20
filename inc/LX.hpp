@@ -126,6 +126,7 @@ struct ErrorE : public ER::E
   X(IntDef)                                                                    \
   X(ExtDef)                                                                    \
   X(Not)                                                                       \
+  X(Str)                                                                       \
   X(Max)
 
 enum class Type
@@ -441,6 +442,10 @@ to_string(
   case LX::Type::Not:
   {
     return "(not)";
+  }
+  case LX::Type::Str:
+  {
+    return "\"" + to_string(t.as.m_string) + "\"";
   }
   }
   UT_FAIL_IF("UNREACHABLE");

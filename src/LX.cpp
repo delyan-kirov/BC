@@ -1,5 +1,6 @@
 #include "LX.hpp"
 #include "UT.hpp"
+#include <cstdio>
 
 namespace LX
 {
@@ -271,7 +272,6 @@ Lexer::run()
     }
     break;
 
-    case '"':
     case '$':
     case '&':
     case '\'':
@@ -301,7 +301,21 @@ Lexer::run()
       m_tokens.push(not_token);
     }
     break;
+    case '"':
+    {
+      UT::SB sb{};
+      for (char c = this->next_char(); c && c != '"'; c = this->next_char())
+      {
+        sb.add(c);
+      }
 
+      UT::String string = sb.to_String(m_arena);
+      Token      string_token{ Type::Str };
+      string_token.as.m_string = string;
+
+      m_tokens.push(string_token);
+    }
+    break;
     case '-':
     {
       char next_c = this->peek_char();

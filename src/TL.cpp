@@ -45,7 +45,7 @@ Mod::Mod(
 
     this->m_defs.push(def);
 
-    if (false)
+    if (!true)
     {
       std::printf("%s %s = %s\n",
                   UT_TCS(def.m_type),
@@ -174,8 +174,14 @@ eval(
       void *handle    = dlopen("./bin/bc.so", RTLD_LAZY | RTLD_DEEPBIND);
       void *printchar = dlsym(handle, fn_name.c_str());
 
-      int     ret   = 0;
-      ssize_t param = expr.as.m_varapp.m_param.last()->as.m_int;
+      int ret = 0;
+
+      EX::Expr *app_param = expr.as.m_varapp.m_param.last();
+      ssize_t   param
+        = EX::Type::Var == app_param->m_type
+            ? (ssize_t)env[std::string(app_param->as.m_varapp.m_fn_name.m_mem)]
+                .as.m_string.m_mem
+            : app_param->as.m_int;
 
       __asm__("mov %1, %%rdi\n" // 64-bit
               "mov %2, %%rax\n"
@@ -220,6 +226,10 @@ eval(
     inner_value          = not inner_value;
 
     return inner_instance;
+  }
+  case EX::Type::Str:
+  {
+    return inst;
   }
   break;
   case EX::Type::Unknown:
