@@ -5,8 +5,10 @@ INC = inc/
 BIN = bin/
 TST = tst/
 
-CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g -O1
+CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g -O1 
 CC = clang++ $(CFLAGS) -I$(INC)
+LIBS = -L./bin/lib64 -lffi -Wl,-rpath,'$$ORIGIN/lib64' -L./bin/
+# LIBS = -lffi -lraylib -Wl,-rpath,'$$ORIGIN/lib'
 CFSO = -fPIC -shared
 
 #------------------------------MAIN-----------------------------
@@ -33,15 +35,15 @@ BC = $(BIN)bc.so
 # 	$(CC) $(SRC)main.cpp -o $@ $^
 
 $(BC): $(BCinc) $(BCsrc)
-	$(CC) $(CFSO) $(BCsrc) -o $@
+	$(CC) $(CFSO) $(BCsrc) $(LIBS) -o $@
 
 #-----------------------------TEST------------------------------
 
 $(BIN)tst_mult: $(TST)tst_mult.cpp $(BC)
-	$(CC) $(BC) $(TST)tst_mult.cpp -o $@
+	$(CC) $(BC) $(TST)tst_mult.cpp $(LIBS) -o $@
 
 $(BIN)tst_addition_n_subtraction: $(TST)tst_addition_n_subtraction.cpp $(BC)
-	$(CC) $(BC) $(TST)tst_addition_n_subtraction.cpp -o $@
+	$(CC) $(BC) $(TST)tst_addition_n_subtraction.cpp $(LIBS) -o $@
 
 #-----------------------------CMND------------------------------
 COMMANDS = clean bear test init list format valgrind gf2 trace executables
@@ -75,6 +77,8 @@ all:
 init:
 	mkdir -p $(BIN)
 	make clean
+	git submodule update --init
+	$(MAKE) -C ./lib CC= CXX= CFLAGS= CXXFLAGS= CPPFLAGS= LDFLAGS=
 	make test
 	make valgrind
 

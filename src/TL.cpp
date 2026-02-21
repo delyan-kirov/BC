@@ -6,6 +6,37 @@
 #include <dlfcn.h>
 #include <map>
 #include <string>
+#include "ffi.h"
+
+constexpr const char *RAYLIB_PATH = "./bin/raylib.so";
+extern "C" {
+ssize_t
+window_should_close(
+  ssize_t t)
+{
+  void *handle      = dlopen(RAYLIB_PATH, RTLD_LAZY | RTLD_DEEPBIND);
+  using Fn          = bool (*)();
+  Fn func           = nullptr;
+  *(void **)(&func) = dlsym(handle, "WindowShouldClose");
+  t                 = func();
+  dlclose(handle);
+  return t;
+}
+
+ssize_t
+init_window(
+  ssize_t a, ssize_t b, char *name)
+{
+  (void)a, (void)b, (void)name;
+  void *handle      = dlopen(RAYLIB_PATH, RTLD_LAZY | RTLD_DEEPBIND);
+  using Fn          = void (*)(int, int, char *);
+  Fn func           = nullptr;
+  *(void **)(&func) = dlsym(handle, "InitWindow");
+  func(500, 500, (char *)"world");
+  dlclose(handle);
+  return 0;
+}
+}
 
 namespace TL
 {
@@ -172,7 +203,7 @@ eval(
     else
     {
       void *handle    = dlopen("./bin/bc.so", RTLD_LAZY | RTLD_DEEPBIND);
-      void *printchar = dlsym(handle, fn_name.c_str());
+      void *fn = dlsym(handle, fn_name.c_str());
 
       int ret = 0;
 
@@ -183,15 +214,21 @@ eval(
                 .as.m_string.m_mem
             : app_param->as.m_int;
 
-      __asm__("mov %1, %%rdi\n" // 64-bit
-              "mov %2, %%rax\n"
-              "call *%%rax\n"
-              "mov %%eax, %0\n"
-              : "=r"(ret)
-              : "r"(param), "r"(printchar)
-              : "rdi", "rax", "memory");
+      /* libffi setup */
+      ffi_cif   cif;
+      ffi_type *arg_types[1] = { &ffi_type_sint64 }; // ssize_t argument
+      ffi_type *ret_type     = &ffi_type_sint32;     // int return
+
+      if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, 1, ret_type, arg_types) != FFI_OK)
+      {
+        // handle error
+      }
+
+      void *args[1] = { &param };
+      ffi_call(&cif, FFI_FN(fn), &ret, args);
 
       dlclose(handle);
+
       Instance app_instance{ fndef, env };
       app_instance.m_expr.m_type   = EX::Type::Int;
       app_instance.m_expr.as.m_int = ret;
