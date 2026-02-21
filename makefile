@@ -84,9 +84,11 @@ all:
 init:
 	mkdir -p $(BIN)
 	make clean
+ifndef GIT_ACTION_CTX
 	git submodule update --init
 ifndef GIT_ACTION_CTX
 	$(MAKE) -C ./lib CC= CXX= CFLAGS= CXXFLAGS= CPPFLAGS= LDFLAGS=
+endif
 endif
 	make test
 	make valgrind
@@ -95,6 +97,7 @@ clean:
 	rm -f tmp.*
 	rm -f vgcore*
 	rm -rf $(BIN)*
+	rm -rf ./lib/libffi/x86_64-pc-linux-gnu/
 
 bear:
 	mkdir -p $(BIN)
