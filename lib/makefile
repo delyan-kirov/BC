@@ -11,15 +11,15 @@ RAYLIB_BLD = $(PROJECT_DIR)lib/raylib/build/
 RAYLIB_HEADER = $(PROJECT_DIR)inc/raylib.h
 RAYLIB_OBJ = $(PROJECT_DIR)bin/raylib.so
 
-.PHONY: all raylib_examples configure_libffi build_libffi configure_raylib
+ifdef RAYLIB_ENABLED
+raytargets = $(RAYLIB_BLD) $(RAYLIB_HEADER) $(RAYLIB_OBJ) raylib_examples
+else
+raytargets =
+endif
 
-all: $(RAYLIB_BLD) \
-	$(RAYLIB_HEADER) \
-	$(RAYLIB_OBJ) \
-	raylib_examples \
-	$(LIBFFI_OBJ) \
-	$(FFI_HEADER) \
-	$(FFI_TARGET_HEADER)
+ffitargets = $(LIBFFI_OBJ) $(FFI_HEADER) $(FFI_TARGET_HEADER)
+
+all: $(ffitargets) $(raytargets)
 
 configure_libffi:
 	cd $(LIBFFI_DIR) && ./configure --prefix=$(PREFIX)

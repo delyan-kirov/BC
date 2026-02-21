@@ -2,11 +2,11 @@
 #include "EX.hpp"
 #include "LX.hpp"
 #include "UT.hpp"
+#include "ffi.h"
 #include <cstdio>
 #include <dlfcn.h>
 #include <map>
 #include <string>
-#include "ffi.h"
 
 constexpr const char *RAYLIB_PATH = "./bin/raylib.so";
 extern "C" {
@@ -202,8 +202,8 @@ eval(
     }
     else
     {
-      void *handle    = dlopen("./bin/bc.so", RTLD_LAZY | RTLD_DEEPBIND);
-      void *fn = dlsym(handle, fn_name.c_str());
+      void *handle = dlopen("./bin/bc.so", RTLD_LAZY | RTLD_DEEPBIND);
+      void *fn     = dlsym(handle, fn_name.c_str());
 
       int ret = 0;
 
@@ -216,12 +216,12 @@ eval(
 
       /* libffi setup */
       ffi_cif   cif;
-      ffi_type *arg_types[1] = { &ffi_type_sint64 }; // ssize_t argument
-      ffi_type *ret_type     = &ffi_type_sint32;     // int return
+      ffi_type *arg_types[1] = { &ffi_type_sint64 };
+      ffi_type *ret_type     = &ffi_type_sint;
 
       if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, 1, ret_type, arg_types) != FFI_OK)
       {
-        // handle error
+        // FIXME: handle error
       }
 
       void *args[1] = { &param };

@@ -7,9 +7,16 @@ TST = tst/
 
 CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g -O1 
 CC = clang++ $(CFLAGS) -I$(INC)
+CFSO = -fPIC -shared
+
+ifdef RAYLIB_ENABLED
 LIBS = -L./bin/lib64 -lffi -Wl,-rpath,'$$ORIGIN/lib64' -L./bin/
 # LIBS = -lffi -lraylib -Wl,-rpath,'$$ORIGIN/lib'
-CFSO = -fPIC -shared
+else ifdef GIT_ACTION_CTX
+LIBS = -lffi -Wl,-rpath,'$$ORIGIN/lib64'
+else
+LIBS = -L./bin/lib64 -lffi -Wl,-rpath,'$$ORIGIN/lib64'
+endif
 
 #------------------------------MAIN-----------------------------
 # 
@@ -78,7 +85,9 @@ init:
 	mkdir -p $(BIN)
 	make clean
 	git submodule update --init
+ifndef GIT_ACTION_CTX
 	$(MAKE) -C ./lib CC= CXX= CFLAGS= CXXFLAGS= CPPFLAGS= LDFLAGS=
+endif
 	make test
 	make valgrind
 

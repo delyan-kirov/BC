@@ -28,3 +28,8 @@
 #   dlclose(handle);
 # }
 
+pub w = \t =
+	if t ?= 0 => w 0 + (sleep 3)
+	else (init_window 100 100 world) + (sleep 3) + (w 0)
+
+pub ww = w 1
