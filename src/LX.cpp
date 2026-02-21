@@ -67,6 +67,7 @@ Lexer::match_keyword(
 
 // TODO: should be comment aware
 // FIXME: 'word=' does not work but it should
+// FIXME: bug when ignoring comments, see find_next_global_symbol
 UT::String
 LX::Lexer::get_word(
   size_t idx)
@@ -77,13 +78,13 @@ LX::Lexer::get_word(
   this->strip_white_space(idx);
   idx = this->m_cursor;
 
-  for (char c = this->m_input[idx++]; c && (!delimits_word(c));
-       c      = this->m_input[idx++])
+  for (char c = m_input[idx++]; c && (!delimits_word(c)); c = m_input[idx++])
   {
     sb.add(c);
   }
-  UT::String string = sb.to_String(this->m_arena);
-  this->m_cursor    = idx;
+
+  UT::String string = sb.to_String(m_arena);
+  m_cursor          = idx;
 
   return string;
 }
@@ -221,7 +222,7 @@ Lexer::push_operator(
   case '%': t_type = LX::Type::Modulus; break;
   default : /* UNREACHABLE */ UT_FAIL_IF("UNERACHABLE");
   }
-  this->m_tokens.push(LX::Token{ t_type });
+  m_tokens.push(LX::Token{ t_type });
 }
 
 // TODO: candidate for refactor

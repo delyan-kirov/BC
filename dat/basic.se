@@ -1,4 +1,17 @@
 # this is a comment
 
 pub world = "Hello world!"
-pub hello_world = puts world
+
+pub s =
+	puts world +
+	puts world +
+	puts world +
+	puts world +
+	puts world +
+	puts world
+
+pub foo =
+	let new_world = world + 1 in
+	puts new_world
+
+pub s1 = s

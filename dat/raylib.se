@@ -30,7 +30,6 @@
 # }
 
 # 1. [TODO] loop indefinitely
-# 2. [TODO] tuples
 # 3. [DONE] strings
 # 4. [DONE] not
-# 5. [TODO] and-then operator ;
+# 5. [TODO] call any C function using libffi
