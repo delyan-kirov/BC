@@ -5,3 +5,6 @@ BL*
 *.txt
 vgcore*
 tmp.*
+
+inc/ffi.h
+inc/ffitarget.h

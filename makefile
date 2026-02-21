@@ -81,7 +81,7 @@ init:
 clean:
 	rm -f tmp.*
 	rm -f vgcore*
-	rm -f $(BIN)*
+	rm -rf $(BIN)*
 
 bear:
 	mkdir -p $(BIN)

@@ -1,0 +1,3 @@
+[submodule "lib/libffi"]
+	path = lib/libffi
+	url = git@github.com:libffi/libffi.git

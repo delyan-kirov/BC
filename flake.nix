@@ -17,6 +17,11 @@
           pkgs.bear
           pkgs.git
           pkgs.valgrind
+          pkgs.autoconf
+          pkgs.automake
+          pkgs.libtool
+          pkgs.texinfo
+          pkgs.libssh
         ];
 
         shellHook = ''
