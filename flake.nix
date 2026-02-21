@@ -22,6 +22,16 @@
           pkgs.libtool
           pkgs.texinfo
           pkgs.libssh
+          pkgs.cmakeWithGui
+          pkgs.raylib
+
+          # X11 support for raylib
+          pkgs.xorg.libX11
+          pkgs.xorg.libX11.dev
+          pkgs.xorg.libXcursor
+          pkgs.xorg.libXi
+          pkgs.xorg.libXinerama
+          pkgs.xorg.libXrandr
         ];
 
         shellHook = ''

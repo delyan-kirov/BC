@@ -192,8 +192,11 @@ eval(
               : "rdi", "rax", "memory");
 
       dlclose(handle);
+      Instance app_instance{ fndef, env };
+      app_instance.m_expr.m_type   = EX::Type::Int;
+      app_instance.m_expr.as.m_int = ret;
 
-      return inst;
+      return app_instance;
     }
   }
   case EX::Type::If:

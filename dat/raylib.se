@@ -1,35 +1,30 @@
 # #include "raylib.h"
+# #include <dlfcn.h>
 
-# int main(void)
+# int
+# main()
 # {
-#     const int screenWidth = 800;
-#     const int screenHeight = 600;
+#   void *handle = dlopen("./bin/raylib.so", RTLD_LAZY | RTLD_DEEPBIND);
+#   bool (*window_should_close)(void) = dlsym(handle, "WindowShouldClose");
+#   void (*begin_drawing)(void)       = dlsym(handle, "BeginDrawing");
+#   void (*end_drawing)(void)         = dlsym(handle, "EndDrawing");
+#   void (*clear_background)(int)     = dlsym(handle, "ClearBackground");
+#   void (*init_window)(int, int, const char *) = dlsym(handle, "InitWindow");
+#   void (*close_window)(void)                  = dlsym(handle, "CloseWindow");
+#   void (*set_fps)(int)                        = dlsym(handle, "SetTargetFPS");
 
-#     InitWindow(screenWidth, screenHeight, "Triangle Demo");
+#   init_window(800, 600, "Hi");
+#   set_fps(60);
 
-#     SetTargetFPS(60);
-
-#     Vector2 v1 = { 400, 100 };
-#     Vector2 v2 = { 200, 500 };
-#     Vector2 v3 = { 600, 500 };
-
-#     while (!WindowShouldClose())
+#   while (!window_should_close())
+#   {
+#     begin_drawing();
 #     {
-#         BeginDrawing();
-
-#         ClearBackground(RAYWHITE);
-
-#         DrawTriangle(v1, v2, v3, RED);
-
-#         EndDrawing();
+#       clear_background((int)0xFFFF);
 #     }
+#     end_drawing();
+#   }
 
-#     CloseWindow();
-
-#     return 0;
+#   dlclose(handle);
 # }
 
-# 1. [TODO] loop indefinitely
-# 3. [DONE] strings
-# 4. [DONE] not
-# 5. [TODO] call any C function using libffi
