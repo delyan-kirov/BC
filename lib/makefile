@@ -6,6 +6,8 @@ FFI_TARGET_HEADER = $(PROJECT_DIR)inc/ffitarget.h
 
 LIBFFI_OBJ = $(PREFIX)lib64/libffi.so
 LIBFFI_DIR = /home/dk/Projects/BC/lib/libffi/
+LIBFFI_BLD = $(LIBFFI_DIR)x86_64-pc-linux-gnu/include/ffi.h
+LIBFFI_CONFIG = $(LIBFFI_DIR).configured
 
 RAYLIB_BLD = $(PROJECT_DIR)lib/raylib/build/
 RAYLIB_HEADER = $(PROJECT_DIR)inc/raylib.h
@@ -21,10 +23,16 @@ ffitargets = $(LIBFFI_OBJ) $(FFI_HEADER) $(FFI_TARGET_HEADER)
 
 all: $(ffitargets) $(raytargets)
 
-configure_libffi:
-	cd $(LIBFFI_DIR) && ./configure --prefix=$(PREFIX)
+.PHONY: clean
+clean:
+	rm -rf $(LIBFFI_DIR)x86_64-pc-linux-gnu/
+	rm $(LIBFFI_DIR).configured
 
-build_libffi: configure_libffi
+$(LIBFFI_CONFIG):
+	cd $(LIBFFI_DIR) && ./configure --prefix=$(PREFIX)
+	touch $@
+
+$(LIBFFI_BLD): $(LIBFFI_CONFIG)
 	$(MAKE) -C $(LIBFFI_DIR)
 
 configure_raylib:
@@ -48,7 +56,7 @@ raylib_examples: $(RAYLIB_BLD)
 	&& cmake -DCUSTOMIZE_BUILD=ON -DBUILD_EXAMPLES=ON .. \
 	&& $(MAKE)
 
-$(LIBFFI_OBJ): build_libffi
+$(LIBFFI_OBJ): $(LIBFFI_BLD)
 	$(MAKE) -C $(LIBFFI_DIR) install
 
 $(FFI_HEADER):
