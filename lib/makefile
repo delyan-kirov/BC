@@ -26,7 +26,7 @@ all: $(ffitargets) $(raytargets)
 .PHONY: clean
 clean:
 	rm -rf $(LIBFFI_DIR)x86_64-pc-linux-gnu/
-	rm $(LIBFFI_DIR).configured
+	rm -f $(LIBFFI_DIR).configured
 
 $(LIBFFI_CONFIG):
 	cd $(LIBFFI_DIR) && ./configure --prefix=$(PREFIX)
