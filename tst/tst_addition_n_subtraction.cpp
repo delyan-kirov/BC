@@ -6,9 +6,9 @@ constexpr UT::String sut_file        = "./dat/addition.se";
 constexpr UT::String sut_file_basic  = "./dat/basic.se";
 constexpr UT::String sut_file_raylib = "./dat/raylib.se";
 
-constexpr bool RUN        = true;
+constexpr bool RUN        = false;
 constexpr bool RUN_BASIC  = false;
-constexpr bool RUN_RAYLIB = false;
+constexpr bool RUN_RAYLIB = true;
 
 int
 main()

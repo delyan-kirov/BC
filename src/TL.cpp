@@ -7,39 +7,75 @@
 #include <dlfcn.h>
 #include <map>
 #include <string>
-
-constexpr const char *RAYLIB_PATH = "./bin/raylib.so";
-extern "C" {
-ssize_t
-window_should_close(
-  ssize_t t)
-{
-  void *handle      = dlopen(RAYLIB_PATH, RTLD_LAZY | RTLD_DEEPBIND);
-  using Fn          = bool (*)();
-  Fn func           = nullptr;
-  *(void **)(&func) = dlsym(handle, "WindowShouldClose");
-  t                 = func();
-  dlclose(handle);
-  return t;
-}
-
-ssize_t
-init_window(
-  ssize_t a, ssize_t b, char *name)
-{
-  (void)a, (void)b, (void)name;
-  void *handle      = dlopen(RAYLIB_PATH, RTLD_LAZY | RTLD_DEEPBIND);
-  using Fn          = void (*)(int, int, char *);
-  Fn func           = nullptr;
-  *(void **)(&func) = dlsym(handle, "InitWindow");
-  func(500, 500, (char *)"world");
-  dlclose(handle);
-  return 0;
-}
-}
+#include <utility>
+#include <vector>
 
 namespace TL
 {
+
+constexpr const char *RAYLIB_PATH = "./bin/raylib.so";
+class DFN
+{
+  const char *m_fn_name;
+  void       *m_fn;
+  ffi_type  **m_in_types;
+  ffi_type   *m_out_type;
+  void       *m_handle;
+
+public:
+  DFN(
+    const char *fn_name, ffi_type **in_types, ffi_type *out_type)
+      : m_fn_name{ fn_name },
+        m_in_types{ in_types },
+        m_out_type{ out_type },
+        m_handle{ nullptr }
+  {
+  }
+
+  void
+  init(
+    void)
+  {
+    m_handle = dlopen(RAYLIB_PATH, RTLD_LAZY | RTLD_DEEPBIND);
+    m_fn     = dlsym(m_handle, m_fn_name);
+    if (!m_fn) throw 69;
+  }
+
+  void
+  deinit(
+    void)
+  {
+    if (m_handle) dlclose(m_handle);
+  }
+
+  bool
+  call(
+    std::vector<void *> &input, void *const output)
+  {
+    ffi_cif cif;
+
+    if (ffi_prep_cif(
+          &cif, FFI_DEFAULT_ABI, input.size(), m_out_type, m_in_types)
+        != FFI_OK)
+      return false;
+
+    ffi_call(&cif, FFI_FN(m_fn), output, input.data());
+
+    return true;
+  }
+};
+
+// InitWindow: void InitWindow(int, int, char*)
+const ffi_type *init_window_in_types[3]
+  = { &ffi_type_sint, &ffi_type_sint, &ffi_type_pointer };
+
+DFN init_window_fn{ "InitWindow",
+                    (ffi_type **)init_window_in_types,
+                    &ffi_type_void };
+
+const std::map<std::string, DFN *> raylib_functions
+  = { { "init_window", &init_window_fn } };
+
 Mod::Mod(
   UT::String file_name, AR::Arena &arena)
 {
@@ -144,6 +180,11 @@ eval(
       Instance new_instance{ var_expr->second, env };
       return new_instance;
     }
+    else
+    {
+      // FIXME: We should not fail like that
+      UT_TODO("Variable not defined.");
+    }
   }
   break;
   case EX::Type::Minus:
@@ -184,6 +225,8 @@ eval(
     auto        fn_def_it = env.find(fn_name);
     EX::Expr    fndef{};
 
+    auto is_raylib = raylib_functions.find(fn_name.c_str());
+
     if (env.end() != fn_def_it)
     {
       fndef            = fn_def_it->second;
@@ -200,8 +243,60 @@ eval(
 
       return app_instance;
     }
+    // TODO: There should be a better way to both load and define functions
+    else if (raylib_functions.end() != is_raylib)
+    {
+      DFN raylib_fn = *raylib_functions.find(fn_name.c_str())->second;
+      raylib_fn.init();
+
+      AR::Arena           input_buffer{};
+      AR::Arena           output_buffer{};
+      std::vector<void *> input;
+
+      // FIXME: assume output fits in 64 bytes
+      void *output = output_buffer.alloc(64);
+
+      EX::Exprs params = expr.as.m_varapp.m_param;
+      for (auto &param_expr : params)
+      {
+        Instance param_inst{ param_expr, env };
+        std::printf("NOTE: %s\n", UT_TCS(param_inst.m_expr.m_type));
+        param_inst = eval(param_inst);
+
+        if (EX::Type::Int == param_inst.m_expr.m_type)
+        {
+          ssize_t param = param_inst.m_expr.as.m_int;
+
+          void *param_buffer      = input_buffer.alloc<ssize_t>(1);
+          *(size_t *)param_buffer = param;
+          input.push_back(param_buffer);
+        }
+        else if (EX::Type::Str == param_inst.m_expr.m_type)
+        {
+          char *param = param_inst.m_expr.as.m_string.m_mem;
+
+          void *param_buffer     = input_buffer.alloc<ssize_t>(1);
+          *(char **)param_buffer = param;
+          input.push_back(param_buffer);
+        }
+        else
+        {
+          UT_TODO();
+        }
+      }
+
+      raylib_fn.call(input, output);
+      raylib_fn.deinit();
+
+      Instance app_instance{ fndef, env };
+      app_instance.m_expr.m_type   = EX::Type::Int;
+      app_instance.m_expr.as.m_int = 1;
+
+      return app_instance;
+    }
     else
     {
+      // TODO: Use DFN class
       void *handle = dlopen("./bin/bc.so", RTLD_LAZY | RTLD_DEEPBIND);
       void *fn     = dlsym(handle, fn_name.c_str());
 
