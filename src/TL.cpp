@@ -3,26 +3,28 @@
 #include "LX.hpp"
 #include "UT.hpp"
 #include "ffi.h"
+#include <cstddef>
 #include <cstdio>
 #include <dlfcn.h>
 #include <map>
 #include <string>
+#include <unistd.h>
 #include <utility>
 #include <vector>
 
 namespace TL
 {
 
-constexpr const char *RAYLIB_PATH = "./bin/raylib.so";
+constexpr const char *RAYLIB_PATH = "./bin/libraylib.so";
 class DFN
 {
+public:
   const char *m_fn_name;
   void       *m_fn;
   ffi_type  **m_in_types;
   ffi_type   *m_out_type;
   void       *m_handle;
 
-public:
   DFN(
     const char *fn_name, ffi_type **in_types, ffi_type *out_type)
       : m_fn_name{ fn_name },
@@ -36,33 +38,41 @@ public:
   init(
     void)
   {
-    m_handle = dlopen(RAYLIB_PATH, RTLD_LAZY | RTLD_DEEPBIND);
+    m_handle = dlopen(RAYLIB_PATH, RTLD_NOW | RTLD_LOCAL);
     m_fn     = dlsym(m_handle, m_fn_name);
-    if (!m_fn) throw 69;
+    if (!m_fn)
+    {
+      UT_TODO(TODO_MSG);
+    }
   }
 
   void
   deinit(
     void)
   {
-    if (m_handle) dlclose(m_handle);
+    // if (m_handle) dlclose(m_handle);
   }
 
   bool
   call(
-    std::vector<void *> &input, void *const output)
+    std::vector<void *> &input, void *output)
   {
     ffi_cif cif;
 
-    if (ffi_prep_cif(
-          &cif, FFI_DEFAULT_ABI, input.size(), m_out_type, m_in_types)
+    void **args = input.empty() ? nullptr : input.data();
+
+    if (ffi_prep_cif(&cif,
+                     FFI_DEFAULT_ABI,
+                     input.size(),
+                     m_out_type,
+                     input.empty() ? nullptr : m_in_types)
         != FFI_OK)
       return false;
 
-    ffi_call(&cif, FFI_FN(m_fn), output, input.data());
+    ffi_call(&cif, FFI_FN(m_fn), output, args);
 
     return true;
-  }
+  };
 };
 
 // InitWindow: void InitWindow(int, int, char*)
@@ -73,8 +83,25 @@ DFN init_window_fn{ "InitWindow",
                     (ffi_type **)init_window_in_types,
                     &ffi_type_void };
 
-const std::map<std::string, DFN *> raylib_functions
-  = { { "init_window", &init_window_fn } };
+DFN window_should_close_fn{ "WindowShouldClose", nullptr, &ffi_type_uchar };
+
+DFN begin_drawing_fn{ "BeginDrawing", nullptr, &ffi_type_void };
+
+DFN end_drawing_fn{ "EndDrawing", nullptr, &ffi_type_void };
+
+const ffi_type *clear_background_in_types[1] = { &ffi_type_uint32 };
+
+DFN clear_background_fn{ "ClearBackground",
+                         (ffi_type **)clear_background_in_types,
+                         &ffi_type_void };
+
+const std::map<std::string, DFN *> raylib_functions = {
+  { "init_window", &init_window_fn },
+  { "window_should_close", &window_should_close_fn },
+  { "begin_drawing", &begin_drawing_fn },
+  { "end_drawing", &end_drawing_fn },
+  { "clear_background", &clear_background_fn },
+};
 
 Mod::Mod(
   UT::String file_name, AR::Arena &arena)
@@ -135,9 +162,11 @@ eval_bi_op(
   EX::Expr expr = inst.m_expr;
 
   Instance left_instance  = Instance{ expr.as.m_pair.first(), env };
-  ssize_t  left           = eval(left_instance).m_expr.as.m_int;
   Instance right_instance = Instance{ expr.as.m_pair.second(), env };
-  ssize_t  right          = eval(right_instance).m_expr.as.m_int;
+
+  ssize_t left  = eval(left_instance).m_expr.as.m_int;
+  ssize_t right = eval(right_instance).m_expr.as.m_int;
+
   Instance result_instance{ EX::Type::Int, env };
 
   switch (expr.m_type)
@@ -150,7 +179,6 @@ eval_bi_op(
   case EX::Type::IsEq   : result_instance.m_expr.as.m_int = left == right; break;
   default               : UT_FAIL_MSG("UNREACHABLE expr.m_type = %s", expr.m_type);
   }
-
   return result_instance;
 }
 
@@ -178,6 +206,27 @@ eval(
     if (var_expr != env.end())
     {
       Instance new_instance{ var_expr->second, env };
+      return new_instance;
+    }
+    else if (raylib_functions.end()
+             != raylib_functions.find(std::to_string(var_name)))
+    {
+      DFN raylib_fn = *raylib_functions.find(var_name.m_mem)->second;
+      raylib_fn.init();
+      AR::Arena output_arena{};
+
+      // FIXME: assume output fits in 64 bytes
+      void               *output = output_arena.alloc(64);
+      std::vector<void *> _input;
+
+      raylib_fn.call(_input, output);
+      raylib_fn.deinit();
+
+      // FIXME: Don't assume the function only returns ints
+      EX::Expr int_expr{ EX::Type::Int };
+      expr.as.m_int = nullptr == raylib_fn.m_out_type ? 0 : *(ssize_t *)output;
+
+      Instance new_instance{ int_expr, env };
       return new_instance;
     }
     else
@@ -250,17 +299,15 @@ eval(
       raylib_fn.init();
 
       AR::Arena           input_buffer{};
-      AR::Arena           output_buffer{};
       std::vector<void *> input;
 
       // FIXME: assume output fits in 64 bytes
-      void *output = output_buffer.alloc(64);
+      void *output = input_buffer.alloc(64);
 
       EX::Exprs params = expr.as.m_varapp.m_param;
       for (auto &param_expr : params)
       {
         Instance param_inst{ param_expr, env };
-        std::printf("NOTE: %s\n", UT_TCS(param_inst.m_expr.m_type));
         param_inst = eval(param_inst);
 
         if (EX::Type::Int == param_inst.m_expr.m_type)

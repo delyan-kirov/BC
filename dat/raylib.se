@@ -29,9 +29,14 @@
 # }
 
 pub world = "World"
-
 pub w = \t =
-	if t ?= 0 => w 0 + (sleep 13)
-	else (init_window 900 900 world) + (sleep 13) + (w 0)
+	if t ?= 0 =>
+		(init_window 400 400 world) +
+		(w 1)
+	else
+		begin_drawing +
+		(clear_background world) +
+		end_drawing +
+		(if !window_should_close => (sleep 1) + (w 1) else (puts "Bye!"))
 
-pub ww = w 1
+pub ww = w 0
