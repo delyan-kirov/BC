@@ -34,6 +34,7 @@ enum class E
   X(Var)                                                                       \
   X(If)                                                                        \
   X(Not)                                                                       \
+  X(While)                                                                     \
   X(Str)
 
 enum class Type
@@ -96,6 +97,12 @@ struct Let
   Expr      *m_continuation;
 };
 
+struct While
+{
+  Expr *m_condition;
+  Expr *m_body;
+};
+
 struct Expr
 {
   Type m_type;
@@ -111,6 +118,7 @@ struct Expr
     ssize_t        m_int = 0;
     If             m_if;
     Let            m_let;
+    While          m_while;
   } as;
 
   Expr() = default;

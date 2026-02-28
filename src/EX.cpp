@@ -289,13 +289,13 @@ Parser::run()
     {
       // FIXME: https://github.com/delyan-kirov/BC/issues/25
       // let var = body_expr in app_expr
-      UT::String var_name = t.as.m_let_in_tokens.m_var_name;
+      UT::String var_name = t.as.m_let_tokens.m_var_name;
 
-      EX::Parser value_parser{ *this, t.as.m_let_in_tokens.m_let_tokens };
+      EX::Parser value_parser{ *this, t.as.m_let_tokens.m_let_tokens };
       value_parser.run();
       EX::Expr *value_expr = value_parser.m_exprs.last();
 
-      EX::Parser continuation_parser{ *this, t.as.m_let_in_tokens.m_in_tokens };
+      EX::Parser continuation_parser{ *this, t.as.m_let_tokens.m_in_tokens };
       continuation_parser.run();
       EX::Expr *continuation_expr = continuation_parser.m_exprs.last();
 
@@ -407,6 +407,25 @@ Parser::run()
       string_expr.as.m_string = t.as.m_string;
 
       m_exprs.push(string_expr);
+    }
+    break;
+    case LX::Type::While:
+    {
+      i += 1;
+
+      EX::Parser condition_parser{ *this, t.as.m_while.m_condition };
+      condition_parser.run();
+
+      // FIXME: variable str should result in function app but currently, the
+      // variable is ignored
+      EX::Parser body_parser{ *this, t.as.m_while.m_body };
+      body_parser.run();
+
+      EX::Expr while_expr{ EX::Type::While };
+      while_expr.as.m_while.m_body      = body_parser.m_exprs.last();
+      while_expr.as.m_while.m_condition = condition_parser.m_exprs.last();
+
+      m_exprs.push(while_expr);
     }
     break;
     case LX::Type::Min:

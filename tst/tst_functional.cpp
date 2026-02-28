@@ -6,9 +6,14 @@ constexpr UT::String sut_file        = "./dat/addition.se";
 constexpr UT::String sut_file_basic  = "./dat/basic.se";
 constexpr UT::String sut_file_raylib = "./dat/raylib.se";
 
-constexpr bool RUN        = false;
-constexpr bool RUN_BASIC  = false;
-constexpr bool RUN_RAYLIB = true;
+constexpr bool RUN       = false;
+constexpr bool RUN_BASIC = false;
+constexpr bool RUN_RAYLIB =
+#if GIT_ACTION_CTX
+  false;
+#else
+  true;
+#endif
 
 int
 main()
@@ -29,6 +34,6 @@ main()
   }
   else
   {
-    std::printf("tst_addition_n_subtraction -> OK [no target ran]\n");
+    std::printf("%s -> OK [no target ran]\n", __FILE__);
   }
 }

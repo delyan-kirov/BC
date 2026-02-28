@@ -551,9 +551,9 @@ Lexer::run()
         Token token{ Type::Let };
         token.m_line                          = this->m_lines;
         token.m_cursor                        = this->m_cursor;
-        token.as.m_let_in_tokens.m_var_name   = var_name;
-        token.as.m_let_in_tokens.m_let_tokens = let_lexer.m_tokens;
-        token.as.m_let_in_tokens.m_in_tokens  = in_lexer.m_tokens;
+        token.as.m_let_tokens.m_var_name   = var_name;
+        token.as.m_let_tokens.m_let_tokens = let_lexer.m_tokens;
+        token.as.m_let_tokens.m_in_tokens  = in_lexer.m_tokens;
 
         this->m_tokens.push(token);
         this->skip_to(in_lexer);
@@ -592,6 +592,33 @@ Lexer::run()
 
         UT_TRACE("If expression tokenized: %s", UT_TCS(token));
         if (E::IN_KEYWORD == e) return e;
+      }
+      else if (this->match_keyword(LX::Keyword::WHILE, word))
+      {
+        Lexer condition_lexer{
+          this->m_input, this->m_arena, this->m_cursor, this->m_end
+        };
+        LX_ASSERT(E::FAT_ARROW == condition_lexer.run(),
+                  E::OPERATOR_MATCH_FAILURE);
+
+        Lexer body_lexer{ condition_lexer.m_input,
+                          condition_lexer.m_arena,
+                          condition_lexer.m_cursor,
+                          this->m_end };
+        LX::E e = body_lexer.run();
+        LX_ASSERT(e == E::ELSE_KEYWORD || e == E::IN_KEYWORD || e == E::OK,
+                  E::CONTROL_STRUCTURE_ERROR);
+
+        // TODO: candidate for refactor
+        Token token{ Type::While };
+        token.as.m_while.m_condition = condition_lexer.m_tokens;
+        token.as.m_while.m_body      = body_lexer.m_tokens;
+
+        this->m_tokens.push(token);
+        this->skip_to(body_lexer);
+
+        UT_TRACE("While expression tokenized: %s", UT_TCS(token));
+        if (E::IN_KEYWORD == e || e == E::ELSE_KEYWORD) return e;
       }
       else
       {

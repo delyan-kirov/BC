@@ -15,34 +15,46 @@
 namespace TL
 {
 
+// FIXME : just don't do it like that
 constexpr const char *RAYLIB_PATH = "./bin/libraylib.so";
+using FnMap_t                     = std::map<std::string, void *>;
 class DFN
 {
 public:
-  const char *m_fn_name;
-  void       *m_fn;
-  ffi_type  **m_in_types;
-  ffi_type   *m_out_type;
-  void       *m_handle;
+  const char    *m_fn_name;
+  ffi_type     **m_in_types;
+  ffi_type      *m_out_type;
+  static void   *m_handle;
+  static FnMap_t m_fn_map;
 
   DFN(
     const char *fn_name, ffi_type **in_types, ffi_type *out_type)
       : m_fn_name{ fn_name },
         m_in_types{ in_types },
-        m_out_type{ out_type },
-        m_handle{ nullptr }
+        m_out_type{ out_type }
   {
+    if (!m_handle) m_handle = dlopen(RAYLIB_PATH, RTLD_LAZY | RTLD_LOCAL);
   }
 
   void
   init(
     void)
   {
-    m_handle = dlopen(RAYLIB_PATH, RTLD_NOW | RTLD_LOCAL);
-    m_fn     = dlsym(m_handle, m_fn_name);
-    if (!m_fn)
+    if (m_fn_map.end() == m_fn_map.find(std::string(m_fn_name)))
     {
-      UT_TODO(TODO_MSG);
+      void *fn_handle = dlsym(m_handle, m_fn_name);
+      if (!fn_handle)
+      {
+        UT_FAIL_MSG("ERROR: function (%s) not found in raylib so\n", m_fn_name);
+      }
+      else
+      {
+        m_fn_map[std::string(m_fn_name)] = fn_handle;
+      }
+    }
+    else
+    {
+      // Nothing to do
     }
   }
 
@@ -69,11 +81,16 @@ public:
         != FFI_OK)
       return false;
 
-    ffi_call(&cif, FFI_FN(m_fn), output, args);
+    void *fn_handle = m_fn_map[std::string(m_fn_name)];
+
+    ffi_call(&cif, FFI_FN(fn_handle), output, args);
 
     return true;
   };
 };
+
+void   *DFN::m_handle = nullptr;
+FnMap_t DFN::m_fn_map = {};
 
 // InitWindow: void InitWindow(int, int, char*)
 const ffi_type *init_window_in_types[3]
@@ -83,7 +100,14 @@ DFN init_window_fn{ "InitWindow",
                     (ffi_type **)init_window_in_types,
                     &ffi_type_void };
 
-DFN window_should_close_fn{ "WindowShouldClose", nullptr, &ffi_type_uchar };
+DFN window_should_close_fn{ "WindowShouldClose", nullptr, &ffi_type_sint };
+
+DFN get_key_pressed_fn{ "GetKeyPressed", nullptr, &ffi_type_sint };
+
+const ffi_type *set_target_fps_types[1] = { &ffi_type_sint };
+DFN             set_target_fps_fn{ "SetTargetFPS",
+                       (ffi_type **)set_target_fps_types,
+                       &ffi_type_void };
 
 DFN begin_drawing_fn{ "BeginDrawing", nullptr, &ffi_type_void };
 
@@ -100,6 +124,8 @@ const std::map<std::string, DFN *> raylib_functions = {
   { "window_should_close", &window_should_close_fn },
   { "begin_drawing", &begin_drawing_fn },
   { "end_drawing", &end_drawing_fn },
+  { "set_target_fps", &set_target_fps_fn },
+  { "get_key_pressed", &get_key_pressed_fn },
   { "clear_background", &clear_background_fn },
 };
 
@@ -224,7 +250,7 @@ eval(
 
       // FIXME: Don't assume the function only returns ints
       EX::Expr int_expr{ EX::Type::Int };
-      expr.as.m_int = nullptr == raylib_fn.m_out_type ? 0 : *(ssize_t *)output;
+      int_expr.as.m_int = *(ssize_t *)output;
 
       Instance new_instance{ int_expr, env };
       return new_instance;
@@ -232,7 +258,7 @@ eval(
     else
     {
       // FIXME: We should not fail like that
-      UT_TODO("Variable not defined.");
+      UT_FAIL_MSG("Variable (%s) is not defined", UT_TCS(var_name));
     }
   }
   break;
@@ -337,7 +363,7 @@ eval(
 
       Instance app_instance{ fndef, env };
       app_instance.m_expr.m_type   = EX::Type::Int;
-      app_instance.m_expr.as.m_int = 1;
+      app_instance.m_expr.as.m_int = *(ssize_t *)output;
 
       return app_instance;
     }
@@ -361,8 +387,12 @@ eval(
       ffi_type *arg_types[1] = { &ffi_type_sint64 };
       ffi_type *ret_type     = &ffi_type_sint;
 
-      if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, 1, ret_type, arg_types) != FFI_OK)
+      ssize_t ffi_result
+        = ffi_prep_cif(&cif, FFI_DEFAULT_ABI, 1, ret_type, arg_types);
+
+      if (FFI_OK != ffi_result)
       {
+        UT_FAIL_MSG("LIB FFI call failed with %zu\n", ffi_result);
         // FIXME: handle error
       }
 
@@ -412,6 +442,47 @@ eval(
   case EX::Type::Str:
   {
     return inst;
+  }
+  break;
+  case EX::Type::While:
+  {
+    Instance return_instance        = { EX::Expr{ EX::Type::Int }, env };
+    Env      while_env              = env;
+    return_instance.m_expr.as.m_int = 0;
+
+    EX::Expr condition_expr = *expr.as.m_while.m_condition;
+    EX::Expr body_expr      = *expr.as.m_while.m_body;
+    Instance condition_instance{ condition_expr, while_env };
+    Instance body_instance{ body_expr, while_env };
+
+  TL_CONDITION_BLOCK:
+  {
+    condition_instance = { condition_expr, while_env };
+    condition_instance = eval(condition_instance);
+    while_env          = condition_instance.m_env;
+    if (EX::Type::Int != condition_instance.m_expr.m_type)
+    {
+      UT_FAIL_MSG("Expected integer(bool) but found %s\n", UT_TCS(expr.m_type));
+    }
+    bool should_loop = condition_instance.m_expr.as.m_int;
+
+    if (should_loop)
+      goto TL_BODY_EVAL_BLOCK;
+    else
+      goto TL_RETURN_BLOCK;
+  }
+
+  TL_BODY_EVAL_BLOCK:
+  {
+    body_instance = { body_expr, while_env };
+    body_instance = eval(body_instance);
+    while_env     = body_instance.m_env;
+
+    goto TL_CONDITION_BLOCK;
+  }
+
+  TL_RETURN_BLOCK:
+    return return_instance;
   }
   break;
   case EX::Type::Unknown:

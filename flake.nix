@@ -37,6 +37,9 @@
           pkgs.xorg.libXi
           pkgs.xorg.libXinerama
           pkgs.xorg.libXrandr
+
+          # extra
+          pkgs.tokei
         ];
 
         shellHook = ''

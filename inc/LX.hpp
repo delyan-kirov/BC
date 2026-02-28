@@ -27,6 +27,7 @@ constexpr UT::String IF{ "if" };
 constexpr UT::String ELSE{ "else" };
 constexpr UT::String INT{ "int" };
 constexpr UT::String PUB{ "pub" };
+constexpr UT::String WHILE{ "while" };
 
 } // namespace Keyword
 
@@ -127,6 +128,7 @@ struct ErrorE : public ER::E
   X(ExtDef)                                                                    \
   X(Not)                                                                       \
   X(Str)                                                                       \
+  X(While)                                                                     \
   X(Max)
 
 enum class Type
@@ -167,6 +169,12 @@ struct SymDef
   Tokens     m_def;
 };
 
+struct While
+{
+  Tokens m_condition;
+  Tokens m_body;
+};
+
 struct Token
 {
   Type   m_type;
@@ -175,10 +183,11 @@ struct Token
   union
   {
     Tokens     m_tokens;
-    Let        m_let_in_tokens;
+    Let        m_let_tokens;
     If         m_if_tokens;
     Fn         m_fn;
     SymDef     m_sym;
+    While      m_while;
     UT::String m_string;
     ssize_t    m_int = 0;
   } as;
@@ -402,9 +411,9 @@ to_string(
            ")";
   case LX::Type::Let:
   {
-    std::string let_string = to_string(t.as.m_let_in_tokens.m_let_tokens);
-    std::string in_string  = to_string(t.as.m_let_in_tokens.m_in_tokens);
-    std::string var_name   = to_string(t.as.m_let_in_tokens.m_var_name);
+    std::string let_string = to_string(t.as.m_let_tokens.m_let_tokens);
+    std::string in_string  = to_string(t.as.m_let_tokens.m_in_tokens);
+    std::string var_name   = to_string(t.as.m_let_tokens.m_var_name);
     return "let " + var_name + " = " + let_string + " in " + in_string;
   }
   break;
@@ -447,6 +456,11 @@ to_string(
   {
     return "\"" + to_string(t.as.m_string) + "\"";
   }
+  case LX::Type::While:
+  {
+    return "while " + to_string(t.as.m_while.m_condition) + " "
+           + to_string(t.as.m_while.m_body);
+  }
   }
   UT_FAIL_IF("UNREACHABLE");
   return "";
@@ -478,6 +492,7 @@ to_string(
     case LX::Type::Max    : s += to_string(t); break;
     case LX::Type::Word   : s += "Word(" + to_string(t.as.m_string) + ")"; break;
     case LX::Type::If     : s += to_string(t); break;
+    case LX::Type::Str    : s += "Str(" + to_string(t.as.m_string) + ")"; break;
     default               : UT_FAIL_MSG("Got unexpected type: %s", UT_TCS(t.m_type));
     }
 
