@@ -1,5 +1,6 @@
 #include "LX.hpp"
 #include "UT.hpp"
+#include <cstdio>
 
 namespace LX
 {
@@ -66,6 +67,7 @@ Lexer::match_keyword(
 
 // TODO: should be comment aware
 // FIXME: 'word=' does not work but it should
+// FIXME: bug when ignoring comments, see find_next_global_symbol
 UT::String
 LX::Lexer::get_word(
   size_t idx)
@@ -76,13 +78,13 @@ LX::Lexer::get_word(
   this->strip_white_space(idx);
   idx = this->m_cursor;
 
-  for (char c = this->m_input[idx++]; c && (!delimits_word(c));
-       c      = this->m_input[idx++])
+  for (char c = m_input[idx++]; c && (!delimits_word(c)); c = m_input[idx++])
   {
     sb.add(c);
   }
-  UT::String string = sb.to_String(this->m_arena);
-  this->m_cursor    = idx;
+
+  UT::String string = sb.to_String(m_arena);
+  m_cursor          = idx;
 
   return string;
 }
@@ -220,7 +222,7 @@ Lexer::push_operator(
   case '%': t_type = LX::Type::Modulus; break;
   default : /* UNREACHABLE */ UT_FAIL_IF("UNERACHABLE");
   }
-  this->m_tokens.push(LX::Token{ t_type });
+  m_tokens.push(LX::Token{ t_type });
 }
 
 // TODO: candidate for refactor
@@ -271,8 +273,6 @@ Lexer::run()
     }
     break;
 
-    case '!':
-    case '"':
     case '$':
     case '&':
     case '\'':
@@ -296,7 +296,27 @@ Lexer::run()
       UT_FAIL_MSG("Symbol `%c` reserved but not used", c);
     }
     break;
+    case '!':
+    {
+      Token not_token{ LX::Type::Not };
+      m_tokens.push(not_token);
+    }
+    break;
+    case '"':
+    {
+      UT::SB sb{};
+      for (char c = this->next_char(); c && c != '"'; c = this->next_char())
+      {
+        sb.add(c);
+      }
 
+      UT::String string = sb.to_String(m_arena);
+      Token      string_token{ Type::Str };
+      string_token.as.m_string = string;
+
+      m_tokens.push(string_token);
+    }
+    break;
     case '-':
     {
       char next_c = this->peek_char();
@@ -531,9 +551,9 @@ Lexer::run()
         Token token{ Type::Let };
         token.m_line                          = this->m_lines;
         token.m_cursor                        = this->m_cursor;
-        token.as.m_let_in_tokens.m_var_name   = var_name;
-        token.as.m_let_in_tokens.m_let_tokens = let_lexer.m_tokens;
-        token.as.m_let_in_tokens.m_in_tokens  = in_lexer.m_tokens;
+        token.as.m_let_tokens.m_var_name   = var_name;
+        token.as.m_let_tokens.m_let_tokens = let_lexer.m_tokens;
+        token.as.m_let_tokens.m_in_tokens  = in_lexer.m_tokens;
 
         this->m_tokens.push(token);
         this->skip_to(in_lexer);
@@ -572,6 +592,33 @@ Lexer::run()
 
         UT_TRACE("If expression tokenized: %s", UT_TCS(token));
         if (E::IN_KEYWORD == e) return e;
+      }
+      else if (this->match_keyword(LX::Keyword::WHILE, word))
+      {
+        Lexer condition_lexer{
+          this->m_input, this->m_arena, this->m_cursor, this->m_end
+        };
+        LX_ASSERT(E::FAT_ARROW == condition_lexer.run(),
+                  E::OPERATOR_MATCH_FAILURE);
+
+        Lexer body_lexer{ condition_lexer.m_input,
+                          condition_lexer.m_arena,
+                          condition_lexer.m_cursor,
+                          this->m_end };
+        LX::E e = body_lexer.run();
+        LX_ASSERT(e == E::ELSE_KEYWORD || e == E::IN_KEYWORD || e == E::OK,
+                  E::CONTROL_STRUCTURE_ERROR);
+
+        // TODO: candidate for refactor
+        Token token{ Type::While };
+        token.as.m_while.m_condition = condition_lexer.m_tokens;
+        token.as.m_while.m_body      = body_lexer.m_tokens;
+
+        this->m_tokens.push(token);
+        this->skip_to(body_lexer);
+
+        UT_TRACE("While expression tokenized: %s", UT_TCS(token));
+        if (E::IN_KEYWORD == e || e == E::ELSE_KEYWORD) return e;
       }
       else
       {

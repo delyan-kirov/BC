@@ -1,15 +1,18 @@
 # this is a comment
 
-pub x = 1
+pub world = "Hello world!"
 
-pub y = 1+x
-
-pub hexval = -0x11
+pub s =
+	puts world +
+	puts world +
+	puts world +
+	puts world +
+	puts world +
+	puts world
 
 pub foo =
-	(\x = \y = y + x + 1) 2 3
+	let new_world = world + (strlen world) / 2 in
+	puts new_world
 
-pub add2 = \x = \y = x + y
-pub sum = add2 1 2
-pub sumx = add2 1 # FIXME: does not print correctly
-pub sumy = sumx -3
+# pub gettit = getwchar 1
+pub gettitputc = (putchar gettit) + (putchar 10)

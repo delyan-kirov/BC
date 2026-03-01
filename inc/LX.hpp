@@ -27,6 +27,7 @@ constexpr UT::String IF{ "if" };
 constexpr UT::String ELSE{ "else" };
 constexpr UT::String INT{ "int" };
 constexpr UT::String PUB{ "pub" };
+constexpr UT::String WHILE{ "while" };
 
 } // namespace Keyword
 
@@ -109,24 +110,32 @@ struct ErrorE : public ER::E
   }
 };
 
+#define LX_Type_ENUM_VARIANTS                                                  \
+  X(Min)                                                                       \
+  X(Int)                                                                       \
+  X(Plus)                                                                      \
+  X(Minus)                                                                     \
+  X(Div)                                                                       \
+  X(Modulus)                                                                   \
+  X(Mult)                                                                      \
+  X(IsEq)                                                                      \
+  X(Group)                                                                     \
+  X(Let)                                                                       \
+  X(Fn)                                                                        \
+  X(Word)                                                                      \
+  X(If)                                                                        \
+  X(IntDef)                                                                    \
+  X(ExtDef)                                                                    \
+  X(Not)                                                                       \
+  X(Str)                                                                       \
+  X(While)                                                                     \
+  X(Max)
+
 enum class Type
 {
-  Min = 0,
-  Int,
-  Plus,
-  Minus,
-  Div,
-  Modulus,
-  Mult,
-  IsEq,
-  Group,
-  Let,
-  Fn,
-  Word,
-  If,
-  IntDef,
-  ExtDef,
-  Max,
+#define X(LX_ENUM_VALUE) LX_ENUM_VALUE,
+  LX_Type_ENUM_VARIANTS
+#undef X
 };
 
 struct Token;
@@ -160,6 +169,12 @@ struct SymDef
   Tokens     m_def;
 };
 
+struct While
+{
+  Tokens m_condition;
+  Tokens m_body;
+};
+
 struct Token
 {
   Type   m_type;
@@ -168,10 +183,11 @@ struct Token
   union
   {
     Tokens     m_tokens;
-    Let        m_let_in_tokens;
+    Let        m_let_tokens;
     If         m_if_tokens;
     Fn         m_fn;
     SymDef     m_sym;
+    While      m_while;
     UT::String m_string;
     ssize_t    m_int = 0;
   } as;
@@ -348,22 +364,10 @@ to_string(
 {
   switch (t)
   {
-  case LX::Type::Min    : return "Min";
-  case LX::Type::Int    : return "Int";
-  case LX::Type::Plus   : return "Plus";
-  case LX::Type::Minus  : return "Minus";
-  case LX::Type::Mult   : return "Mult";
-  case LX::Type::Div    : return "Div";
-  case LX::Type::IsEq   : return "Eq";
-  case LX::Type::Modulus: return "Modulus";
-  case LX::Type::Group  : return "Group";
-  case LX::Type::Let    : return "LetIn";
-  case LX::Type::Word   : return "Word";
-  case LX::Type::Fn     : return "Fn";
-  case LX::Type::If     : return "If";
-  case LX::Type::IntDef : return "IntDef";
-  case LX::Type::ExtDef : return "ExtDef";
-  case LX::Type::Max    : return "Max";
+#define X(LX_ENUM_VALUE)                                                       \
+  case LX::Type::LX_ENUM_VALUE: return #LX_ENUM_VALUE;
+    LX_Type_ENUM_VARIANTS
+#undef X
   }
 
   UT_FAIL_MSG("Got unexpected type %d", t);
@@ -407,9 +411,9 @@ to_string(
            ")";
   case LX::Type::Let:
   {
-    std::string let_string = to_string(t.as.m_let_in_tokens.m_let_tokens);
-    std::string in_string  = to_string(t.as.m_let_in_tokens.m_in_tokens);
-    std::string var_name   = to_string(t.as.m_let_in_tokens.m_var_name);
+    std::string let_string = to_string(t.as.m_let_tokens.m_let_tokens);
+    std::string in_string  = to_string(t.as.m_let_tokens.m_in_tokens);
+    std::string var_name   = to_string(t.as.m_let_tokens.m_var_name);
     return "let " + var_name + " = " + let_string + " in " + in_string;
   }
   break;
@@ -444,6 +448,19 @@ to_string(
     return "int " + to_string(t.as.m_sym.m_sym_name) + " = "
            + to_string(t.as.m_sym.m_def);
   }
+  case LX::Type::Not:
+  {
+    return "(not)";
+  }
+  case LX::Type::Str:
+  {
+    return "\"" + to_string(t.as.m_string) + "\"";
+  }
+  case LX::Type::While:
+  {
+    return "while " + to_string(t.as.m_while.m_condition) + " "
+           + to_string(t.as.m_while.m_body);
+  }
   }
   UT_FAIL_IF("UNREACHABLE");
   return "";
@@ -475,6 +492,7 @@ to_string(
     case LX::Type::Max    : s += to_string(t); break;
     case LX::Type::Word   : s += "Word(" + to_string(t.as.m_string) + ")"; break;
     case LX::Type::If     : s += to_string(t); break;
+    case LX::Type::Str    : s += "Str(" + to_string(t.as.m_string) + ")"; break;
     default               : UT_FAIL_MSG("Got unexpected type: %s", UT_TCS(t.m_type));
     }
 

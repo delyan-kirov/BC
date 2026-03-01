@@ -32,7 +32,10 @@ enum class E
   X(FnApp)                                                                     \
   X(VarApp)                                                                    \
   X(Var)                                                                       \
-  X(If)
+  X(If)                                                                        \
+  X(Not)                                                                       \
+  X(While)                                                                     \
+  X(Str)
 
 enum class Type
 {
@@ -52,7 +55,6 @@ enum FnFlags : std::uint64_t
   MAX            = FN_MUST_INLINE,
 };
 
-// TODO: use Expr* not the vector Exprs
 struct FnDef
 {
   FnFlags    m_flags;
@@ -95,6 +97,12 @@ struct Let
   Expr      *m_continuation;
 };
 
+struct While
+{
+  Expr *m_condition;
+  Expr *m_body;
+};
+
 struct Expr
 {
   Type m_type;
@@ -104,11 +112,13 @@ struct Expr
     FnApp          m_fnapp;
     VarApp         m_varapp;
     UT::String     m_var;
+    UT::String     m_string;
     UT::Pair<Expr> m_pair;
     Expr          *m_expr;
     ssize_t        m_int = 0;
     If             m_if;
     Let            m_let;
+    While          m_while;
   } as;
 
   Expr() = default;
@@ -382,10 +392,20 @@ to_string(
          + to_string(*expr.as.m_let.m_continuation);
   }
   break;
+  case EX::Type::Not:
+  {
+    s += "neg ( " + to_string(*expr.as.m_expr) + " )";
+  }
+  break;
+  case EX::Type::Str:
+  {
+    s += "\"" + to_string(expr.as.m_string) + "\"";
+  }
+  break;
   default:
   {
     // TODO: Don't use default case here, fail under switch
-    UT_FAIL_IF("UNREACHABLE");
+    UT_FAIL_MSG("UNREACHABLE %d", expr.m_type);
   }
   break;
   }

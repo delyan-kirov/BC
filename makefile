@@ -5,15 +5,28 @@ INC = inc/
 BIN = bin/
 TST = tst/
 
-CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g -O1
+CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g -O1 
+ifdef GIT_ACTION_CTX
+CFLAGS += -DGIT_ACTION_CTX=1
+endif
+
 CC = clang++ $(CFLAGS) -I$(INC)
 CFSO = -fPIC -shared
 
+ifdef RAYLIB_ENABLED
+LIBS = -L./bin/lib64 -lffi -Wl,-rpath,'$$ORIGIN/lib64' -L./bin/
+# LIBS = -lffi -lraylib -Wl,-rpath,'$$ORIGIN/lib'
+else ifdef GIT_ACTION_CTX
+LIBS = -lffi -Wl,-rpath,'$$ORIGIN/lib64'
+else
+LIBS = -L./bin/lib64 -lffi -Wl,-rpath,'$$ORIGIN/lib64'
+endif
+
 #------------------------------MAIN-----------------------------
 # 
-test: $(BIN)tst_mult $(BIN)tst_addition_n_subtraction
+test: $(BIN)tst_mult $(BIN)tst_functional
 	@$(BIN)tst_mult
-	@$(BIN)tst_addition_n_subtraction
+	@$(BIN)tst_functional
 
 #------------------------------OBJC-----------------------------
 BCsrc = \
@@ -33,18 +46,18 @@ BC = $(BIN)bc.so
 # 	$(CC) $(SRC)main.cpp -o $@ $^
 
 $(BC): $(BCinc) $(BCsrc)
-	$(CC) $(CFSO) $(BCsrc) -o $@
+	$(CC) $(CFSO) $(BCsrc) $(LIBS) -o $@
 
 #-----------------------------TEST------------------------------
 
 $(BIN)tst_mult: $(TST)tst_mult.cpp $(BC)
-	$(CC) $(BC) $(TST)tst_mult.cpp -o $@
+	$(CC) $(BC) $(TST)tst_mult.cpp $(LIBS) -o $@
 
-$(BIN)tst_addition_n_subtraction: $(TST)tst_addition_n_subtraction.cpp $(BC)
-	$(CC) $(BC) $(TST)tst_addition_n_subtraction.cpp -o $@
+$(BIN)tst_functional: $(TST)tst_functional.cpp $(BC) 
+	$(CC) $(BC) $(TST)tst_functional.cpp $(LIBS) -o $@
 
 #-----------------------------CMND------------------------------
-COMMANDS = clean bear test init list format valgrind gf2 trace executables
+COMMANDS = clean bear test init list format valgrind gf2 trace executables tokei
 .PHONY: COMMANDS
 
 executables: $(BC)
@@ -63,7 +76,7 @@ list:
 
 valgrind:
 	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose ./bin/tst_mult
-	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose ./bin/tst_addition_n_subtraction
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose ./bin/tst_functional
 
 format:
 	find . -regex '.*\.\(cpp\|hpp\|c\|h\)$\' -exec clang-format -i {} + 
@@ -72,18 +85,31 @@ all:
 	make
 	make test
 
+tokei:
+	tokei --exclude lib
+
 init:
 	mkdir -p $(BIN)
 	make clean
+ifndef GIT_ACTION_CTX
+	git submodule update --init
+	$(MAKE) -C ./lib CC= CXX= CFLAGS= CXXFLAGS= CPPFLAGS= LDFLAGS=
+endif
 	make test
 	make valgrind
 
 clean:
 	rm -f tmp.*
 	rm -f vgcore*
-	rm -f $(BIN)*
+	rm -rf $(BIN)*
+	$(MAKE) -C ./lib clean
+
+clean_wkspace:
+	rm -f tmp.*
+	rm -f vgcore*
+	$(MAKE) -C ./lib clean
 
 bear:
 	mkdir -p $(BIN)
 	make clean
-	bear -- make test
+	bear -- make init

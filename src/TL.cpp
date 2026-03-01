@@ -2,12 +2,133 @@
 #include "EX.hpp"
 #include "LX.hpp"
 #include "UT.hpp"
+#include "ffi.h"
+#include <cstddef>
 #include <cstdio>
+#include <dlfcn.h>
 #include <map>
 #include <string>
+#include <unistd.h>
+#include <utility>
+#include <vector>
 
 namespace TL
 {
+
+// FIXME : just don't do it like that
+constexpr const char *RAYLIB_PATH = "./bin/libraylib.so";
+using FnMap_t                     = std::map<std::string, void *>;
+class DFN
+{
+public:
+  const char    *m_fn_name;
+  ffi_type     **m_in_types;
+  ffi_type      *m_out_type;
+  static void   *m_handle;
+  static FnMap_t m_fn_map;
+
+  DFN(
+    const char *fn_name, ffi_type **in_types, ffi_type *out_type)
+      : m_fn_name{ fn_name },
+        m_in_types{ in_types },
+        m_out_type{ out_type }
+  {
+    if (!m_handle) m_handle = dlopen(RAYLIB_PATH, RTLD_LAZY | RTLD_LOCAL);
+  }
+
+  void
+  init(
+    void)
+  {
+    if (m_fn_map.end() == m_fn_map.find(std::string(m_fn_name)))
+    {
+      void *fn_handle = dlsym(m_handle, m_fn_name);
+      if (!fn_handle)
+      {
+        UT_FAIL_MSG("ERROR: function (%s) not found in raylib so\n", m_fn_name);
+      }
+      else
+      {
+        m_fn_map[std::string(m_fn_name)] = fn_handle;
+      }
+    }
+    else
+    {
+      // Nothing to do
+    }
+  }
+
+  void
+  deinit(
+    void)
+  {
+    // if (m_handle) dlclose(m_handle);
+  }
+
+  bool
+  call(
+    std::vector<void *> &input, void *output)
+  {
+    ffi_cif cif;
+
+    void **args = input.empty() ? nullptr : input.data();
+
+    if (ffi_prep_cif(&cif,
+                     FFI_DEFAULT_ABI,
+                     input.size(),
+                     m_out_type,
+                     input.empty() ? nullptr : m_in_types)
+        != FFI_OK)
+      return false;
+
+    void *fn_handle = m_fn_map[std::string(m_fn_name)];
+
+    ffi_call(&cif, FFI_FN(fn_handle), output, args);
+
+    return true;
+  };
+};
+
+void   *DFN::m_handle = nullptr;
+FnMap_t DFN::m_fn_map = {};
+
+// InitWindow: void InitWindow(int, int, char*)
+const ffi_type *init_window_in_types[3]
+  = { &ffi_type_sint, &ffi_type_sint, &ffi_type_pointer };
+
+DFN init_window_fn{ "InitWindow",
+                    (ffi_type **)init_window_in_types,
+                    &ffi_type_void };
+
+DFN window_should_close_fn{ "WindowShouldClose", nullptr, &ffi_type_sint };
+
+DFN get_key_pressed_fn{ "GetKeyPressed", nullptr, &ffi_type_sint };
+
+const ffi_type *set_target_fps_types[1] = { &ffi_type_sint };
+DFN             set_target_fps_fn{ "SetTargetFPS",
+                       (ffi_type **)set_target_fps_types,
+                       &ffi_type_void };
+
+DFN begin_drawing_fn{ "BeginDrawing", nullptr, &ffi_type_void };
+
+DFN end_drawing_fn{ "EndDrawing", nullptr, &ffi_type_void };
+
+const ffi_type *clear_background_in_types[1] = { &ffi_type_uint32 };
+
+DFN clear_background_fn{ "ClearBackground",
+                         (ffi_type **)clear_background_in_types,
+                         &ffi_type_void };
+
+const std::map<std::string, DFN *> raylib_functions = {
+  { "init_window", &init_window_fn },
+  { "window_should_close", &window_should_close_fn },
+  { "begin_drawing", &begin_drawing_fn },
+  { "end_drawing", &end_drawing_fn },
+  { "set_target_fps", &set_target_fps_fn },
+  { "get_key_pressed", &get_key_pressed_fn },
+  { "clear_background", &clear_background_fn },
+};
+
 Mod::Mod(
   UT::String file_name, AR::Arena &arena)
 {
@@ -44,7 +165,7 @@ Mod::Mod(
 
     this->m_defs.push(def);
 
-    if (false)
+    if (!true)
     {
       std::printf("%s %s = %s\n",
                   UT_TCS(def.m_type),
@@ -67,9 +188,11 @@ eval_bi_op(
   EX::Expr expr = inst.m_expr;
 
   Instance left_instance  = Instance{ expr.as.m_pair.first(), env };
-  ssize_t  left           = eval(left_instance).m_expr.as.m_int;
   Instance right_instance = Instance{ expr.as.m_pair.second(), env };
-  ssize_t  right          = eval(right_instance).m_expr.as.m_int;
+
+  ssize_t left  = eval(left_instance).m_expr.as.m_int;
+  ssize_t right = eval(right_instance).m_expr.as.m_int;
+
   Instance result_instance{ EX::Type::Int, env };
 
   switch (expr.m_type)
@@ -82,7 +205,6 @@ eval_bi_op(
   case EX::Type::IsEq   : result_instance.m_expr.as.m_int = left == right; break;
   default               : UT_FAIL_MSG("UNREACHABLE expr.m_type = %s", expr.m_type);
   }
-
   return result_instance;
 }
 
@@ -111,6 +233,32 @@ eval(
     {
       Instance new_instance{ var_expr->second, env };
       return new_instance;
+    }
+    else if (raylib_functions.end()
+             != raylib_functions.find(std::to_string(var_name)))
+    {
+      DFN raylib_fn = *raylib_functions.find(var_name.m_mem)->second;
+      raylib_fn.init();
+      AR::Arena output_arena{};
+
+      // FIXME: assume output fits in 64 bytes
+      void               *output = output_arena.alloc(64);
+      std::vector<void *> _input;
+
+      raylib_fn.call(_input, output);
+      raylib_fn.deinit();
+
+      // FIXME: Don't assume the function only returns ints
+      EX::Expr int_expr{ EX::Type::Int };
+      int_expr.as.m_int = *(ssize_t *)output;
+
+      Instance new_instance{ int_expr, env };
+      return new_instance;
+    }
+    else
+    {
+      // FIXME: We should not fail like that
+      UT_FAIL_MSG("Variable (%s) is not defined", UT_TCS(var_name));
     }
   }
   break;
@@ -152,6 +300,8 @@ eval(
     auto        fn_def_it = env.find(fn_name);
     EX::Expr    fndef{};
 
+    auto is_raylib = raylib_functions.find(fn_name.c_str());
+
     if (env.end() != fn_def_it)
     {
       fndef            = fn_def_it->second;
@@ -168,7 +318,95 @@ eval(
 
       return app_instance;
     }
-    return inst;
+    // TODO: There should be a better way to both load and define functions
+    else if (raylib_functions.end() != is_raylib)
+    {
+      DFN raylib_fn = *raylib_functions.find(fn_name.c_str())->second;
+      raylib_fn.init();
+
+      AR::Arena           input_buffer{};
+      std::vector<void *> input;
+
+      // FIXME: assume output fits in 64 bytes
+      void *output = input_buffer.alloc(64);
+
+      EX::Exprs params = expr.as.m_varapp.m_param;
+      for (auto &param_expr : params)
+      {
+        Instance param_inst{ param_expr, env };
+        param_inst = eval(param_inst);
+
+        if (EX::Type::Int == param_inst.m_expr.m_type)
+        {
+          ssize_t param = param_inst.m_expr.as.m_int;
+
+          void *param_buffer      = input_buffer.alloc<ssize_t>(1);
+          *(size_t *)param_buffer = param;
+          input.push_back(param_buffer);
+        }
+        else if (EX::Type::Str == param_inst.m_expr.m_type)
+        {
+          char *param = param_inst.m_expr.as.m_string.m_mem;
+
+          void *param_buffer     = input_buffer.alloc<ssize_t>(1);
+          *(char **)param_buffer = param;
+          input.push_back(param_buffer);
+        }
+        else
+        {
+          UT_TODO();
+        }
+      }
+
+      raylib_fn.call(input, output);
+      raylib_fn.deinit();
+
+      Instance app_instance{ fndef, env };
+      app_instance.m_expr.m_type   = EX::Type::Int;
+      app_instance.m_expr.as.m_int = *(ssize_t *)output;
+
+      return app_instance;
+    }
+    else
+    {
+      // TODO: Use DFN class
+      void *handle = dlopen("./bin/bc.so", RTLD_LAZY | RTLD_DEEPBIND);
+      void *fn     = dlsym(handle, fn_name.c_str());
+
+      int ret = 0;
+
+      EX::Expr *app_param = expr.as.m_varapp.m_param.last();
+      ssize_t   param
+        = EX::Type::Var == app_param->m_type
+            ? (ssize_t)env[std::string(app_param->as.m_varapp.m_fn_name.m_mem)]
+                .as.m_string.m_mem
+            : app_param->as.m_int;
+
+      /* libffi setup */
+      ffi_cif   cif;
+      ffi_type *arg_types[1] = { &ffi_type_sint64 };
+      ffi_type *ret_type     = &ffi_type_sint;
+
+      ssize_t ffi_result
+        = ffi_prep_cif(&cif, FFI_DEFAULT_ABI, 1, ret_type, arg_types);
+
+      if (FFI_OK != ffi_result)
+      {
+        UT_FAIL_MSG("LIB FFI call failed with %zu\n", ffi_result);
+        // FIXME: handle error
+      }
+
+      void *args[1] = { &param };
+      ffi_call(&cif, FFI_FN(fn), &ret, args);
+
+      dlclose(handle);
+
+      Instance app_instance{ fndef, env };
+      app_instance.m_expr.m_type   = EX::Type::Int;
+      app_instance.m_expr.as.m_int = ret;
+
+      return app_instance;
+    }
   }
   case EX::Type::If:
   {
@@ -192,6 +430,61 @@ eval(
 
     return eval(continuation_instrance);
   }
+  case EX::Type::Not:
+  {
+    Instance inner_instance{ *expr.as.m_expr, env };
+    inner_instance       = eval(inner_instance);
+    ssize_t &inner_value = inner_instance.m_expr.as.m_int;
+    inner_value          = not inner_value;
+
+    return inner_instance;
+  }
+  case EX::Type::Str:
+  {
+    return inst;
+  }
+  break;
+  case EX::Type::While:
+  {
+    Instance return_instance        = { EX::Expr{ EX::Type::Int }, env };
+    Env      while_env              = env;
+    return_instance.m_expr.as.m_int = 0;
+
+    EX::Expr condition_expr = *expr.as.m_while.m_condition;
+    EX::Expr body_expr      = *expr.as.m_while.m_body;
+    Instance condition_instance{ condition_expr, while_env };
+    Instance body_instance{ body_expr, while_env };
+
+  TL_CONDITION_BLOCK:
+  {
+    condition_instance = { condition_expr, while_env };
+    condition_instance = eval(condition_instance);
+    while_env          = condition_instance.m_env;
+    if (EX::Type::Int != condition_instance.m_expr.m_type)
+    {
+      UT_FAIL_MSG("Expected integer(bool) but found %s\n", UT_TCS(expr.m_type));
+    }
+    bool should_loop = condition_instance.m_expr.as.m_int;
+
+    if (should_loop)
+      goto TL_BODY_EVAL_BLOCK;
+    else
+      goto TL_RETURN_BLOCK;
+  }
+
+  TL_BODY_EVAL_BLOCK:
+  {
+    body_instance = { body_expr, while_env };
+    body_instance = eval(body_instance);
+    while_env     = body_instance.m_env;
+
+    goto TL_CONDITION_BLOCK;
+  }
+
+  TL_RETURN_BLOCK:
+    return return_instance;
+  }
+  break;
   case EX::Type::Unknown:
   default:
   {
