@@ -1,56 +1,11 @@
-# #include "raylib.h"
-# #include <dlfcn.h>
-
-# int
-# main()
-# {
-#   void *handle = dlopen("./bin/raylib.so", RTLD_LAZY | RTLD_DEEPBIND);
-#   bool (*window_should_close)(void) = dlsym(handle, "WindowShouldClose");
-#   void (*begin_drawing)(void)       = dlsym(handle, "BeginDrawing");
-#   void (*end_drawing)(void)         = dlsym(handle, "EndDrawing");
-#   void (*clear_background)(int)     = dlsym(handle, "ClearBackground");
-#   void (*init_window)(int, int, const char *) = dlsym(handle, "InitWindow");
-#   void (*close_window)(void)                  = dlsym(handle, "CloseWindow");
-#   void (*set_fps)(int)                        = dlsym(handle, "SetTargetFPS");
-
-#   init_window(800, 600, "Hi");
-#   set_fps(60);
-
-#   while (!window_should_close())
-#   {
-#     begin_drawing();
-#     {
-#       clear_background((int)0xFFFF);
-#     }
-#     end_drawing();
-#   }
-
-#   dlclose(handle);
-# }
-
-pub world = "World"
-# pub w = \t =
-# 	if t ?= 0 =>
-# 		(init_window 400 400 world) +
-# 		(w 1)
-# 	else
-# 		begin_drawing +
-# 		(clear_background world) +
-# 		end_drawing +
-# 		(if !window_should_close => (sleep 1) + (w 1) else (puts "Bye!"))
-
-# pub ww = w 0
+# ext(C)
+# init_window: C_int -> C_int -> C_str =
+# 	#DLL_AT("./bin/raylib.so")
 
 pub loopy =
 	let fps = set_target_fps 10 in
-	let window = init_window 800 400 world in
+	let window = init_window 800 400 "Hello world!" in
 	while !window_should_close =>
 		begin_drawing +
 		(clear_background (rand 1)) +
 		end_drawing
-
-# pub loop =
-# 	let idx = 5 in
-# 	while idx - 2 =>
-# 		let idx = idx - 1 in 
-# 		puts world 

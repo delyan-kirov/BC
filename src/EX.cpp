@@ -1,6 +1,7 @@
 #include "EX.hpp"
 #include "LX.hpp"
 #include "UT.hpp"
+#include <cstdio>
 
 namespace EX
 {
@@ -211,8 +212,12 @@ Parser::run()
         goto CASE_WORD_END;
 
       CASE_WORD_NOT_APPLIED:
-        if (this->match_token_type(
-              i, LX::Type::Group, LX::Type::Int, LX::Type::Fn, LX::Type::Word))
+        if (this->match_token_type(i,
+                                   LX::Type::Group,
+                                   LX::Type::Int,
+                                   LX::Type::Fn,
+                                   LX::Type::Word,
+                                   LX::Type::Str))
         {
           LX::Tokens next_token = { this->m_arena };
           next_token.push(this->m_tokens[i]);
@@ -401,12 +406,38 @@ Parser::run()
     break;
     case LX::Type::Str:
     {
+      EX::Expr expr{ EX::Type::Str };
+      expr.as.m_string = t.as.m_string;
+      if (this->m_exprs.is_empty()) goto CASE_STR_SINGLE_EXPR;
+
+      if (EX::Type::VarApp == this->m_exprs.last()->m_type)
+      {
+        // (\x = \y = ...) expr expr
+        this->m_exprs.last()->as.m_varapp.m_param.push(expr);
+      }
+      else if (EX::Type::FnDef == this->m_exprs.last()->m_type)
+      {
+        // (\x = \y = ...) expr expr
+        EX::Expr fnapp{ EX::Type::FnApp, m_arena };
+        fnapp.as.m_fnapp.m_param.push(expr);
+        fnapp.as.m_fnapp.m_body.m_body  = this->m_exprs.last()->as.m_fn.m_body;
+        fnapp.as.m_fnapp.m_body.m_param = this->m_exprs.last()->as.m_fn.m_param;
+        fnapp.as.m_fnapp.m_body.m_flags = this->m_exprs.last()->as.m_fn.m_flags;
+
+        (void)m_exprs.pop();
+        m_exprs.push(fnapp);
+      }
+      else if (EX::Type::FnApp == this->m_exprs.last()->m_type)
+      {
+        m_exprs.last()->as.m_fnapp.m_param.push(expr);
+      }
+      else
+      {
+      CASE_STR_SINGLE_EXPR:
+        this->m_exprs.push(expr);
+      }
+
       i += 1;
-
-      EX::Expr string_expr{ Type::Str };
-      string_expr.as.m_string = t.as.m_string;
-
-      m_exprs.push(string_expr);
     }
     break;
     case LX::Type::While:
