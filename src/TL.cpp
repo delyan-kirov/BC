@@ -16,7 +16,7 @@ namespace TL
 {
 
 // FIXME : just don't do it like that
-constexpr const char *RAYLIB_PATH = "./bin/libraylib.so";
+constexpr const char *RAYLIB_PATH = "./bin/raylib.so";
 using FnMap_t                     = std::map<std::string, void *>;
 class DFN
 {
@@ -147,7 +147,7 @@ Mod::Mod(
     TL::Type def_type = TL::Type::ExtDef;
     switch (t.m_type)
     {
-    case LX::Type::ExtDef: def_type = TL::Type::ExtDef; break;
+    case LX::Type::PubDef: def_type = TL::Type::PubDef; break;
     case LX::Type::IntDef: def_type = TL::Type::IntDef; break;
     default              : UT_FAIL_MSG("UNREACHABLE token type: %s", UT_TCS(t.m_type));
     }

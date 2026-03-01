@@ -28,6 +28,7 @@ constexpr UT::String ELSE{ "else" };
 constexpr UT::String INT{ "int" };
 constexpr UT::String PUB{ "pub" };
 constexpr UT::String WHILE{ "while" };
+constexpr UT::String EXT{ "ext" };
 
 } // namespace Keyword
 
@@ -125,10 +126,11 @@ struct ErrorE : public ER::E
   X(Word)                                                                      \
   X(If)                                                                        \
   X(IntDef)                                                                    \
-  X(ExtDef)                                                                    \
+  X(PubDef)                                                                    \
   X(Not)                                                                       \
   X(Str)                                                                       \
   X(While)                                                                     \
+  X(ExtDef)                                                                    \
   X(Max)
 
 enum class Type
@@ -169,6 +171,34 @@ struct SymDef
   Tokens     m_def;
 };
 
+enum class LangType
+{
+  Fn,
+  Nat,
+  Nat8,
+  Nat16,
+  Nat32,
+  Nat64,
+  Int,
+  Int8,
+  Int16,
+  Int32,
+  Int64,
+};
+
+struct Sig
+{
+  LangType m_type;
+  Tokens   m_fn_params;
+};
+
+struct ExtSym
+{
+  UT::String m_name;
+  Sig        m_sig;
+  Tokens     m_def;
+};
+
 struct While
 {
   Tokens m_condition;
@@ -188,6 +218,8 @@ struct Token
     Fn         m_fn;
     SymDef     m_sym;
     While      m_while;
+    ExtSym     m_ext_sym;
+    Sig        m_sig;
     UT::String m_string;
     ssize_t    m_int = 0;
   } as;
@@ -317,6 +349,8 @@ public:
 
   E match_operator(char c);
 
+  E match_operator(UT::String s);
+
   UT::String get_word(size_t idx);
 
   bool match_keyword(UT::String keyword, UT::String word);
@@ -438,7 +472,7 @@ to_string(
   {
     return to_string(t.as.m_tokens);
   }
-  case LX::Type::ExtDef:
+  case LX::Type::PubDef:
   {
     return "pub " + to_string(t.as.m_sym.m_sym_name) + " = "
            + to_string(t.as.m_sym.m_def);
@@ -460,6 +494,11 @@ to_string(
   {
     return "while " + to_string(t.as.m_while.m_condition) + " "
            + to_string(t.as.m_while.m_body);
+  }
+  case LX::Type::ExtDef:
+  {
+    UT_TODO("Type Ext not handled yet!");
+    return "ext";
   }
   }
   UT_FAIL_IF("UNREACHABLE");

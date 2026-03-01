@@ -521,7 +521,7 @@ Lexer::run()
         LX_FN_TRY(new_lexer.run());
 
         // TODO: candidate for refactor
-        Token symbol{ "int" == word ? Type::IntDef : Type::ExtDef };
+        Token symbol{ "int" == word ? Type::IntDef : Type::PubDef };
         symbol.m_cursor            = new_lexer.m_cursor;
         symbol.m_line              = new_lexer.m_lines;
         symbol.as.m_sym.m_def      = new_lexer.m_tokens;
@@ -549,8 +549,8 @@ Lexer::run()
 
         // TODO: Token should have an end
         Token token{ Type::Let };
-        token.m_line                          = this->m_lines;
-        token.m_cursor                        = this->m_cursor;
+        token.m_line                       = this->m_lines;
+        token.m_cursor                     = this->m_cursor;
         token.as.m_let_tokens.m_var_name   = var_name;
         token.as.m_let_tokens.m_let_tokens = let_lexer.m_tokens;
         token.as.m_let_tokens.m_in_tokens  = in_lexer.m_tokens;
@@ -619,6 +619,64 @@ Lexer::run()
 
         UT_TRACE("While expression tokenized: %s", UT_TCS(token));
         if (E::IN_KEYWORD == e || e == E::ELSE_KEYWORD) return e;
+      }
+      else if (this->match_keyword(LX::Keyword::EXT, word))
+      {
+        size_t next_symbol_idx;
+        E      e = this->find_next_global_symbol(next_symbol_idx);
+        if (E::WORD_NOT_FOUND == e) next_symbol_idx = this->m_end;
+
+        UT::String sym_name = this->get_word(this->m_cursor);
+
+        LX_ASSERT("" != sym_name,
+                  E::WORD_NOT_FOUND); // TODO: use a different error
+
+        LX_FN_TRY(this->match_operator(':'));
+
+        Lexer sig_lexer{ m_input, m_arena, m_cursor, next_symbol_idx };
+        UT::Vec<UT::String> types{ m_arena };
+        UT::String          type{};
+        e = E::OK;
+
+        while (E::OK == e)
+        {
+          type = sig_lexer.get_word(sig_lexer.m_cursor);
+          LX_ASSERT("" != type, E::UNRECOGNIZED_STRING);
+          types.push(type);
+          e = sig_lexer.match_operator("->");
+        }
+
+        for (auto &t : types)
+        {
+          std::printf("HERE (%s)\n", t.m_mem);
+        }
+
+        e = E::OK;
+        Sig sig{};
+        sig.m_fn_params = { m_arena };
+        sig.m_type      = 1 == types.m_len ? LangType::Int
+                                           : LangType::Fn; // TODO: Don't hardcode
+        for (auto &string : types)
+        {
+          LX::Token type_token{ Type::Str };
+          type_token.as.m_string = string;
+          sig.m_fn_params.push(type_token);
+        }
+
+        // LX_FN_TRY(sig_lexer.match_operator('='));
+
+        Tokens sym_defs{ m_arena };
+        Token  sym_def{ Type::Str };
+        sym_def.as.m_string = "./bin/raylib.so";
+        sym_defs.push(sym_def);
+
+        Token symbol{ Type::ExtDef };
+        symbol.as.m_ext_sym.m_name = sym_name;
+        symbol.as.m_ext_sym.m_sig  = sig;
+        symbol.as.m_ext_sym.m_def  = sym_defs;
+
+        this->m_tokens.push(symbol);
+        this->m_cursor = next_symbol_idx;
       }
       else
       {
@@ -764,6 +822,22 @@ Lexer::match_operator(
   return E::OK;
 };
 
+E
+Lexer::match_operator(
+  UT::String s)
+{
+  UT_BEGIN_TRACE(this->m_arena, this->m_events, "{}", 0);
+
+  this->strip_white_space(this->m_cursor - 1);
+  for (size_t idx = 0; idx < s.m_len; ++idx)
+  {
+    LX_ASSERT(s[idx] == this->next_char(), E::UNRECOGNIZED_STRING);
+  }
+
+  UT_TRACE("Successfully matched operator %c", c);
+  return E::OK;
+}
+
 // TODO: candidate for refactor
 void
 Lexer::strip_white_space(
@@ -839,7 +913,7 @@ Lexer::find_next_global_symbol(
     {
       search_lexer.strip_line(search_lexer.m_cursor);
     }
-    if ("int" == next_word || "pub" == next_word)
+    if ("int" == next_word || "pub" == next_word || "ext" == next_word)
     {
       /*
          Need to return the cursor just before
