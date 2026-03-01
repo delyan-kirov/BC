@@ -104,6 +104,11 @@ clean:
 	rm -rf $(BIN)*
 	$(MAKE) -C ./lib clean
 
+clean_wkspace:
+	rm -f tmp.*
+	rm -f vgcore*
+	$(MAKE) -C ./lib clean
+
 bear:
 	mkdir -p $(BIN)
 	make clean

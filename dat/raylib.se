@@ -1,6 +1,5 @@
-# ext(C)
-# init_window: C_int -> C_int -> C_str =
-# 	#DLL_AT("./bin/raylib.so")
+# ext init_window: C_int -> C_int -> C_str =
+# 	@DLL(C, "./bin/raylib.so")
 
 pub loopy =
 	let fps = set_target_fps 10 in
