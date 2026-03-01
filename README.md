@@ -1,4 +1,4 @@
-# BC
+# Thrax
 
 Low level, expression based language. 
 
