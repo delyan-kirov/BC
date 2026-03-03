@@ -171,25 +171,37 @@ struct SymDef
   Tokens     m_def;
 };
 
+#define LX_LangType_ENUM_VARIANTS                                              \
+  X(Fn)                                                                        \
+  X(Nat)                                                                       \
+  X(Nat8)                                                                      \
+  X(Nat16)                                                                     \
+  X(Nat32)                                                                     \
+  X(Nat64)                                                                     \
+  X(Int)                                                                       \
+  X(Int8)                                                                      \
+  X(Int16)                                                                     \
+  X(Int32)                                                                     \
+  X(Int64)                                                                     \
+  X(Ptr)                                                                       \
+  X(Void)
+
 enum class LangType
 {
-  Fn,
-  Nat,
-  Nat8,
-  Nat16,
-  Nat32,
-  Nat64,
-  Int,
-  Int8,
-  Int16,
-  Int32,
-  Int64,
+#define X(LX_ENUM_VALUE) LX_ENUM_VALUE,
+  LX_LangType_ENUM_VARIANTS
+#undef X
 };
 
+// NOTE: T -> (T -> (T -> T))
+//   is: T -> T -> T -> T
 struct Sig
 {
   LangType m_type;
-  Tokens   m_fn_params;
+  union
+  {
+    UT::Pair<Sig> m_pair;
+  } as;
 };
 
 struct ExtSym
@@ -394,6 +406,47 @@ to_string(
 
 inline string
 to_string(
+  LX::LangType lang_type)
+{
+  switch (lang_type)
+  {
+#define X(LX_ENUM_VALUE)                                                       \
+  case LX::LangType::LX_ENUM_VALUE: return #LX_ENUM_VALUE;
+    LX_LangType_ENUM_VARIANTS
+#undef X
+  }
+
+  UT_FAIL_MSG("Got unexpected type %d", lang_type);
+  return "";
+}
+
+// TODO: Knowing what type I need from the union is not obvious.
+// There should be a better way to do it
+inline string
+to_string(
+  LX::Sig sig)
+{
+  switch (sig.m_type)
+  {
+#define X(LX_ENUM_VALUE)                                                       \
+  case LX::LangType::LX_ENUM_VALUE:                                            \
+    if constexpr (LX::LangType::LX_ENUM_VALUE == LX::LangType::Fn)             \
+    {                                                                          \
+      UT::Pair<LX::Sig> pair = sig.as.m_pair;                                  \
+      return to_string(pair.first()) + " -> " + to_string(pair.second());      \
+    }                                                                          \
+    return to_string(sig.m_type);
+    LX_LangType_ENUM_VARIANTS
+#undef X
+  }
+
+  UT_FAIL_MSG("Unreachable variant %d\n", sig.m_type);
+
+  return "";
+}
+
+inline string
+to_string(
   LX::Type t)
 {
   switch (t)
@@ -497,8 +550,10 @@ to_string(
   }
   case LX::Type::ExtDef:
   {
-    UT_TODO("Type Ext not handled yet!");
-    return "ext";
+    auto ext_sym = t.as.m_ext_sym;
+
+    return "ext " + to_string(ext_sym.m_name) + ": " + to_string(ext_sym.m_sig)
+           + " = " + to_string(ext_sym.m_def);
   }
   }
   UT_FAIL_IF("UNREACHABLE");

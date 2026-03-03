@@ -20,6 +20,73 @@ is_white_space(
   }
 }
 
+// TODO: We may have functions as input params, but for now we
+// ignore this case
+// Functions can only have integer params in their signature
+std::pair<LX::E, LX::Sig>
+parse_sig(
+  UT::Vec<UT::String> &types, AR::Arena &arena, const size_t idx)
+{
+  Sig sig{};
+
+  // TODO: Don't hardcode types like that
+  if ("C_int" == types[idx])
+  {
+    if (idx == types.m_len - 1)
+    {
+      sig.m_type = LX::LangType::Int;
+    }
+    else
+    {
+      sig.m_type            = LangType::Fn;
+      UT::Pair<Sig> *pair   = &sig.as.m_pair;
+      *pair                 = { arena };
+      pair->begin()->m_type = LX::LangType::Int;
+      *pair->last()         = parse_sig(types, arena, idx + 1).second;
+      sig.as.m_pair         = *pair;
+    }
+  }
+  else if ("C_void" == types[idx])
+  {
+    if (idx == types.m_len - 1)
+    {
+      sig.m_type = LX::LangType::Void;
+    }
+    else
+    {
+      sig.m_type            = LangType::Fn;
+      UT::Pair<Sig> *pair   = &sig.as.m_pair;
+      *pair                 = { arena };
+      pair->begin()->m_type = LX::LangType::Void;
+      *pair->last()         = parse_sig(types, arena, idx + 1).second;
+      sig.as.m_pair         = *pair;
+    }
+  }
+  else if ("C_str" == types[idx])
+  {
+    if (idx == types.m_len - 1)
+    {
+      // TODO: The pointer should indicate what it points to
+      sig.m_type = LX::LangType::Ptr;
+    }
+    else
+    {
+      sig.m_type          = LangType::Fn;
+      UT::Pair<Sig> *pair = &sig.as.m_pair;
+      *pair               = { arena };
+      // TODO: this should also include the type behind the pointer
+      pair->begin()->m_type = LX::LangType::Ptr;
+      *pair->last()         = parse_sig(types, arena, idx + 1).second;
+      sig.as.m_pair         = *pair;
+    }
+  }
+  else
+  {
+    // TODO: Think how to handle the other cases
+  }
+  return std::pair{ LX::E::OK, sig };
+}
+
 bool
 delimits_word(
   char c)
@@ -510,14 +577,12 @@ Lexer::run()
 
         UT::String sym_name = this->get_word(this->m_cursor);
 
-        LX_ASSERT("" != sym_name,
-                  E::WORD_NOT_FOUND); // TODO: use a different error
+        // TODO: use a different error
+        LX_ASSERT("" != sym_name, E::WORD_NOT_FOUND);
 
         LX_FN_TRY(this->match_operator('='));
 
-        Lexer new_lexer{
-          this->m_input, this->m_arena, this->m_cursor, next_symbol_idx
-        };
+        Lexer new_lexer{ m_input, m_arena, m_cursor, next_symbol_idx };
         LX_FN_TRY(new_lexer.run());
 
         // TODO: candidate for refactor
@@ -646,37 +711,33 @@ Lexer::run()
           e = sig_lexer.match_operator("->");
         }
 
-        for (auto &t : types)
-        {
-          std::printf("HERE (%s)\n", t.m_mem);
-        }
+        auto parse_result = parse_sig(types, m_arena, 0);
 
-        e = E::OK;
-        Sig sig{};
-        sig.m_fn_params = { m_arena };
-        sig.m_type      = 1 == types.m_len ? LangType::Int
-                                           : LangType::Fn; // TODO: Don't hardcode
-        for (auto &string : types)
-        {
-          LX::Token type_token{ Type::Str };
-          type_token.as.m_string = string;
-          sig.m_fn_params.push(type_token);
-        }
+        // TODO : Use better error
+        LX_ASSERT(E::OK == parse_result.first, E::CONTROL_STRUCTURE_ERROR);
+        Sig sig = parse_result.second;
 
+        // TODO: parse this
         // LX_FN_TRY(sig_lexer.match_operator('='));
 
+        // UT_FAIL_IF("here");
+
+        sig_lexer.run();
         Tokens sym_defs{ m_arena };
-        Token  sym_def{ Type::Str };
-        sym_def.as.m_string = "./bin/raylib.so";
-        sym_defs.push(sym_def);
+        sym_defs.push(sig_lexer.m_tokens.last()->as.m_tokens[0]);
+        sym_defs.push(sig_lexer.m_tokens.last()->as.m_tokens[1]);
 
         Token symbol{ Type::ExtDef };
         symbol.as.m_ext_sym.m_name = sym_name;
         symbol.as.m_ext_sym.m_sig  = sig;
         symbol.as.m_ext_sym.m_def  = sym_defs;
 
-        this->m_tokens.push(symbol);
-        this->m_cursor = next_symbol_idx;
+        // UT_VAR_INSP(symbol);
+        m_cursor = next_symbol_idx;
+        m_lines += sig_lexer.m_lines;
+
+
+        m_tokens.push(symbol);
       }
       else
       {
