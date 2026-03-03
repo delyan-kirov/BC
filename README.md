@@ -10,4 +10,4 @@ make
 
 ## Raylib demo
 
-![Demo GIF](lib/blobs/raylib-demo.gif)
+![Demo GIF](https://raw.githubusercontent.com/delyan-kirov/blobs/main/raylib-demo.gif)
