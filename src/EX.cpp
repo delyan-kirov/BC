@@ -104,12 +104,12 @@ Parser::run()
   {
     LX::Token t = this->m_tokens[i];
 
-    switch (t.m_type)
+    switch (t.type)
     {
     case LX::Type::Int:
     {
       EX::Expr expr{ EX::Type::Int };
-      expr.as.m_int = t.as.m_int;
+      expr.as.m_int = t.as.integer;
       if (this->m_exprs.is_empty()) goto CASE_INT_SINGLE_EXPR;
 
       if (EX::Type::VarApp == this->m_exprs.last()->m_type)
@@ -144,7 +144,7 @@ Parser::run()
     break;
     case LX::Type::Group:
     {
-      Parser group_parser{ *this, t.as.m_tokens };
+      Parser group_parser{ *this, t.as.tokens };
       group_parser.run();
       EX::Expr expr = *group_parser.m_exprs.last();
       if (this->m_exprs.is_empty()) goto CASE_GROUP_SINGLE_PARAM;
@@ -182,7 +182,7 @@ Parser::run()
       // TODO: candidate for refactor, label abuse unnecessary
       {
         EX::Expr var{ EX::Type::Var };
-        var.as.m_var = t.as.m_string;
+        var.as.m_var = t.as.string;
         i += 1;
 
         if (this->m_exprs.is_empty()) goto CASE_WORD_NOT_APPLIED;
@@ -227,7 +227,7 @@ Parser::run()
           EX::Exprs param_expr = param_parser.m_exprs;
 
           EX::Expr var_app{ EX::Type::VarApp, this->m_arena };
-          var_app.as.m_varapp.m_fn_name = t.as.m_string;
+          var_app.as.m_varapp.m_fn_name = t.as.string;
           var_app.as.m_varapp.m_param   = param_expr;
 
           this->m_exprs.push(var_app);
@@ -294,13 +294,13 @@ Parser::run()
     {
       // FIXME: https://github.com/delyan-kirov/BC/issues/25
       // let var = body_expr in app_expr
-      UT::String var_name = t.as.m_let_tokens.m_var_name;
+      UT::String var_name = t.as.binding.name;
 
-      EX::Parser value_parser{ *this, t.as.m_let_tokens.m_let_tokens };
+      EX::Parser value_parser{ *this, t.as.binding.let };
       value_parser.run();
       EX::Expr *value_expr = value_parser.m_exprs.last();
 
-      EX::Parser continuation_parser{ *this, t.as.m_let_tokens.m_in_tokens };
+      EX::Parser continuation_parser{ *this, t.as.binding.in };
       continuation_parser.run();
       EX::Expr *continuation_expr = continuation_parser.m_exprs.last();
 
@@ -317,9 +317,9 @@ Parser::run()
     case LX::Type::Fn:
     {
       // \<var> = <expr>
-      UT::String param = t.as.m_fn.m_var_name;
+      UT::String param = t.as.fn.param_name;
 
-      EX::Parser body_parser{ *this, t.as.m_fn.m_body };
+      EX::Parser body_parser{ *this, t.as.fn.body };
       body_parser.run();
       EX::Expr body_expr = *body_parser.m_exprs.last();
 
@@ -360,15 +360,15 @@ Parser::run()
     break;
     case LX::Type::If:
     {
-      EX::Parser condition_parser{ *this, t.as.m_if_tokens.m_condition };
+      EX::Parser condition_parser{ *this, t.as.if_else.condition };
       condition_parser.run();
       EX::Expr condition = *condition_parser.m_exprs.last();
 
-      EX::Parser true_branch_parser{ *this, t.as.m_if_tokens.m_true_branch };
+      EX::Parser true_branch_parser{ *this, t.as.if_else.true_branch };
       true_branch_parser.run();
       EX::Expr true_branch_expr = *true_branch_parser.m_exprs.last();
 
-      EX::Parser else_branch_parser{ *this, t.as.m_if_tokens.m_else_branch };
+      EX::Parser else_branch_parser{ *this, t.as.if_else.else_branch };
       else_branch_parser.run();
       EX::Expr else_branch_expr = *else_branch_parser.m_exprs.last();
 
@@ -407,7 +407,7 @@ Parser::run()
     case LX::Type::Str:
     {
       EX::Expr expr{ EX::Type::Str };
-      expr.as.m_string = t.as.m_string;
+      expr.as.m_string = t.as.string;
       if (this->m_exprs.is_empty()) goto CASE_STR_SINGLE_EXPR;
 
       if (EX::Type::VarApp == this->m_exprs.last()->m_type)
@@ -444,12 +444,12 @@ Parser::run()
     {
       i += 1;
 
-      EX::Parser condition_parser{ *this, t.as.m_while.m_condition };
+      EX::Parser condition_parser{ *this, t.as.wile.condition };
       condition_parser.run();
 
       // FIXME: variable str should result in function app but currently, the
       // variable is ignored
-      EX::Parser body_parser{ *this, t.as.m_while.m_body };
+      EX::Parser body_parser{ *this, t.as.wile.body };
       body_parser.run();
 
       EX::Expr while_expr{ EX::Type::While };
@@ -464,7 +464,7 @@ Parser::run()
     default:
     {
       // TODO: instead of UT_FAIL_IF, implement error reporting macros
-      UT_FAIL_MSG("The token type <%s> is unhandled", UT_TCS(t.m_type));
+      UT_FAIL_MSG("The token type <%s> is unhandled", UT_TCS(t.type));
     }
     break;
     }

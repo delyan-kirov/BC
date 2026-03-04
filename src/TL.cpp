@@ -106,17 +106,17 @@ expand_signature(
 {
   std::vector<LX::LangType> expansion{};
 
-  if (LX::LangType::Fn == sig.m_type)
+  if (LX::LangType::Fn == sig.type)
   {
-    expansion.push_back(sig.as.m_pair.first().m_type);
-    LX::Sig                   left_sig       = sig.as.m_pair.second();
+    expansion.push_back(sig.as.pair.first().type);
+    LX::Sig                   left_sig       = sig.as.pair.second();
     std::vector<LX::LangType> left_expansion = expand_signature(left_sig);
     expansion.insert(
       expansion.end(), left_expansion.begin(), left_expansion.end());
   }
   else
   {
-    expansion.push_back(sig.m_type);
+    expansion.push_back(sig.type);
   }
 
   return expansion;
@@ -138,22 +138,22 @@ Mod::Mod(
   for (LX::Token t : l.m_tokens)
   {
     TL::Type def_type = TL::Type::ExtDef;
-    switch (t.m_type)
+    switch (t.type)
     {
     // TODO: this should be handled better
     case LX::Type::PubDef: def_type = TL::Type::PubDef; break;
     case LX::Type::IntDef: def_type = TL::Type::IntDef; break;
     case LX::Type::ExtDef: def_type = TL::Type::ExtDef; break;
-    default              : UT_FAIL_MSG("UNREACHABLE token type: %s", UT_TCS(t.m_type));
+    default              : UT_FAIL_MSG("UNREACHABLE token type: %s", UT_TCS(t.type));
     }
 
     // TODO: this should be handled better
-    if (LX::Type::ExtDef == t.m_type)
+    if (LX::Type::ExtDef == t.type)
     {
-      LX::Sig sig = t.as.m_ext_sym.m_sig;
-      DFN::init(t.as.m_ext_sym.m_def[1].as.m_string);
+      LX::Sig sig = t.as.ext_sym.sig;
+      DFN::init(t.as.ext_sym.def[1].as.string);
 
-      if (LX::LangType::Fn == sig.m_type)
+      if (LX::LangType::Fn == sig.type)
       {
         // TODO: It is assumed C functions are simple (Type, Type, Type) -> Type
         // where Type is not a function type or a structure or union
@@ -186,18 +186,18 @@ Mod::Mod(
         }
 
         auto sym = (DFN *)arena.alloc(sizeof(DFN));
-        *sym     = { t.as.m_ext_sym.m_def[0].as.m_string.m_mem,
+        *sym     = { t.as.ext_sym.def[0].as.string.m_mem,
                      sig_in_types,
                      sig_out_types };
 
-        raylib_functions[std::to_string(t.as.m_ext_sym.m_name)] = sym;
+        raylib_functions[std::to_string(t.as.ext_sym.name)] = sym;
       }
 
       continue;
     }
 
-    UT::String def_name   = t.as.m_sym.m_sym_name;
-    LX::Tokens def_tokens = t.as.m_sym.m_def;
+    UT::String def_name   = t.as.sym.name;
+    LX::Tokens def_tokens = t.as.sym.def;
 
     EX::Parser parser{ def_tokens, arena, source_code.m_mem };
     parser.run();

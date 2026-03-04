@@ -34,32 +34,32 @@ parse_sig(
   {
     if (idx == types.m_len - 1)
     {
-      sig.m_type = LX::LangType::Int;
+      sig.type = LX::LangType::Int;
     }
     else
     {
-      sig.m_type            = LangType::Fn;
-      UT::Pair<Sig> *pair   = &sig.as.m_pair;
-      *pair                 = { arena };
-      pair->begin()->m_type = LX::LangType::Int;
-      *pair->last()         = parse_sig(types, arena, idx + 1).second;
-      sig.as.m_pair         = *pair;
+      sig.type            = LangType::Fn;
+      UT::Pair<Sig> *pair = &sig.as.pair;
+      *pair               = { arena };
+      pair->begin()->type = LX::LangType::Int;
+      *pair->last()       = parse_sig(types, arena, idx + 1).second;
+      sig.as.pair         = *pair;
     }
   }
   else if ("C_void" == types[idx])
   {
     if (idx == types.m_len - 1)
     {
-      sig.m_type = LX::LangType::Void;
+      sig.type = LX::LangType::Void;
     }
     else
     {
-      sig.m_type            = LangType::Fn;
-      UT::Pair<Sig> *pair   = &sig.as.m_pair;
-      *pair                 = { arena };
-      pair->begin()->m_type = LX::LangType::Void;
-      *pair->last()         = parse_sig(types, arena, idx + 1).second;
-      sig.as.m_pair         = *pair;
+      sig.type            = LangType::Fn;
+      UT::Pair<Sig> *pair = &sig.as.pair;
+      *pair               = { arena };
+      pair->begin()->type = LX::LangType::Void;
+      *pair->last()       = parse_sig(types, arena, idx + 1).second;
+      sig.as.pair         = *pair;
     }
   }
   else if ("C_str" == types[idx])
@@ -67,17 +67,17 @@ parse_sig(
     if (idx == types.m_len - 1)
     {
       // TODO: The pointer should indicate what it points to
-      sig.m_type = LX::LangType::Ptr;
+      sig.type = LX::LangType::Ptr;
     }
     else
     {
-      sig.m_type          = LangType::Fn;
-      UT::Pair<Sig> *pair = &sig.as.m_pair;
+      sig.type            = LangType::Fn;
+      UT::Pair<Sig> *pair = &sig.as.pair;
       *pair               = { arena };
       // TODO: this should also include the type behind the pointer
-      pair->begin()->m_type = LX::LangType::Ptr;
-      *pair->last()         = parse_sig(types, arena, idx + 1).second;
-      sig.as.m_pair         = *pair;
+      pair->begin()->type = LX::LangType::Ptr;
+      *pair->last()       = parse_sig(types, arena, idx + 1).second;
+      sig.as.pair         = *pair;
     }
   }
   else
@@ -260,7 +260,7 @@ Lexer::push_int()
                           : std::stoi(s.c_str(), nullptr, 10);
 
     LX::Token t{ LX::Type::Int };
-    t.as.m_int = result;
+    t.as.integer = result;
     this->m_tokens.push(t);
   }
   catch (std::exception &e)
@@ -379,7 +379,7 @@ Lexer::run()
 
       UT::String string = sb.to_String(m_arena);
       Token      string_token{ Type::Str };
-      string_token.as.m_string = string;
+      string_token.as.string = string;
 
       m_tokens.push(string_token);
     }
@@ -504,11 +504,11 @@ Lexer::run()
                 LX::E::CONTROL_STRUCTURE_ERROR);
 
       Token fn{};
-      fn.m_type             = Type::Fn;
-      fn.m_line             = this->m_lines;
-      fn.m_cursor           = this->m_cursor;
-      fn.as.m_fn.m_var_name = var_name;
-      fn.as.m_fn.m_body     = body_lexer.m_tokens;
+      fn.type             = Type::Fn;
+      fn.line             = this->m_lines;
+      fn.cursor           = this->m_cursor;
+      fn.as.fn.param_name = var_name;
+      fn.as.fn.body       = body_lexer.m_tokens;
 
       this->m_tokens.push(fn);
       this->skip_to(body_lexer);
@@ -587,10 +587,10 @@ Lexer::run()
 
         // TODO: candidate for refactor
         Token symbol{ "int" == word ? Type::IntDef : Type::PubDef };
-        symbol.m_cursor            = new_lexer.m_cursor;
-        symbol.m_line              = new_lexer.m_lines;
-        symbol.as.m_sym.m_def      = new_lexer.m_tokens;
-        symbol.as.m_sym.m_sym_name = sym_name;
+        symbol.cursor      = new_lexer.m_cursor;
+        symbol.line        = new_lexer.m_lines;
+        symbol.as.sym.def  = new_lexer.m_tokens;
+        symbol.as.sym.name = sym_name;
 
         this->m_tokens.push(symbol);
         this->skip_to(new_lexer);
@@ -614,11 +614,11 @@ Lexer::run()
 
         // TODO: Token should have an end
         Token token{ Type::Let };
-        token.m_line                       = this->m_lines;
-        token.m_cursor                     = this->m_cursor;
-        token.as.m_let_tokens.m_var_name   = var_name;
-        token.as.m_let_tokens.m_let_tokens = let_lexer.m_tokens;
-        token.as.m_let_tokens.m_in_tokens  = in_lexer.m_tokens;
+        token.line            = this->m_lines;
+        token.cursor          = this->m_cursor;
+        token.as.binding.name = var_name;
+        token.as.binding.let  = let_lexer.m_tokens;
+        token.as.binding.in   = in_lexer.m_tokens;
 
         this->m_tokens.push(token);
         this->skip_to(in_lexer);
@@ -648,9 +648,9 @@ Lexer::run()
 
         // TODO: candidate for refactor
         Token token{ Type::If };
-        token.as.m_if_tokens.m_condition   = if_condition_lexer.m_tokens;
-        token.as.m_if_tokens.m_true_branch = true_branch_lexer.m_tokens;
-        token.as.m_if_tokens.m_else_branch = else_branch_lexer.m_tokens;
+        token.as.if_else.condition   = if_condition_lexer.m_tokens;
+        token.as.if_else.true_branch = true_branch_lexer.m_tokens;
+        token.as.if_else.else_branch = else_branch_lexer.m_tokens;
 
         this->m_tokens.push(token);
         this->skip_to(else_branch_lexer);
@@ -676,8 +676,8 @@ Lexer::run()
 
         // TODO: candidate for refactor
         Token token{ Type::While };
-        token.as.m_while.m_condition = condition_lexer.m_tokens;
-        token.as.m_while.m_body      = body_lexer.m_tokens;
+        token.as.wile.condition = condition_lexer.m_tokens;
+        token.as.wile.body      = body_lexer.m_tokens;
 
         this->m_tokens.push(token);
         this->skip_to(body_lexer);
@@ -724,18 +724,17 @@ Lexer::run()
 
         sig_lexer.run();
         Tokens sym_defs{ m_arena };
-        sym_defs.push(sig_lexer.m_tokens.last()->as.m_tokens[0]);
-        sym_defs.push(sig_lexer.m_tokens.last()->as.m_tokens[1]);
+        sym_defs.push(sig_lexer.m_tokens.last()->as.tokens[0]);
+        sym_defs.push(sig_lexer.m_tokens.last()->as.tokens[1]);
 
         Token symbol{ Type::ExtDef };
-        symbol.as.m_ext_sym.m_name = sym_name;
-        symbol.as.m_ext_sym.m_sig  = sig;
-        symbol.as.m_ext_sym.m_def  = sym_defs;
+        symbol.as.ext_sym.name = sym_name;
+        symbol.as.ext_sym.sig  = sig;
+        symbol.as.ext_sym.def  = sym_defs;
 
         // UT_VAR_INSP(symbol);
         m_cursor = next_symbol_idx;
         m_lines += sig_lexer.m_lines;
-
 
         m_tokens.push(symbol);
       }
@@ -743,7 +742,7 @@ Lexer::run()
       {
         LX_ASSERT(word.m_len > 0, LX::E::UNRECOGNIZED_STRING);
         LX::Token t{ LX::Type::Word };
-        t.as.m_string = word;
+        t.as.string = word;
         this->m_tokens.push(t);
       }
     }
