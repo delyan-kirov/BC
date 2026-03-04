@@ -1,9 +1,26 @@
 #include "LX.hpp"
 #include "UT.hpp"
-#include <cstdio>
 
 namespace LX
 {
+LX::ErrorE::ErrorE(
+  AR::Arena  &arena,
+  const char *fn_name,
+  int         line,
+  const char *data,
+  LX::E       error)
+    : E{
+        ER::Level::ERROR,
+        0,
+        arena,
+        (void *)data,
+      }
+{
+  UT::SB sb{};
+  sb.concatf("[%s] %s ln(%d) %s", UT_TCS(error), fn_name, line, data);
+  UT::Vu<char> msg = UT::memcopy(*this->m_arena, sb.vu().m_mem);
+  this->m_data     = (void *)msg.m_mem;
+}
 
 namespace
 {
@@ -988,4 +1005,71 @@ Lexer::find_next_global_symbol(
   return E::WORD_NOT_FOUND;
 }
 
+Lexer::Lexer(
+  const char *const input, AR::Arena &arena, size_t begin, size_t end)
+    : m_arena{ arena },
+      m_events{ arena },
+      m_input{ input },
+      m_tokens{ Tokens(arena) },
+      m_lines{ 0 },
+      m_cursor{ begin },
+      m_begin{ begin },
+      m_end{ end }
+{
+}
+Lexer::Lexer(
+  Lexer const &l)
+    : m_arena(l.m_arena),              //
+      m_events(std::move(l.m_events)), //
+      m_input{ l.m_input },            //
+      m_tokens(l.m_tokens),            //
+      m_lines(l.m_lines),              //
+      m_cursor(l.m_cursor),            //
+      m_begin(l.m_begin),              //
+      m_end(l.m_end)                   //
+{
+  for (size_t i = 0; i < l.m_events.m_len; ++i)
+  {
+    ER::E e = l.m_events[i];
+    this->m_events.push(e);
+  }
+};
+Lexer::Lexer(
+  Lexer const &l, size_t begin, size_t end)
+    : m_arena{ l.m_arena },
+      m_events(l.m_arena)
+{
+  this->m_begin  = l.m_begin;
+  this->m_end    = l.m_end;
+  this->m_cursor = l.m_cursor;
+  this->m_input  = l.m_input;
+  this->m_begin  = begin;
+  this->m_end    = end;
+  new (&this->m_tokens) Tokens{ l.m_arena };
+}
+Lexer::Lexer(
+  Lexer const &l, size_t begin)
+    : m_arena{ l.m_arena },
+      m_events(l.m_arena)
+{
+  this->m_begin  = l.m_begin;
+  this->m_end    = l.m_end;
+  this->m_cursor = l.m_cursor;
+  this->m_input  = l.m_input;
+  this->m_begin  = begin;
+  this->m_end    = l.m_end;
+  new (&this->m_tokens) Tokens{ l.m_arena };
+}
+void
+Lexer::skip_to(
+  Lexer const &l)
+{
+  this->m_cursor = l.m_cursor;
+  this->m_lines += l.m_lines;
+
+  for (auto e : l.m_events)
+  {
+    this->m_events.push(e);
+  }
+}
 } // namespace LX

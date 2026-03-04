@@ -1,7 +1,6 @@
 #include "EX.hpp"
 #include "LX.hpp"
 #include "UT.hpp"
-#include <cstdio>
 
 namespace EX
 {
@@ -124,7 +123,6 @@ Parser::run()
         fnapp.as.m_fnapp.m_param.push(expr);
         fnapp.as.m_fnapp.m_body.m_body  = this->m_exprs.last()->as.m_fn.m_body;
         fnapp.as.m_fnapp.m_body.m_param = this->m_exprs.last()->as.m_fn.m_param;
-        fnapp.as.m_fnapp.m_body.m_flags = this->m_exprs.last()->as.m_fn.m_flags;
 
         (void)m_exprs.pop();
         m_exprs.push(fnapp);
@@ -161,7 +159,6 @@ Parser::run()
         fnapp.as.m_fnapp.m_param.push(expr);
         fnapp.as.m_fnapp.m_body.m_body  = this->m_exprs.last();
         fnapp.as.m_fnapp.m_body.m_param = this->m_exprs.last()->as.m_fn.m_param;
-        fnapp.as.m_fnapp.m_body.m_flags = this->m_exprs.last()->as.m_fn.m_flags;
 
         (void)m_exprs.pop();
       }
@@ -200,8 +197,6 @@ Parser::run()
           fnapp.as.m_fnapp.m_body.m_body = this->m_exprs.last();
           fnapp.as.m_fnapp.m_body.m_param
             = this->m_exprs.last()->as.m_fn.m_param;
-          fnapp.as.m_fnapp.m_body.m_flags
-            = this->m_exprs.last()->as.m_fn.m_flags;
 
           (void)m_exprs.pop();
         }
@@ -323,7 +318,7 @@ Parser::run()
       body_parser.run();
       EX::Expr body_expr = *body_parser.m_exprs.last();
 
-      EX::FnDef fn_def{ EX::FnFlags::FN_MUST_INLINE, param, this->m_arena };
+      EX::FnDef fn_def{ param, this->m_arena };
       *fn_def.m_body = body_expr;
 
       i += 1;
@@ -348,7 +343,6 @@ Parser::run()
       else
       {
         EX::Expr fn_def{ EX::Type::FnDef, this->m_arena };
-        fn_def.as.m_fn.m_flags = FnFlags::FN_MUST_INLINE;
         fn_def.as.m_fn.m_param = param;
         *fn_def.as.m_fn.m_body = body_expr;
 
@@ -422,7 +416,6 @@ Parser::run()
         fnapp.as.m_fnapp.m_param.push(expr);
         fnapp.as.m_fnapp.m_body.m_body  = this->m_exprs.last()->as.m_fn.m_body;
         fnapp.as.m_fnapp.m_body.m_param = this->m_exprs.last()->as.m_fn.m_param;
-        fnapp.as.m_fnapp.m_body.m_flags = this->m_exprs.last()->as.m_fn.m_flags;
 
         (void)m_exprs.pop();
         m_exprs.push(fnapp);

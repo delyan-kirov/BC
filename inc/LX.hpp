@@ -1,36 +1,22 @@
+/*-----------------------------------------------------------------------------------------
+ *\file LX.hpp
+ *\info Header file for Lexer
+ *----------------------------------------------------------------------------------------*/
+
 #ifndef LX_HEADER
 #define LX_HEADER
+
+/*-----------------------------------------------------------------------------------------
+ *                                        INCLUDES
+ *----------------------------------------------------------------------------------------*/
 
 #include "UT.hpp"
 #include <cstring>
 #include <stdio.h>
 
-namespace LX
-{
-enum class E;
-}
-
-namespace std
-{
-string to_string(LX::E);
-}
-
-namespace LX
-{
-
-namespace Keyword
-{
-
-constexpr UT::String LET{ "let" };
-constexpr UT::String IN{ "in" };
-constexpr UT::String IF{ "if" };
-constexpr UT::String ELSE{ "else" };
-constexpr UT::String INT{ "int" };
-constexpr UT::String PUB{ "pub" };
-constexpr UT::String WHILE{ "while" };
-constexpr UT::String EXT{ "ext" };
-
-} // namespace Keyword
+/*-----------------------------------------------------------------------------------------
+ *                                        MACROS
+ *----------------------------------------------------------------------------------------*/
 
 #define LX_ERROR_REPORT(LX_ERROR_E, LX_ERROR_MSG)                              \
   do                                                                           \
@@ -72,6 +58,53 @@ constexpr UT::String EXT{ "ext" };
     }                                                                          \
   } while (false)
 
+namespace LX
+{
+
+/*-----------------------------------------------------------------------------------------
+ *                                        CONSTANTS
+ *----------------------------------------------------------------------------------------*/
+
+namespace Keyword
+{
+
+constexpr UT::String LET{ "let" };
+constexpr UT::String IN{ "in" };
+constexpr UT::String IF{ "if" };
+constexpr UT::String ELSE{ "else" };
+constexpr UT::String INT{ "int" };
+constexpr UT::String PUB{ "pub" };
+constexpr UT::String WHILE{ "while" };
+constexpr UT::String EXT{ "ext" };
+
+} // namespace Keyword
+
+/*-----------------------------------------------------------------------------------------
+ *                                        TYPES
+ *----------------------------------------------------------------------------------------*/
+
+#define LX_LangType_ENUM_VARIANTS                                              \
+  X(Fn)                                                                        \
+  X(Nat)                                                                       \
+  X(Nat8)                                                                      \
+  X(Nat16)                                                                     \
+  X(Nat32)                                                                     \
+  X(Nat64)                                                                     \
+  X(Int)                                                                       \
+  X(Int8)                                                                      \
+  X(Int16)                                                                     \
+  X(Int32)                                                                     \
+  X(Int64)                                                                     \
+  X(Ptr)                                                                       \
+  X(Void)
+
+enum class LangType
+{
+#define X(LX_ENUM_VALUE) LX_ENUM_VALUE,
+  LX_LangType_ENUM_VARIANTS
+#undef X
+};
+
 #define LX_E_ENUM_VARIANTS                                                     \
   X(OK)                                                                        \
   X(PARENTHESIS_UNBALANCED)                                                    \
@@ -84,28 +117,6 @@ constexpr UT::String EXT{ "ext" };
   X(IN_KEYWORD)                                                                \
   X(CONTROL_STRUCTURE_ERROR)                                                   \
   X(WORD_NOT_FOUND)
-
-struct ErrorE : public ER::E
-{
-  ErrorE(
-    AR::Arena  &arena,
-    const char *fn_name,
-    int         line,
-    const char *data,
-    LX::E       error)
-      : E{
-          ER::Level::ERROR, //
-          0,                //
-          arena,            //
-          (void *)data,     //
-        }
-  {
-    UT::SB sb{};
-    sb.concatf("[%s] %s ln(%d) %s", UT_TCS(error), fn_name, line, data);
-    UT::Vu<char> msg = UT::memcopy(*this->m_arena, sb.vu().m_mem);
-    this->m_data     = (void *)msg.m_mem;
-  }
-};
 
 enum class E
 {
@@ -146,6 +157,15 @@ enum class Type
 struct Token;
 using Tokens = UT::Vec<Token>;
 
+struct ErrorE : public ER::E
+{
+  ErrorE(AR::Arena  &arena,
+         const char *fn_name,
+         int         line,
+         const char *data,
+         LX::E       error);
+};
+
 struct If
 // if expr => expr else expr
 // [TODO] if expr is pattern => is ... else =>
@@ -172,28 +192,6 @@ struct SymDef
 {
   UT::String name;
   Tokens     def;
-};
-
-#define LX_LangType_ENUM_VARIANTS                                              \
-  X(Fn)                                                                        \
-  X(Nat)                                                                       \
-  X(Nat8)                                                                      \
-  X(Nat16)                                                                     \
-  X(Nat32)                                                                     \
-  X(Nat64)                                                                     \
-  X(Int)                                                                       \
-  X(Int8)                                                                      \
-  X(Int16)                                                                     \
-  X(Int32)                                                                     \
-  X(Int64)                                                                     \
-  X(Ptr)                                                                       \
-  X(Void)
-
-enum class LangType
-{
-#define X(LX_ENUM_VALUE) LX_ENUM_VALUE,
-  LX_LangType_ENUM_VARIANTS
-#undef X
 };
 
 // NOTE: T -> (T -> (T -> T))
@@ -257,6 +255,10 @@ struct Token
   };
 };
 
+/*-----------------------------------------------------------------------------------------
+ *                                        CLASSES
+ *----------------------------------------------------------------------------------------*/
+
 class Lexer
 {
   // TODO: use UT::String, not const char*
@@ -270,79 +272,17 @@ public:
   size_t      m_begin;
   size_t      m_end;
 
-  Lexer(
-    const char *const input, AR::Arena &arena, size_t begin, size_t end)
-      : m_arena{ arena },
-        m_events{ arena },
-        m_input{ input },
-        m_tokens{ Tokens(arena) },
-        m_lines{ 0 },
-        m_cursor{ begin },
-        m_begin{ begin },
-        m_end{ end }
-  {
-  }
+  Lexer(const char *const input, AR::Arena &arena, size_t begin, size_t end);
 
-  Lexer(
-    Lexer const &l)
-      : m_arena(l.m_arena),              //
-        m_events(std::move(l.m_events)), //
-        m_input{ l.m_input },            //
-        m_tokens(l.m_tokens),            //
-        m_lines(l.m_lines),              //
-        m_cursor(l.m_cursor),            //
-        m_begin(l.m_begin),              //
-        m_end(l.m_end)                   //
-  {
-    for (size_t i = 0; i < l.m_events.m_len; ++i)
-    {
-      ER::E e = l.m_events[i];
-      this->m_events.push(e);
-    }
-  };
+  Lexer(Lexer const &l);
 
-  Lexer(
-    Lexer const &l, size_t begin, size_t end)
-      : m_arena{ l.m_arena },
-        m_events(l.m_arena)
-  {
-    this->m_begin  = l.m_begin;
-    this->m_end    = l.m_end;
-    this->m_cursor = l.m_cursor;
-    this->m_input  = l.m_input;
-    this->m_begin  = begin;
-    this->m_end    = end;
-    new (&this->m_tokens) Tokens{ l.m_arena };
-  }
+  Lexer(Lexer const &l, size_t begin, size_t end);
 
-  Lexer(
-    Lexer const &l, size_t begin)
-      : m_arena{ l.m_arena },
-        m_events(l.m_arena)
-  {
-    this->m_begin  = l.m_begin;
-    this->m_end    = l.m_end;
-    this->m_cursor = l.m_cursor;
-    this->m_input  = l.m_input;
-    this->m_begin  = begin;
-    this->m_end    = l.m_end;
-    new (&this->m_tokens) Tokens{ l.m_arena };
-  }
-
-  void
-  skip_to(
-    Lexer const &l)
-  {
-    this->m_cursor = l.m_cursor;
-    this->m_lines += l.m_lines;
-
-    for (auto e : l.m_events)
-    {
-      this->m_events.push(e);
-    }
-  }
+  Lexer(Lexer const &l, size_t begin);
 
   ~Lexer() {}
+
+  void skip_to(Lexer const &l);
 
   void generate_event_report();
 
@@ -378,6 +318,10 @@ public:
 };
 
 } // namespace LX
+
+/*-----------------------------------------------------------------------------------------
+ *                                        UTILS
+ *----------------------------------------------------------------------------------------*/
 
 namespace std
 {
@@ -574,5 +518,9 @@ to_string(
   return s;
 }
 } // namespace std
+
+/*-----------------------------------------------------------------------------------------
+ *                                        EOF
+ *----------------------------------------------------------------------------------------*/
 
 #endif // LX_HEADER

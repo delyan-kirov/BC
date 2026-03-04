@@ -3,9 +3,6 @@
 
 #include "LX.hpp"
 #include "UT.hpp"
-#include <cstdint>
-#include <cstdio>
-#include <string>
 
 namespace EX
 {
@@ -47,25 +44,15 @@ enum class Type
 struct Expr;
 using Exprs = UT::Vec<Expr>;
 
-enum FnFlags : std::uint64_t
-{
-  MIN            = 0,
-  NONE           = 0,
-  FN_MUST_INLINE = 1 << 0,
-  MAX            = FN_MUST_INLINE,
-};
-
 struct FnDef
 {
-  FnFlags    m_flags;
   UT::String m_param;
   Expr      *m_body;
 
   FnDef() = default;
   FnDef(
-    FnFlags flags, UT::String param, AR::Arena &arena)
-      : m_flags{ flags },
-        m_param{ param }
+    UT::String param, AR::Arena &arena)
+      : m_param{ param }
   {
     this->m_body = (EX::Expr *)arena.alloc<EX::Expr>(1);
   }
