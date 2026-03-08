@@ -154,6 +154,12 @@ ErrorE::ErrorE(
   this->m_data     = (void *)msg.m_mem;
 }
 
+E
+Lexer::operator()()
+{
+  return this->run();
+};
+
 bool
 Lexer::match_keyword(
   UT::String keyword, UT::String word)
@@ -467,7 +473,7 @@ Lexer::run()
       LX_FN_TRY(this->find_matching_paren(group_end));
 
       Lexer new_l = Lexer(*this, group_begin, group_end);
-      LX_FN_TRY(new_l.run());
+      LX_FN_TRY(new_l());
 
       this->push_group(new_l);
     }
@@ -518,7 +524,7 @@ Lexer::run()
       Lexer body_lexer{
         this->m_input, this->m_arena, this->m_cursor, this->m_end
       };
-      LX::E e = body_lexer.run();
+      LX::E e = body_lexer();
       LX_ASSERT(LX::E::OK == e || LX::E::IN_KEYWORD == e,
                 LX::E::CONTROL_STRUCTURE_ERROR);
 
@@ -602,7 +608,7 @@ Lexer::run()
         LX_FN_TRY(this->match_operator('='));
 
         Lexer new_lexer{ m_input, m_arena, m_cursor, next_symbol_idx };
-        LX_FN_TRY(new_lexer.run());
+        LX_FN_TRY(new_lexer());
 
         // TODO: candidate for refactor
         Token symbol{ "int" == word ? Type::IntDef : Type::PubDef };
@@ -624,12 +630,12 @@ Lexer::run()
         Lexer let_lexer{
           this->m_input, this->m_arena, this->m_cursor, this->m_end
         };
-        LX_ASSERT(E::IN_KEYWORD == let_lexer.run(), E::CONTROL_STRUCTURE_ERROR);
+        LX_ASSERT(E::IN_KEYWORD == let_lexer(), E::CONTROL_STRUCTURE_ERROR);
 
         Lexer in_lexer{
           let_lexer.m_input, let_lexer.m_arena, let_lexer.m_cursor, this->m_end
         };
-        LX_FN_TRY(in_lexer.run());
+        LX_FN_TRY(in_lexer());
 
         // TODO: Token should have an end
         Token token{ Type::Let };
@@ -647,21 +653,21 @@ Lexer::run()
         Lexer if_condition_lexer{
           this->m_input, this->m_arena, this->m_cursor, this->m_end
         };
-        LX_ASSERT(E::FAT_ARROW == if_condition_lexer.run(),
+        LX_ASSERT(E::FAT_ARROW == if_condition_lexer(),
                   E::OPERATOR_MATCH_FAILURE);
 
         Lexer true_branch_lexer{ if_condition_lexer.m_input,
                                  if_condition_lexer.m_arena,
                                  if_condition_lexer.m_cursor,
                                  this->m_end };
-        LX_ASSERT(E::ELSE_KEYWORD == true_branch_lexer.run(),
+        LX_ASSERT(E::ELSE_KEYWORD == true_branch_lexer(),
                   E::CONTROL_STRUCTURE_ERROR);
 
         Lexer else_branch_lexer{ true_branch_lexer.m_input,
                                  true_branch_lexer.m_arena,
                                  true_branch_lexer.m_cursor,
                                  this->m_end };
-        LX::E e = else_branch_lexer.run();
+        LX::E e = else_branch_lexer();
         LX_ASSERT(LX::E::OK == e || LX::E::IN_KEYWORD == e,
                   LX::E::CONTROL_STRUCTURE_ERROR);
 
@@ -681,14 +687,14 @@ Lexer::run()
         Lexer condition_lexer{
           this->m_input, this->m_arena, this->m_cursor, this->m_end
         };
-        LX_ASSERT(E::FAT_ARROW == condition_lexer.run(),
+        LX_ASSERT(E::FAT_ARROW == condition_lexer(),
                   E::OPERATOR_MATCH_FAILURE);
 
         Lexer body_lexer{ condition_lexer.m_input,
                           condition_lexer.m_arena,
                           condition_lexer.m_cursor,
                           this->m_end };
-        LX::E e = body_lexer.run();
+        LX::E e = body_lexer();
         LX_ASSERT(e == E::ELSE_KEYWORD || e == E::IN_KEYWORD || e == E::OK,
                   E::CONTROL_STRUCTURE_ERROR);
 
@@ -739,7 +745,7 @@ Lexer::run()
 
         // UT_FAIL_IF("here");
 
-        sig_lexer.run();
+        sig_lexer();
         Tokens sym_defs{ m_arena };
         sym_defs.push(sig_lexer.m_tokens.last()->as.tokens[0]);
         sym_defs.push(sig_lexer.m_tokens.last()->as.tokens[1]);
@@ -1057,5 +1063,9 @@ Lexer::skip_to(
     this->m_events.push(e);
   }
 }
+
+/*-------------------------------------------------------------------------------
+ *\EOF
+ *------------------------------------------------------------------------------*/
 
 } // namespace LX

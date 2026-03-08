@@ -313,6 +313,8 @@ public:
   void strip_line(size_t idx);
 
   E run();
+
+  E operator()();
 };
 
 } // namespace LX

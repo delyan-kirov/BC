@@ -52,8 +52,8 @@ pub main =
 	let rec_size = 100 in
 	let y = 0    in let x = 0 in
 	let y2 = 200 in let x2 = 200 in
-	let cx1 = 0 in let cy1 = 0   in let cx2 = 200 in let cy2 = 0   in
-	let cx3 = 0 in let cy3 = 200 in let cx4 = 200 in let cy4 = 200 in
+	let cx1 = 0  in let cy1 = 0   in let cx2 = 200 in let cy2 = 0   in
+	let cx3 = 0  in let cy3 = 200 in let cx4 = 200 in let cy4 = 200 in
 	let counter = 1 in
 	let random_color = 0 in
 	(while !window_should_close

@@ -1,3 +1,12 @@
+/*-------------------------------------------------------------------------------
+ *\file TL.hpp
+ *\info Translation later impl
+ * *----------------------------------------------------------------------------*/
+
+/*------------------------------------------------------------------------------
+ *\INCLUDES
+ *-----------------------------------------------------------------------------*/
+
 #include "TL.hpp"
 #include "EX.hpp"
 #include "LX.hpp"
@@ -92,7 +101,9 @@ public:
 void   *DFN::m_handle = nullptr;
 FnMap_t DFN::m_fn_map = {};
 
-static std::map<std::string, DFN *> raylib_functions = {};
+using DFN_map = std::map<std::string, DFN *>;
+
+static DFN_map raylib_functions = {};
 
 std::vector<LX::LangType>
 expand_signature(
@@ -341,6 +352,7 @@ eval(
     std::string fn_name   = std::to_string(expr.as.m_varapp.m_fn_name);
     auto        fn_def_it = env.find(fn_name);
     EX::Expr    fndef{};
+    Env         app_env = env;
 
     auto is_raylib = raylib_functions.find(fn_name.c_str());
 
@@ -351,12 +363,16 @@ eval(
       for (EX::Expr &param_expr : params)
       {
         Instance param_inst{ param_expr, env };
-        env[std::to_string(fndef.as.m_fn.m_param)] = eval(param_inst).m_expr;
-        fndef                                      = *fndef.as.m_fn.m_body;
+        app_env[std::to_string(fndef.as.m_fn.m_param)]
+          = eval(param_inst).m_expr;
+
+        // NOTE: Pop the parameter
+        fndef = *fndef.as.m_fn.m_body;
       }
 
-      Instance app_instance{ fndef, env };
-      app_instance = eval(app_instance);
+      Instance app_instance{ fndef, app_env };
+      app_instance       = eval(app_instance); // NOTE: remove app env
+      app_instance.m_env = env;
 
       return app_instance;
     }
@@ -538,4 +554,9 @@ eval(
   UT_FAIL_MSG("Expr type not resolved, type = %s", expr.m_type);
   return Instance{};
 }
+
+/*-------------------------------------------------------------------------------
+ *\EOF
+ *------------------------------------------------------------------------------*/
+
 } // namespace TL
