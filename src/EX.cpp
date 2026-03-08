@@ -437,12 +437,12 @@ Parser::run()
     {
       i += 1;
 
-      EX::Parser condition_parser{ *this, t.as.wile.condition };
+      EX::Parser condition_parser{ *this, t.as.whyle.condition };
       condition_parser.run();
 
       // FIXME: variable str should result in function app but currently, the
       // variable is ignored
-      EX::Parser body_parser{ *this, t.as.wile.body };
+      EX::Parser body_parser{ *this, t.as.whyle.body };
       body_parser.run();
 
       EX::Expr while_expr{ EX::Type::While };
