@@ -26,10 +26,13 @@ LIBS = -L./bin/lib64 -lffi -Wl,-rpath,'$$ORIGIN/lib64'
 endif
 
 #------------------------------MAIN-----------------------------
-# 
-test: $(BIN)tst_mult $(BIN)tst_functional
-	@$(BIN)tst_mult
-	@$(BIN)tst_functional
+TESTS = tst_mult tst_functional tst_debug
+
+test: $(addprefix $(BIN),$(TESTS))
+	@for t in $(TESTS); do $(BIN)$$t; done
+
+test-debug: $(BIN)tst_debug
+	@$(BIN)tst_debug
 
 #------------------------------OBJC-----------------------------
 THRAXsrc = \
@@ -59,8 +62,11 @@ $(BIN)tst_mult: $(TST)tst_mult.cpp $(THRAX)
 $(BIN)tst_functional: $(TST)tst_functional.cpp $(THRAX) 
 	$(CC) $(THRAX) $(TST)tst_functional.cpp $(LIBS) -o $@
 
+$(BIN)tst_debug: $(TST)tst_debug.cpp $(THRAX) 
+	$(CC) $(THRAX) $(TST)tst_debug.cpp $(LIBS) -o $@
+
 #-----------------------------CMND------------------------------
-COMMANDS = clean bear test init list format valgrind gf2 executables tokei
+COMMANDS = clean bear test init list format valgrind gf2 executables tokei test-debug
 .PHONY: COMMANDS
 
 executables: $(THRAX)
