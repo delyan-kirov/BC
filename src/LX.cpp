@@ -179,8 +179,16 @@ Lexer::get_word(
   this->strip_white_space(idx);
   idx = this->m_cursor;
 
-  for (char c = m_input[idx++]; c && (!delimits_word(c)); c = m_input[idx++])
+  for (char c = m_input[idx++]; c; c = m_input[idx++])
   {
+    if (delimits_word(c))
+    {
+      if (!is_white_space(c))
+      {
+        idx -= 1;
+      }
+      break;
+    }
     sb.add(c);
   }
 
@@ -687,8 +695,7 @@ Lexer::run()
         Lexer condition_lexer{
           this->m_input, this->m_arena, this->m_cursor, this->m_end
         };
-        LX_ASSERT(E::FAT_ARROW == condition_lexer(),
-                  E::OPERATOR_MATCH_FAILURE);
+        LX_ASSERT(E::FAT_ARROW == condition_lexer(), E::OPERATOR_MATCH_FAILURE);
 
         Lexer body_lexer{ condition_lexer.m_input,
                           condition_lexer.m_arena,
@@ -742,8 +749,6 @@ Lexer::run()
 
         // TODO: parse this
         // LX_FN_TRY(sig_lexer.match_operator('='));
-
-        // UT_FAIL_IF("here");
 
         sig_lexer();
         Tokens sym_defs{ m_arena };
@@ -894,7 +899,7 @@ E
 Lexer::match_operator(
   char c)
 {
-  this->strip_white_space(this->m_cursor - 1);
+  this->strip_white_space(this->m_cursor);
   LX_ASSERT(c == this->next_char(), E::UNRECOGNIZED_STRING);
   return E::OK;
 };
@@ -903,7 +908,7 @@ E
 Lexer::match_operator(
   UT::String s)
 {
-  this->strip_white_space(this->m_cursor - 1);
+  this->strip_white_space(this->m_cursor);
   for (size_t idx = 0; idx < s.m_len; ++idx)
   {
     LX_ASSERT(s[idx] == this->next_char(), E::UNRECOGNIZED_STRING);
@@ -980,6 +985,10 @@ Lexer::find_next_global_symbol(
     if ("#" == next_word)
     {
       search_lexer.strip_line(search_lexer.m_cursor);
+    }
+    if (delimits_word(search_lexer.m_input[search_lexer.m_cursor]))
+    {
+      search_lexer.m_cursor += 1;
     }
     if ("int" == next_word || "pub" == next_word || "ext" == next_word)
     {

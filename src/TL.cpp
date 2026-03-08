@@ -54,7 +54,7 @@ public:
       void *fn_handle = dlsym(m_handle, m_fn_name);
       if (!fn_handle)
       {
-        UT_FAIL_MSG("ERROR: function (%s) not found in raylib so\n", m_fn_name);
+        UT_FAIL_MSG("ERROR: function (%s) not found\n", m_fn_name);
       }
       else
       {
@@ -103,7 +103,7 @@ FnMap_t DFN::m_fn_map = {};
 
 using DFN_map = std::map<std::string, DFN *>;
 
-static DFN_map raylib_functions = {};
+static DFN_map foreign_functions = {};
 
 std::vector<LX::LangType>
 expand_signature(
@@ -195,7 +195,7 @@ Mod::Mod(
                      sig_in_types,
                      sig_out_types };
 
-        raylib_functions[std::to_string(t.as.ext_sym.name)] = sym;
+        foreign_functions[std::to_string(t.as.ext_sym.name)] = sym;
       }
 
       continue;
@@ -285,11 +285,11 @@ eval(
       Instance new_instance{ var_expr->second, env };
       return new_instance;
     }
-    else if (raylib_functions.end()
-             != raylib_functions.find(std::to_string(var_name)))
+    else if (foreign_functions.end()
+             != foreign_functions.find(std::to_string(var_name)))
     {
-      DFN raylib_fn = *raylib_functions.find(var_name.m_mem)->second;
-      raylib_fn.configure();
+      DFN foreign_fn = *foreign_functions.find(var_name.m_mem)->second;
+      foreign_fn.configure();
       AR::Arena output_arena{};
 
       // FIXME: assume output fits in 64 bytes
@@ -299,7 +299,7 @@ eval(
       std::memset(output, 0, 64);
       std::vector<void *> _input;
 
-      raylib_fn.call(_input, output);
+      foreign_fn.call(_input, output);
 
       // FIXME: Don't assume the function only returns ints
       EX::Expr int_expr{ EX::Type::Int };
@@ -354,7 +354,7 @@ eval(
     EX::Expr    fndef{};
     Env         app_env = env;
 
-    auto is_raylib = raylib_functions.find(fn_name.c_str());
+    auto foreign_fn_it = foreign_functions.find(fn_name.c_str());
 
     if (env.end() != fn_def_it)
     {
@@ -377,10 +377,10 @@ eval(
       return app_instance;
     }
     // TODO: There should be a better way to both load and define functions
-    else if (raylib_functions.end() != is_raylib)
+    else if (foreign_functions.end() != foreign_fn_it)
     {
-      DFN raylib_fn = *raylib_functions.find(fn_name.c_str())->second;
-      raylib_fn.configure();
+      DFN foreign_fn = *foreign_functions.find(fn_name.c_str())->second;
+      foreign_fn.configure();
 
       AR::Arena           input_buffer{};
       std::vector<void *> input;
@@ -416,7 +416,7 @@ eval(
         }
       }
 
-      bool ok = raylib_fn.call(input, output);
+      bool ok = foreign_fn.call(input, output);
       (void)ok;
 
       Instance app_instance{ fndef, env };
