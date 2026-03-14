@@ -371,7 +371,7 @@ struct String : public Vu<char>
 
   bool
   operator==(
-    String &other)
+    String &other) const
   {
     return (this->m_len == other.m_len)
            && (0 == std::memcmp(this->m_mem, other.m_mem, this->m_len));
@@ -379,7 +379,7 @@ struct String : public Vu<char>
 
   bool
   operator!=(
-    String &other)
+    String &other) const
   {
     return !((this->m_len == other.m_len)
              && (0 == std::memcmp(this->m_mem, other.m_mem, this->m_len)));

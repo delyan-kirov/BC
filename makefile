@@ -5,10 +5,13 @@ INC = inc/
 BIN = bin/
 TST = tst/
 
-CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g -O1 
+CFLAGS = -Wall -Wextra -Wimplicit-fallthrough -Werror -g 
 ifdef GIT_ACTION_CTX
+# We need to enable optimization or we wont compile in nix develop shell
+CFLAGS += -O1
 CFLAGS += -DGIT_ACTION_CTX=1
 else
+CFLAGS += -O0
 RAYLIB_ENABLED ?= 1
 export RAYLIB_ENABLED
 endif

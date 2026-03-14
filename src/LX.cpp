@@ -613,6 +613,14 @@ Lexer::run()
         // TODO: use a different error
         LX_ASSERT("" != sym_name, E::WORD_NOT_FOUND);
 
+        // TODO: We cannot assume that '=' will match, we need to check if ':'
+        // will match first
+        e = match_operator(':');
+        if (E::OK == e)
+        {
+          UT_TODO(type annotations not handled yet);
+        }
+
         LX_FN_TRY(this->match_operator('='));
 
         Lexer new_lexer{ m_input, m_arena, m_cursor, next_symbol_idx };
@@ -728,6 +736,8 @@ Lexer::run()
 
         LX_FN_TRY(this->match_operator(':'));
 
+        // TODO: Factor out signature parsing
+        // TODO: Factor to EX
         Lexer sig_lexer{ m_input, m_arena, m_cursor, next_symbol_idx };
         UT::Vec<UT::String> types{ m_arena };
         UT::String          type{};
@@ -747,8 +757,7 @@ Lexer::run()
         LX_ASSERT(E::OK == parse_result.first, E::CONTROL_STRUCTURE_ERROR);
         Sig sig = parse_result.second;
 
-        // TODO: parse this
-        // LX_FN_TRY(sig_lexer.match_operator('='));
+        LX_FN_TRY(sig_lexer.match_operator('='));
 
         sig_lexer();
         Tokens sym_defs{ m_arena };
@@ -899,22 +908,38 @@ E
 Lexer::match_operator(
   char c)
 {
-  this->strip_white_space(this->m_cursor);
-  LX_ASSERT(c == this->next_char(), E::UNRECOGNIZED_STRING);
-  return E::OK;
+  Lexer match_lexer{ *this, m_cursor, m_end };
+  match_lexer.strip_white_space(m_cursor);
+  char next_char = match_lexer.next_char();
+  if (c == next_char)
+  {
+    skip_to(match_lexer);
+    return E::OK;
+  }
+
+  return E::UNRECOGNIZED_STRING;
 };
 
+// FIXME: Should not mutate state if it fails
 E
 Lexer::match_operator(
   UT::String s)
 {
-  this->strip_white_space(this->m_cursor);
+  Lexer match_lexer{ *this, m_cursor, m_end };
+  match_lexer.strip_white_space(m_cursor);
+
+  UT::SB sb{};
   for (size_t idx = 0; idx < s.m_len; ++idx)
   {
-    LX_ASSERT(s[idx] == this->next_char(), E::UNRECOGNIZED_STRING);
+    sb.add(match_lexer.next_char());
   }
 
-  return E::OK;
+  if (sb.vu() == s)
+  {
+    skip_to(match_lexer);
+    return E::OK;
+  }
+  return E::UNRECOGNIZED_STRING;
 }
 
 // TODO: candidate for refactor
@@ -1017,6 +1042,8 @@ Lexer::Lexer(
       m_end{ end }
 {
 }
+
+// TODO: candidate for removal
 Lexer::Lexer(
   Lexer const &l)
     : m_arena(l.m_arena),              //
