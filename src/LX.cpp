@@ -611,13 +611,13 @@ Lexer::run()
         // TODO: We cannot assume that '=' will match, we need to check if ':'
         // will match first
         e = match_operator(':');
+        Sig sig{ LangType::Max };
+
         if (E::OK == e)
         {
           Lexer sig_lexer{ *this, m_cursor, next_symbol_idx };
-          Sig   sig;
           sig_lexer.parse_signature(sig);
-          UT_VAR_INSP(sig);
-          UT_TODO(type annotations not handled yet);
+          skip_to(sig_lexer);
         }
 
         LX_FN_TRY(this->match_operator('='));
@@ -631,6 +631,7 @@ Lexer::run()
         symbol.line        = new_lexer.m_lines;
         symbol.as.sym.def  = new_lexer.m_tokens;
         symbol.as.sym.name = sym_name;
+        symbol.as.sym.sig  = sig;
 
         this->m_tokens.push(symbol);
         this->skip_to(new_lexer);

@@ -95,7 +95,9 @@ constexpr UT::String EXT{ "ext" };
   X(Int64)                                                                     \
   X(Ptr)                                                                       \
   X(Void)                                                                      \
-  X(Max)
+  X(Struct)                                                                    \
+  X(Enum)                                                                      \
+  X(Alias)
 
 enum class LangType
 {
@@ -104,6 +106,7 @@ enum class LangType
 #define X(LX_ENUM_VALUE) LX_ENUM_VALUE,
   LX_LangType_ENUM_VARIANTS
 #undef X
+    Max,
 }; // namespace LX
 
 #define LX_E_ENUM_VARIANTS                                                     \
@@ -189,12 +192,6 @@ struct Fn
   Tokens     body;
 };
 
-struct SymDef
-{
-  UT::String name;
-  Tokens     def;
-};
-
 // NOTE: T -> (T -> (T -> T))
 //   is: T -> T -> T -> T
 struct Sig
@@ -204,6 +201,21 @@ struct Sig
   {
     UT::Pair<Sig> pair;
   } as;
+
+  Sig() = default;
+  Sig(
+    LangType type)
+      : type{ type },
+        as{}
+  {
+  }
+};
+
+struct SymDef
+{
+  Tokens     def;
+  UT::String name;
+  Sig        sig;
 };
 
 struct ExtSym
@@ -349,7 +361,8 @@ to_string(
 {
   switch (lang_type)
   {
-  case LX::LangType::_: break;
+  case LX::LangType::Max:
+  case LX::LangType::_  : break;
 #define X(LX_ENUM_VALUE)                                                       \
   case LX::LangType::LX_ENUM_VALUE: return #LX_ENUM_VALUE;
     LX_LangType_ENUM_VARIANTS
@@ -368,7 +381,8 @@ to_string(
 {
   switch (sig.type)
   {
-  case LX::LangType::_: break;
+  case LX::LangType::_  : break;
+  case LX::LangType::Max: return "";
 #define X(LX_ENUM_VALUE)                                                       \
   case LX::LangType::LX_ENUM_VALUE:                                            \
     if constexpr (LX::LangType::LX_ENUM_VALUE == LX::LangType::Fn)             \
@@ -466,12 +480,13 @@ to_string(
     return to_string(t.as.tokens);
   }
   case LX::Type::PubDef:
-  {
-    return "pub " + to_string(t.as.sym.name) + " = " + to_string(t.as.sym.def);
-  }
   case LX::Type::IntDef:
   {
-    return "int " + to_string(t.as.sym.name) + " = " + to_string(t.as.sym.def);
+    return (LX::Type::PubDef == t.type ? "pub" : "int")
+           + to_string(t.as.sym.name) + " = " + to_string(t.as.sym.def)
+           + (LX::LangType::Max == t.as.sym.sig.type
+                ? ""
+                : (": " + to_string(t.as.sym.sig)));
   }
   case LX::Type::Not:
   {

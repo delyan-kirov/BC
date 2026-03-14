@@ -127,6 +127,32 @@ expand_signature(
   return expansion;
 }
 
+// TODO: We need to walk the tree
+void
+type_check(
+  EX::Expr &expr)
+{
+  LX::Sig  sig  = expr.m_sig;
+  EX::Type type = expr.m_type;
+
+  if (LX::LangType::Max == sig.type) return;
+
+  switch (type)
+  {
+  case EX::Type::Int:
+  {
+    UT_FAIL_IF(LX::LangType::Int != sig.type);
+  }
+  break;
+  case EX::Type::Str:
+  {
+    UT_FAIL_IF(LX::LangType::Ptr != sig.type);
+  }
+  break;
+  default: return;
+  }
+}
+
 Mod::Mod(
   UT::String file_name, AR::Arena &arena)
 {
@@ -208,7 +234,10 @@ Mod::Mod(
     parser.run();
 
     Instance instance{ *parser.m_exprs.last(), global_env };
-    instance                             = eval(instance);
+    instance.m_expr.m_sig = t.as.sym.sig;
+    instance              = eval(instance);
+    // FIXME: Type check before executing
+    type_check(instance.m_expr);
     global_env[std::to_string(def_name)] = instance.m_expr;
     TL::Def def{ def_type, def_name, instance.m_expr };
 
@@ -216,16 +245,31 @@ Mod::Mod(
 
     if (!true)
     {
-      std::printf("%s %s = %s\n",
+      UT::SB sb{};
+      if (LX::LangType::Max != t.as.sym.sig.type)
+      {
+        sb.concatf(": %s", UT_TCS(t.as.sym.sig));
+      }
+
+      std::printf("%s %s%s = %s\n",
                   UT_TCS(def.m_type),
                   UT_TCS(def_name),
+                  sb.vu().m_mem,
                   UT_TCS(global_env[std::to_string(def_name)]));
     }
   }
 
   for (auto it = global_env.begin(); it != global_env.end(); ++it)
   {
-    std::printf("INFO: %s -> %s\n", it->first.c_str(), UT_TCS(it->second));
+    UT::SB sb{};
+    if (LX::LangType::Max != it->second.m_sig.type)
+    {
+      sb.concatf(": %s", UT_TCS(it->second.m_sig));
+    }
+    std::printf("INFO: %s%s = %s\n",
+                it->first.c_str(),
+                sb.vu().m_mem,
+                UT_TCS(it->second));
   }
 
   DFN::deinit();

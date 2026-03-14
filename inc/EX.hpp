@@ -69,7 +69,6 @@ enum class E
   MAX
 };
 
-
 struct FnApp
 {
   FnDef m_body;
@@ -97,7 +96,8 @@ struct While
 
 struct Expr
 {
-  Type m_type;
+  Type    m_type;
+  LX::Sig m_sig;
   union
   {
     FnDef          m_fn;

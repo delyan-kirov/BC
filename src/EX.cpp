@@ -26,11 +26,13 @@ FnDef::FnDef(
 }
 
 Expr::Expr(Type type)
-    : m_type{ type } {};
+    : m_type{ type },
+      m_sig{ LX::LangType::Max } {};
 
 Expr::Expr(
   Type type, AR::Arena &arena)
-    : m_type{ type }
+    : m_type{ type },
+      m_sig{ LX::LangType::Max }
 {
   switch (type)
   {
