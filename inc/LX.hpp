@@ -94,14 +94,17 @@ constexpr UT::String EXT{ "ext" };
   X(Int32)                                                                     \
   X(Int64)                                                                     \
   X(Ptr)                                                                       \
-  X(Void)
+  X(Void)                                                                      \
+  X(Max)
 
 enum class LangType
 {
+  Min = 0,
+  _   = -1,
 #define X(LX_ENUM_VALUE) LX_ENUM_VALUE,
   LX_LangType_ENUM_VARIANTS
 #undef X
-};
+}; // namespace LX
 
 #define LX_E_ENUM_VARIANTS                                                     \
   X(OK)                                                                        \
@@ -175,8 +178,8 @@ struct If
 
 struct Binding
 {
-  UT::String name;
-  Tokens     let;
+  UT::String var;
+  Tokens     equals;
   Tokens     in;
 };
 
@@ -272,11 +275,7 @@ public:
 
   Lexer(const char *const input, AR::Arena &arena, size_t begin, size_t end);
 
-  Lexer(Lexer const &l);
-
   Lexer(Lexer const &l, size_t begin, size_t end);
-
-  Lexer(Lexer const &l, size_t begin);
 
   ~Lexer() {}
 
@@ -311,6 +310,8 @@ public:
   void strip_white_space(size_t idx);
 
   void strip_line(size_t idx);
+
+  LX::E parse_signature(Sig &sig);
 
   E run();
 
@@ -348,6 +349,7 @@ to_string(
 {
   switch (lang_type)
   {
+  case LX::LangType::_: break;
 #define X(LX_ENUM_VALUE)                                                       \
   case LX::LangType::LX_ENUM_VALUE: return #LX_ENUM_VALUE;
     LX_LangType_ENUM_VARIANTS
@@ -366,6 +368,7 @@ to_string(
 {
   switch (sig.type)
   {
+  case LX::LangType::_: break;
 #define X(LX_ENUM_VALUE)                                                       \
   case LX::LangType::LX_ENUM_VALUE:                                            \
     if constexpr (LX::LangType::LX_ENUM_VALUE == LX::LangType::Fn)             \
@@ -435,9 +438,9 @@ to_string(
            ")";
   case LX::Type::Let:
   {
-    std::string let_string = to_string(t.as.binding.let);
+    std::string let_string = to_string(t.as.binding.equals);
     std::string in_string  = to_string(t.as.binding.in);
-    std::string var_name   = to_string(t.as.binding.name);
+    std::string var_name   = to_string(t.as.binding.var);
     return "let " + var_name + " = " + let_string + " in " + in_string;
   }
   break;

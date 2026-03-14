@@ -39,9 +39,13 @@
 #define UT_FAIL_MSG(MSG_FORMAT, ...)                                           \
   do                                                                           \
   {                                                                            \
-    char *s = nullptr;                                                         \
-    asprintf(&s, MSG_FORMAT, __VA_ARGS__);                                     \
-    UT::IMPL::fail_if(__FILE__, __PRETTY_FUNCTION__, __LINE__, UT::SERROR, s); \
+    char *UT_STRING_BUFFER_NO_ESCAPE = nullptr;                                \
+    asprintf(&UT_STRING_BUFFER_NO_ESCAPE, MSG_FORMAT, __VA_ARGS__);            \
+    UT::IMPL::fail_if(__FILE__,                                                \
+                      __PRETTY_FUNCTION__,                                     \
+                      __LINE__,                                                \
+                      UT::SERROR,                                              \
+                      UT_STRING_BUFFER_NO_ESCAPE);                             \
   } while (false)
 
 #define UT_TCS(o) (std::to_string(o).c_str())
@@ -351,6 +355,13 @@ struct String : public Vu<char>
     char *mem, size_t len)
       : Vu<char>{ mem, len }
   {
+  }
+
+  String(
+    char *s)
+  {
+    this->m_len = std::strlen(s);
+    this->m_mem = s;
   }
 
   String()                          = default;

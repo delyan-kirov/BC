@@ -407,9 +407,9 @@ Parser::run()
     {
       // FIXME: https://github.com/delyan-kirov/BC/issues/25
       // let var = body_expr in app_expr
-      UT::String var_name = t.as.binding.name;
+      UT::String var_name = t.as.binding.var;
 
-      EX::Parser value_parser{ *this, t.as.binding.let };
+      EX::Parser value_parser{ *this, t.as.binding.equals };
       value_parser();
       EX::Expr *value_expr = value_parser.m_exprs.last();
 
